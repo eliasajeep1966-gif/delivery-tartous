@@ -13,7 +13,7 @@ const statusConfig: Record<
   OrderStatus,
   { label: string; bg: string; text: string }
 > = {
-  pending: { label: 'جديد', bg: '#EAF4FC', text: deliveryColors.primary },
+  pending: { label: 'بانتظار استلام الكابتن', bg: '#FFF7E6', text: deliveryColors.warning },
   assigned: { label: 'بانتظار استلام الكابتن', bg: '#FFF7E6', text: deliveryColors.warning },
   received: { label: 'تم الاستلام', bg: '#EAF4FC', text: deliveryColors.primary },
   in_delivery: { label: 'قيد التوصيل', bg: '#E6F7EC', text: deliveryColors.success },

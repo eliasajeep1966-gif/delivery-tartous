@@ -1,4 +1,5 @@
 import { Pressable, Text, View, type ViewStyle, StyleSheet } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 
 import { DeliveryOrder } from '@/types';
@@ -13,6 +14,12 @@ type CurrentOrderCardProps = {
   onDetails?: () => void;
 };
 
+const statusBadgeConfig: Record<string, { label: string; bg: string; text: string }> = {
+  assigned: { label: 'بانتظار استلامك', bg: '#FFF7E6', text: deliveryColors.warning },
+  received: { label: 'تم الاستلام', bg: '#EAF4FC', text: deliveryColors.primary },
+  in_delivery: { label: 'قيد التوصيل', bg: '#E6F7EC', text: deliveryColors.success },
+};
+
 export function CurrentOrderCard({
   order,
   onReceive,
@@ -24,13 +31,15 @@ export function CurrentOrderCard({
     return (
       <View style={styles.card}>
         <EmptyState
-          icon={<Text style={styles.emptyIcon}>📦</Text>}
+          icon={<SymbolView name="cube.box" size={48} tintColor={deliveryColors.muted} />}
           title="لا يوجد لديك طلبات حالياً"
           description="سيظهر هنا الطلب المعين لك عندما يتوفر"
         />
       </View>
     );
   }
+
+  const badge = statusBadgeConfig[order.status];
 
   const renderActions = (): ReactNode => {
     if (order.status === 'assigned') {
@@ -59,6 +68,12 @@ export function CurrentOrderCard({
 
   return (
     <View style={[styles.card, deliveryShadows.sm]}>
+      {badge && (
+        <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+          <Text style={[styles.badgeText, { color: badge.text }]}>{badge.label}</Text>
+        </View>
+      )}
+
       <View style={styles.row}>
         <Text style={styles.orderNumber}>{order.orderNumber}</Text>
         <Text style={styles.customer}>{order.customerName}</Text>
@@ -84,17 +99,24 @@ export function CurrentOrderCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: deliveryColors.surface,
     borderRadius: deliveryRadius.lg,
     padding: deliverySpacing.lg,
     gap: deliverySpacing.sm,
   },
-  emptyIcon: {
-    fontSize: 48,
+  badge: {
+    paddingHorizontal: deliverySpacing.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
     textAlign: 'center',
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -108,7 +130,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: deliveryColors.text,
-    textAlign: 'left',
+    textAlign: 'right',
   },
   address: {
     fontSize: 14,
@@ -117,7 +139,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   footer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: deliverySpacing.sm,

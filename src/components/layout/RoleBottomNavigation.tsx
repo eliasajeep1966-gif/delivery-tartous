@@ -1,21 +1,22 @@
 import { Pressable, Text, View, type ViewStyle, StyleSheet } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 
-import { deliveryColors } from '@/constants/deliveryTheme';
+import { deliveryColors, deliverySpacing } from '@/constants/deliveryTheme';
 
 const ADMIN_TABS = [
-  { key: 'home', label: 'الرئيسية' },
-  { key: 'orders', label: 'الطلبات' },
-  { key: 'captains', label: 'الكباتن' },
-  { key: 'salaries', label: 'الأجور' },
-  { key: 'more', label: 'المزيد' },
+  { key: 'home', label: 'الرئيسية', icon: 'house' },
+  { key: 'orders', label: 'الطلبات', icon: 'list.bullet' },
+  { key: 'captains', label: 'الكباتن', icon: 'person.2' },
+  { key: 'salaries', label: 'الأجور', icon: 'banknote' },
+  { key: 'more', label: 'المزيد', icon: 'ellipsis' },
 ] as const;
 
 const CAPTAIN_TABS = [
-  { key: 'home', label: 'الرئيسية' },
-  { key: 'my_orders', label: 'طلباتي' },
-  { key: 'earnings', label: 'أرباحي' },
-  { key: 'more', label: 'المزيد' },
+  { key: 'home', label: 'الرئيسية', icon: 'house' },
+  { key: 'my_orders', label: 'طلباتي', icon: 'cube.box' },
+  { key: 'earnings', label: 'أرباحي', icon: 'banknote' },
+  { key: 'more', label: 'المزيد', icon: 'ellipsis' },
 ] as const;
 
 type RoleBottomNavigationProps = {
@@ -38,6 +39,11 @@ export function RoleBottomNavigation({ role, activeTab, onTabPress }: RoleBottom
             style={styles.tab}
             hitSlop={8}
           >
+            <SymbolView
+              name={tab.icon as any}
+              size={20}
+              tintColor={isActive ? deliveryColors.primary : deliveryColors.muted}
+            />
             <Text style={[styles.label, isActive && styles.activeLabel]}>{tab.label}</Text>
             <View style={[styles.indicator, isActive && styles.activeIndicator]} />
           </Pressable>
@@ -49,7 +55,7 @@ export function RoleBottomNavigation({ role, activeTab, onTabPress }: RoleBottom
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     backgroundColor: deliveryColors.surface,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',

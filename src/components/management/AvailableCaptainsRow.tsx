@@ -1,4 +1,5 @@
-import { Text, View, type ViewStyle, StyleSheet } from 'react-native';
+import { SymbolView } from 'expo-symbols';
+import { ScrollView, Text, View, type ViewStyle, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { CaptainProfile } from '@/types';
@@ -15,7 +16,11 @@ export function AvailableCaptainsRow({ captains }: AvailableCaptainsRowProps) {
 
   return (
     <View>
-      <View style={styles.row}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {available.map((captain) => {
           const initial = captain.name.trim().charAt(0);
           return (
@@ -31,16 +36,16 @@ export function AvailableCaptainsRow({ captains }: AvailableCaptainsRowProps) {
             </View>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
+  scrollContent: {
+    flexDirection: 'row-reverse',
     gap: deliverySpacing.md,
-    overflow: 'hidden',
+    paddingHorizontal: deliverySpacing.lg,
   },
   card: {
     width: 120,
@@ -57,7 +62,6 @@ const styles = StyleSheet.create({
     backgroundColor: deliveryColors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
   avatarText: {
     fontSize: 18,

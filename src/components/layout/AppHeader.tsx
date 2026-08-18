@@ -1,4 +1,5 @@
 import { Pressable, Text, View, type ViewStyle, StyleSheet } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
 
 import { deliveryColors, deliverySpacing } from '@/constants/deliveryTheme';
@@ -25,11 +26,11 @@ export function AppHeader({
       <View style={styles.actions}>
         {showNotifications && (
           <Pressable onPress={onNotificationsPress} style={styles.iconButton} hitSlop={8}>
-            <Text style={styles.icon}>🔔</Text>
+            <SymbolView name="bell" size={20} tintColor={deliveryColors.surface} />
           </Pressable>
         )}
         <Pressable onPress={onSettingsPress} style={styles.iconButton} hitSlop={8}>
-          <Text style={styles.icon}>⚙️</Text>
+          <SymbolView name="gearshape" size={20} tintColor={deliveryColors.surface} />
         </Pressable>
       </View>
     </View>
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
     backgroundColor: deliveryColors.primary,
     paddingHorizontal: deliverySpacing.lg,
     paddingVertical: deliverySpacing.md,
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -62,7 +63,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: deliverySpacing.sm,
   },
@@ -73,9 +74,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  icon: {
-    fontSize: 18,
-    color: deliveryColors.surface,
   },
 });

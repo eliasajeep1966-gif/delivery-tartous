@@ -1,7 +1,8 @@
+import { SymbolView } from 'expo-symbols';
 import { Text, View, type ViewStyle, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
 
-import { deliverySpacing } from '@/constants/deliveryTheme';
+import { deliveryColors, deliveryRadius, deliverySpacing } from '@/constants/deliveryTheme';
 
 type CaptainDaySummaryProps = {
   deliveredCount: number;
@@ -10,22 +11,26 @@ type CaptainDaySummaryProps = {
 };
 
 export function CaptainDaySummary({ deliveredCount, earnings, falseOrdersCount }: CaptainDaySummaryProps) {
-  const metricIcon = (label: string): ReactNode => <Text style={styles.metricIcon}>{label}</Text>;
-
   return (
     <View style={styles.row}>
       <View style={styles.metric}>
-        <View style={styles.iconBox}>{metricIcon('✅')}</View>
+        <View style={styles.iconBox}>
+          <SymbolView name="checkmark.circle" size={28} tintColor={deliveryColors.success} />
+        </View>
         <Text style={styles.metricValue}>{deliveredCount}</Text>
         <Text style={styles.metricLabel}>تم التوصيل</Text>
       </View>
       <View style={styles.metric}>
-        <View style={styles.iconBox}>{metricIcon('💰')}</View>
+        <View style={styles.iconBox}>
+          <SymbolView name="banknote" size={28} tintColor={deliveryColors.primary} />
+        </View>
         <Text style={styles.metricValue}>{earnings.toLocaleString('ar-SY')}</Text>
         <Text style={styles.metricLabel}>أرباحي المستحقة</Text>
       </View>
       <View style={styles.metric}>
-        <View style={styles.iconBox}>{metricIcon('⚠️')}</View>
+        <View style={styles.iconBox}>
+          <SymbolView name="exclamationmark.triangle" size={28} tintColor={deliveryColors.warning} />
+        </View>
         <Text style={styles.metricValue}>{falseOrdersCount}</Text>
         <Text style={styles.metricLabel}>طلبات كاذبة</Text>
       </View>
@@ -35,13 +40,13 @@ export function CaptainDaySummary({ deliveredCount, earnings, falseOrdersCount }
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     gap: deliverySpacing.md,
   },
   metric: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: deliveryColors.surface,
+    borderRadius: deliveryRadius.lg,
     padding: deliverySpacing.lg,
     alignItems: 'center',
     gap: deliverySpacing.sm,
@@ -52,20 +57,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  metricIcon: {
-    fontSize: 22,
-    textAlign: 'center',
-  },
   metricValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#14213D',
+    color: deliveryColors.text,
     textAlign: 'center',
   },
   metricLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#64748B',
+    color: deliveryColors.muted,
     textAlign: 'center',
   },
 });

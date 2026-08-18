@@ -1,4 +1,5 @@
-import { type ScrollViewProps, SafeAreaView, ScrollView, View, type ViewStyle, StyleSheet } from 'react-native';
+import { type ScrollViewProps, ScrollView, View, type ViewStyle, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 
 import { deliveryColors, deliverySpacing } from '@/constants/deliveryTheme';

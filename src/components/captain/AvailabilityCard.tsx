@@ -1,4 +1,4 @@
-import { Pressable, Text, View, type ViewStyle, StyleSheet } from 'react-native';
+import { Switch, Text, View, type ViewStyle, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { CaptainAvailability } from '@/types';
@@ -18,12 +18,17 @@ export function AvailabilityCard({ availability, onToggle }: AvailabilityCardPro
       <Text style={[styles.status, { color: isAvailable ? deliveryColors.success : deliveryColors.danger }]}>
         {isAvailable ? 'متاح الآن' : 'غير متاح الآن'}
       </Text>
-      <Pressable
-        onPress={onToggle}
-        style={[styles.button, isAvailable ? styles.buttonOff : styles.buttonOn]}
-      >
-        <Text style={styles.buttonText}>{isAvailable ? 'إيقاف التوفر' : 'تفعيل التوفر'}</Text>
-      </Pressable>
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>متاح</Text>
+        <Switch
+          value={isAvailable}
+          onValueChange={onToggle}
+          trackColor={{ false: '#D1D5DB', true: deliveryColors.success }}
+          thumbColor={deliveryColors.surface}
+          ios_backgroundColor="#D1D5DB"
+        />
+        <Text style={styles.switchLabel}>غير متاح</Text>
+      </View>
     </View>
   );
 }
@@ -47,23 +52,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  button: {
-    width: '100%',
-    paddingVertical: deliverySpacing.md,
-    borderRadius: deliveryRadius.md,
+  switchRow: {
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: deliverySpacing.lg,
+    gap: deliverySpacing.md,
   },
-  buttonOn: {
-    backgroundColor: deliveryColors.primary,
-  },
-  buttonOff: {
-    backgroundColor: deliveryColors.muted,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: deliveryColors.surface,
+  switchLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: deliveryColors.text,
     textAlign: 'center',
   },
 });
