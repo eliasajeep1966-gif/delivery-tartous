@@ -1,5 +1,5 @@
-import { canTransitionOrder, transitionOrder } from '@/logic/orderTransitions';
-import { OrdersRepository, DeliveryOrder, CreateOrderInput, ChangeOrderStatusInput, OrderFilters, ActorContext } from '../interfaces';
+import { OrdersRepository, DeliveryOrder, CreateOrderInput, ChangeOrderStatusInput, OrderFilters } from '../interfaces';
+import { OrderStatus } from '@/types';
 
 export class InMemoryOrdersRepository implements OrdersRepository {
   private orders: Map<string, DeliveryOrder> = new Map();
@@ -35,22 +35,44 @@ export class InMemoryOrdersRepository implements OrdersRepository {
     return order;
   }
 
-  async changeOrderStatus(actor: ActorContext, input: ChangeOrderStatusInput): Promise<DeliveryOrder> {
+  async assignCaptain(orderId: string, captainId: string): Promise<DeliveryOrder> {
+    const order = this.orders.get(orderId);
+    if (!order) throw new Error('Order not found');
+    const updated: DeliveryOrder = {
+      ...order,
+      assignedCaptainId: captainId,
+      status: 'assigned',
+      updatedAt: new Date().toISOString(),
+    };
+    this.orders.set(orderId, updated);
+    return updated;
+  }
+
+  async cancelOrder(orderId: string, reason: string): Promise<DeliveryOrder> {
+    const order = this.orders.get(orderId);
+    if (!order) throw new Error('Order not found');
+    const updated: DeliveryOrder = {
+      ...order,
+      status: 'cancelled',
+      cancellationReason: reason,
+      updatedAt: new Date().toISOString(),
+    };
+    this.orders.set(orderId, updated);
+    return updated;
+  }
+
+  async changeOrderStatus(input: ChangeOrderStatusInput): Promise<DeliveryOrder> {
     const order = this.orders.get(input.orderId);
-    if (!order) {
-      throw new Error('Order not found');
+    if (!order) throw new Error('Order not found');
+    const updated: DeliveryOrder = {
+      ...order,
+      status: input.nextStatus,
+      updatedAt: new Date().toISOString(),
+      cancellationReason: input.cancellationReason ?? order.cancellationReason,
+    };
+    if (input.nextStatus === 'completed') {
+      updated.completedAt = new Date().toISOString();
     }
-
-    const transitionResult = canTransitionOrder(actor, order, input.nextStatus);
-    if (!transitionResult.allowed) {
-      throw new Error(`Order transition not allowed: ${transitionResult.reason}`);
-    }
-
-    const updated = transitionOrder(order, actor, input);
-    if (updated === order) {
-      throw new Error('Order transition failed');
-    }
-
     this.orders.set(input.orderId, updated);
     return updated;
   }

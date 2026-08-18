@@ -1,10 +1,10 @@
 import { DeliveryOrder, UserProfile, CaptainProfile, OrderFinancialBreakdown } from '@/types';
-import {
-  OrderRow,
-  ProfileRow,
-  CaptainStatusRow,
-  FinancialLedgerRow,
-} from './database.types';
+import { Tables } from './database.types';
+
+type OrderRow = Tables['orders']['Row'];
+type ProfileRow = Tables['profiles']['Row'];
+type CaptainStatusRow = Tables['captain_status']['Row'];
+type FinancialLedgerRow = Tables['financial_ledger']['Row'];
 
 export function mapOrderRowToDeliveryOrder(row: OrderRow): DeliveryOrder {
   return {
