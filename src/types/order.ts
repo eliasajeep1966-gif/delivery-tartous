@@ -46,7 +46,6 @@ export interface CreateOrderInput {
 export interface ChangeOrderStatusInput {
   orderId: string;
   nextStatus: OrderStatus;
-  actorId: string;
   cancellationReason?: string;
 }
 

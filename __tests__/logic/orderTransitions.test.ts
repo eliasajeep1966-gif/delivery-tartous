@@ -118,7 +118,7 @@ export function runOrderTransitionTests() {
   const result = transitionOrder(
     originalOrder,
     { role: 'captain', userId: 'captain-1' },
-    { orderId: 'order-1', nextStatus: 'in_delivery', actorId: 'captain-1' }
+    { orderId: 'order-1', nextStatus: 'in_delivery' }
   );
   assertEqual(result, originalOrder, 'returns original order when transition not allowed');
 
