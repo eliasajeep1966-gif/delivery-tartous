@@ -1,3 +1,4 @@
+import { canTransitionOrder, transitionOrder } from '@/logic/orderTransitions';
 import { OrdersRepository, DeliveryOrder, CreateOrderInput, ChangeOrderStatusInput, OrderFilters } from '../interfaces';
 
 export class InMemoryOrdersRepository implements OrdersRepository {
@@ -34,20 +35,27 @@ export class InMemoryOrdersRepository implements OrdersRepository {
     return order;
   }
 
-  async changeOrderStatus(input: ChangeOrderStatusInput): Promise<DeliveryOrder> {
+  async changeOrderStatus(
+    input: ChangeOrderStatusInput,
+    actor?: { role: string; userId: string }
+  ): Promise<DeliveryOrder> {
     const order = this.orders.get(input.orderId);
     if (!order) {
       throw new Error('Order not found');
     }
-    const updated: DeliveryOrder = {
-      ...order,
-      status: input.nextStatus as any,
-      updatedAt: new Date().toISOString(),
-      cancellationReason: input.cancellationReason ?? order.cancellationReason,
-    };
-    if (input.nextStatus === 'completed') {
-      updated.completedAt = new Date().toISOString();
+
+    const effectiveActor = actor ?? { role: 'admin', userId: input.actorId };
+
+    const transitionResult = canTransitionOrder(effectiveActor, order, input.nextStatus);
+    if (!transitionResult.allowed) {
+      throw new Error(`Order transition not allowed: ${transitionResult.reason}`);
     }
+
+    const updated = transitionOrder(order, effectiveActor, input);
+    if (updated === order) {
+      throw new Error('Order transition failed');
+    }
+
     this.orders.set(input.orderId, updated);
     return updated;
   }
