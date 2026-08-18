@@ -3,8 +3,8 @@ import { getSupabaseClient } from '@/data/supabase/client';
 import { mapProfileRowToUserProfile, mapCaptainRowToCaptainProfile } from '@/data/supabase/mappers';
 import { Tables } from '@/data/supabase/database.types';
 
-type ProfileRow = Tables['profiles']['Row'];
-type CaptainStatusRow = Tables['captain_status']['Row'];
+type ProfileRow = Tables<'profiles'>;
+type CaptainStatusRow = Tables<'captain_status'>;
 
 export class SupabaseUsersRepository implements UsersRepository {
   async getProfile(userId: string): Promise<UserProfile | null> {

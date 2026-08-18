@@ -3,7 +3,7 @@ import { getSupabaseClient } from '@/data/supabase/client';
 import { mapOrderRowToDeliveryOrder } from '@/data/supabase/mappers';
 import { Tables } from '@/data/supabase/database.types';
 
-type OrderRow = Tables['orders']['Row'];
+type OrderRow = Tables<'orders'>;
 
 export class SupabaseOrdersRepository implements OrdersRepository {
   async listOrders(filters?: OrderFilters): Promise<DeliveryOrder[]> {

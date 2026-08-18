@@ -95,6 +95,24 @@ pending → assigned → received → in_delivery → completed
 
 ---
 
+## 6-A. عقد Supabase النشط — أولوية إلزامية
+
+> **هذه الفقرة تعلو على أي نص أقدم في هذا الملف يقول إن Supabase مرحلة لاحقة.** مشروع Supabase وRLS وRPCs وEdge Function أصبحت موجودة فعلياً ومتصلة بالمشروع.
+
+1. اقرأ `SUPABASE_BACKEND_CONTRACT.md` قبل أي تعديل له علاقة بتسجيل الدخول أو المستخدمين أو الطلبات أو الأرباح أو الأمانات.
+
+2. استخدم فقط `src/data/supabase/supabaseContract.ts` من الشاشات والـHooks. لا تستورد `getSupabaseClient()` خارج `src/data/supabase/`.
+
+3. ملف `src/data/supabase/database.types.ts` مولّد من قاعدة البيانات الحية. **ممنوع تعديله يدوياً أو إنشاء Types يدوية موازية للجداول وRPCs.**
+
+4. جميع تعديلات الطلبات والأرباح والمستخدمين والأمانات تحدث عبر RPC/Edge Function المعرفة في العقد؛ ممنوع `insert` أو `update` أو `delete` مباشر من تطبيق Expo على هذه الجداول.
+
+5. ممنوع `auth.signUp()` داخل تطبيق Expo. إنشاء المستخدمين يتم من Admin فقط عبر `deliverySupabase.actions.inviteUser`، ثم يفعّل المدعو الحساب بكلمة مرور يحددها هو في أول دخول.
+
+6. لا تغيّر Supabase schema أو RLS أو RPC أو Edge Function ولا تطبق Migration إلا بطلب صريح من صاحب المشروع. بعد أي Migration معتمدة: يُعاد توليد `database.types.ts` ثم يحدّث العقد.
+
+---
+
 ## 7. قواعد العمل الإلزامية للوكيل
 
 ### Workspace وGit
