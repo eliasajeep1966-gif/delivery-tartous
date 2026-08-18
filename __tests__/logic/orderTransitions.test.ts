@@ -2,7 +2,7 @@ import {
   canTransitionOrder,
   transitionOrder,
 } from '@/logic/orderTransitions';
-import { DeliveryOrder } from '@/types';
+import { DeliveryOrder, ActorContext } from '@/types';
 
 function createOrder(overrides: Partial<DeliveryOrder> = {}): DeliveryOrder {
   return {
@@ -76,6 +76,42 @@ export function runOrderTransitionTests() {
   assertFalse(
     canTransitionOrder({ role: 'captain', userId: 'captain-1' }, createOrder(), 'cancelled').allowed,
     'captain cannot cancel order'
+  );
+
+  assertFalse(
+    canTransitionOrder(
+      { role: 'supervisor', userId: 'supervisor-1' },
+      createOrder({ status: 'assigned', assignedCaptainId: 'captain-1' }),
+      'received'
+    ).allowed,
+    'supervisor cannot perform captain-only transition received'
+  );
+
+  assertFalse(
+    canTransitionOrder(
+      { role: 'supervisor', userId: 'supervisor-1' },
+      createOrder({ status: 'received', assignedCaptainId: 'captain-1' }),
+      'in_delivery'
+    ).allowed,
+    'supervisor cannot perform captain-only transition in_delivery'
+  );
+
+  assertFalse(
+    canTransitionOrder(
+      { role: 'supervisor', userId: 'supervisor-1' },
+      createOrder({ status: 'in_delivery', assignedCaptainId: 'captain-1' }),
+      'completed'
+    ).allowed,
+    'supervisor cannot perform captain-only transition completed'
+  );
+
+  assertFalse(
+    canTransitionOrder(
+      { role: 'supervisor', userId: 'supervisor-1' },
+      createOrder({ status: 'assigned', assignedCaptainId: 'captain-1' }),
+      'false_order'
+    ).allowed,
+    'supervisor cannot perform captain-only transition false_order'
   );
 
   const originalOrder = createOrder({ status: 'completed' });

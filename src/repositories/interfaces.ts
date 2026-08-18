@@ -7,6 +7,7 @@ import {
   OrderFilters,
   CreateOrderInput,
   ChangeOrderStatusInput,
+  ActorContext,
 } from '@/types';
 
 export {
@@ -18,6 +19,7 @@ export {
   OrderFilters,
   CreateOrderInput,
   ChangeOrderStatusInput,
+  ActorContext,
 };
 
 export interface AuthRepository {
@@ -30,7 +32,7 @@ export interface OrdersRepository {
   listOrders(filters?: OrderFilters): Promise<DeliveryOrder[]>;
   getOrder(id: string): Promise<DeliveryOrder | null>;
   createOrder(input: CreateOrderInput): Promise<DeliveryOrder>;
-  changeOrderStatus(input: ChangeOrderStatusInput): Promise<DeliveryOrder>;
+  changeOrderStatus(actor: ActorContext, input: ChangeOrderStatusInput): Promise<DeliveryOrder>;
 }
 
 export interface UsersRepository {

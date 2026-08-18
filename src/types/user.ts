@@ -12,6 +12,11 @@ export interface UserProfile {
   name: string;
 }
 
+export interface ActorContext {
+  userId: string;
+  role: UserRole;
+}
+
 export interface CaptainProfile {
   userId: string;
   name: string;

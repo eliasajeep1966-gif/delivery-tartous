@@ -32,7 +32,7 @@ export function canTransitionOrder(
       if (order.status !== 'assigned') {
         return { allowed: false, reason: 'invalid_source_status' };
       }
-      if (order.assignedCaptainId !== actor.userId) {
+      if (actor.role !== 'captain' || order.assignedCaptainId !== actor.userId) {
         return { allowed: false, reason: 'actor_not_assigned_captain' };
       }
       return { allowed: true };
@@ -41,7 +41,7 @@ export function canTransitionOrder(
       if (order.status !== 'received') {
         return { allowed: false, reason: 'invalid_source_status' };
       }
-      if (order.assignedCaptainId !== actor.userId) {
+      if (actor.role !== 'captain' || order.assignedCaptainId !== actor.userId) {
         return { allowed: false, reason: 'actor_not_assigned_captain' };
       }
       return { allowed: true };
@@ -50,7 +50,7 @@ export function canTransitionOrder(
       if (order.status !== 'in_delivery') {
         return { allowed: false, reason: 'invalid_source_status' };
       }
-      if (order.assignedCaptainId !== actor.userId) {
+      if (actor.role !== 'captain' || order.assignedCaptainId !== actor.userId) {
         return { allowed: false, reason: 'actor_not_assigned_captain' };
       }
       return { allowed: true };
@@ -77,7 +77,7 @@ export function canTransitionOrder(
       ) {
         return { allowed: false, reason: 'invalid_source_status' };
       }
-      if (order.assignedCaptainId !== actor.userId) {
+      if (actor.role !== 'captain' || order.assignedCaptainId !== actor.userId) {
         return { allowed: false, reason: 'actor_not_assigned_captain' };
       }
       return { allowed: true };
