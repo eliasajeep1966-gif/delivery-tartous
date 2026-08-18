@@ -40,7 +40,6 @@ export interface CreateOrderInput {
   pickupAddress: string;
   deliveryAddress: string;
   fee: number;
-  createdByUserId: string;
 }
 
 export interface ChangeOrderStatusInput {

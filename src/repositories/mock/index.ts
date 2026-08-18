@@ -1,4 +1,5 @@
 import { AuthRepository, OrdersRepository, UsersRepository } from '../interfaces';
+import { ActorContext } from '@/types';
 import { InMemoryAuthRepository } from './authRepository';
 import { InMemoryOrdersRepository } from './ordersRepository';
 import { InMemoryUsersRepository } from './usersRepository';
@@ -8,11 +9,9 @@ export class MockRepositories {
   static orders: OrdersRepository;
   static users: UsersRepository;
 
-  static init() {
-    this.auth = new InMemoryAuthRepository();
-    this.orders = new InMemoryOrdersRepository();
+  static init(actor: ActorContext) {
+    this.auth = new InMemoryAuthRepository(actor);
+    this.orders = new InMemoryOrdersRepository(actor);
     this.users = new InMemoryUsersRepository();
   }
 }
-
-MockRepositories.init();

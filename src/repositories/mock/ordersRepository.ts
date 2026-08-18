@@ -1,8 +1,11 @@
 import { OrdersRepository, DeliveryOrder, CreateOrderInput, ChangeOrderStatusInput, OrderFilters } from '../interfaces';
-import { OrderStatus } from '@/types';
+import { canTransitionOrder, transitionOrder } from '@/logic/orderTransitions';
+import { ActorContext } from '@/types';
 
 export class InMemoryOrdersRepository implements OrdersRepository {
   private orders: Map<string, DeliveryOrder> = new Map();
+
+  constructor(private actor: ActorContext) {}
 
   async listOrders(_filters?: OrderFilters): Promise<DeliveryOrder[]> {
     return Array.from(this.orders.values());
@@ -25,7 +28,7 @@ export class InMemoryOrdersRepository implements OrdersRepository {
       fee: input.fee,
       status: 'pending',
       assignedCaptainId: null,
-      createdByUserId: input.createdByUserId,
+      createdByUserId: this.actor.userId,
       cancellationReason: null,
       createdAt: now,
       updatedAt: now,
@@ -38,25 +41,49 @@ export class InMemoryOrdersRepository implements OrdersRepository {
   async assignCaptain(orderId: string, captainId: string): Promise<DeliveryOrder> {
     const order = this.orders.get(orderId);
     if (!order) throw new Error('Order not found');
-    const updated: DeliveryOrder = {
-      ...order,
+
+    const transitionResult = canTransitionOrder(this.actor, order, 'assigned');
+    if (!transitionResult.allowed) {
+      throw new Error(`Cannot assign captain: ${transitionResult.reason}`);
+    }
+
+    const updated = transitionOrder(order, this.actor, {
+      orderId,
+      nextStatus: 'assigned',
+      cancellationReason: undefined,
+    });
+
+    if (updated === order) {
+      throw new Error('Failed to transition order to assigned');
+    }
+
+    const finalOrder = {
+      ...updated,
       assignedCaptainId: captainId,
-      status: 'assigned',
-      updatedAt: new Date().toISOString(),
     };
-    this.orders.set(orderId, updated);
-    return updated;
+
+    this.orders.set(orderId, finalOrder);
+    return finalOrder;
   }
 
   async cancelOrder(orderId: string, reason: string): Promise<DeliveryOrder> {
     const order = this.orders.get(orderId);
     if (!order) throw new Error('Order not found');
-    const updated: DeliveryOrder = {
-      ...order,
-      status: 'cancelled',
+
+    if (!reason || reason.trim() === '') {
+      throw new Error('Cancellation reason is required');
+    }
+
+    const updated = transitionOrder(order, this.actor, {
+      orderId,
+      nextStatus: 'cancelled',
       cancellationReason: reason,
-      updatedAt: new Date().toISOString(),
-    };
+    });
+
+    if (updated === order) {
+      throw new Error('Failed to cancel order');
+    }
+
     this.orders.set(orderId, updated);
     return updated;
   }
@@ -64,15 +91,12 @@ export class InMemoryOrdersRepository implements OrdersRepository {
   async changeOrderStatus(input: ChangeOrderStatusInput): Promise<DeliveryOrder> {
     const order = this.orders.get(input.orderId);
     if (!order) throw new Error('Order not found');
-    const updated: DeliveryOrder = {
-      ...order,
-      status: input.nextStatus,
-      updatedAt: new Date().toISOString(),
-      cancellationReason: input.cancellationReason ?? order.cancellationReason,
-    };
-    if (input.nextStatus === 'completed') {
-      updated.completedAt = new Date().toISOString();
+
+    const updated = transitionOrder(order, this.actor, input);
+    if (updated === order) {
+      throw new Error(`Cannot transition order to ${input.nextStatus}`);
     }
+
     this.orders.set(input.orderId, updated);
     return updated;
   }

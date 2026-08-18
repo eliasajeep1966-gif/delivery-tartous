@@ -20,6 +20,9 @@ export type OrderStatus =
   | 'false_order';
 
 export interface Database {
+  __InternalSupabase: {
+    PostgrestVersion: '12';
+  };
   public: {
     Tables: {
       profiles: {
@@ -306,34 +309,34 @@ export interface Database {
           p_delivery_address: string;
           p_fee: number;
         };
-        Returns: unknown;
+        Returns: Tables['orders']['Row'];
       };
       assign_order_captain: {
         Args: {
           p_order_id: string;
           p_captain_id: string;
         };
-        Returns: unknown;
+        Returns: Tables['orders']['Row'];
       };
       cancel_order: {
         Args: {
           p_order_id: string;
           p_cancellation_reason: string;
         };
-        Returns: unknown;
+        Returns: Tables['orders']['Row'];
       };
       transition_assigned_order: {
         Args: {
           p_order_id: string;
           p_next_status: OrderStatus;
         };
-        Returns: unknown;
+        Returns: Tables['orders']['Row'];
       };
       set_captain_availability: {
         Args: {
           new_availability: CaptainAvailability;
         };
-        Returns: unknown;
+        Returns: Tables['captain_status']['Row'];
       };
     };
     Enums: {

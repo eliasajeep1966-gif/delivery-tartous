@@ -114,6 +114,19 @@ export function runOrderTransitionTests() {
     'supervisor cannot perform captain-only transition false_order'
   );
 
+  assertFalse(
+    canTransitionOrder({ role: 'captain', userId: 'captain-1' }, createOrder(), 'completed').allowed,
+    'captain cannot transition pending directly to completed'
+  );
+
+  const cancelInput = { orderId: 'order-1', nextStatus: 'cancelled' as const };
+  const cancelResult = transitionOrder(
+    createOrder(),
+    { role: 'admin', userId: 'admin-1' },
+    cancelInput
+  );
+  assertEqual(cancelResult.status, 'pending', 'cancellation without reason should keep original status');
+
   const originalOrder = createOrder({ status: 'completed' });
   const result = transitionOrder(
     originalOrder,
