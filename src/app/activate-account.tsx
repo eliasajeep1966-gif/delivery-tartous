@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router, Stack } from 'expo-router';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { deliverySupabase } from '@/data/supabase/supabaseContract';
+import { useAuthenticatedRedirect } from '@/features/auth/useAuthenticatedRedirect';
 
 export default function ActivateAccountScreen() {
   const [email, setEmail] = useState('');
@@ -9,6 +10,8 @@ export default function ActivateAccountScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useAuthenticatedRedirect();
 
   async function handleActivate() {
     setLoading(true);

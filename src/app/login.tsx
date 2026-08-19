@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { router, Stack } from 'expo-router';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { deliverySupabase } from '@/data/supabase/supabaseContract';
+import { useAuthenticatedRedirect } from '@/features/auth/useAuthenticatedRedirect';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useAuthenticatedRedirect();
 
   async function handleLogin() {
     setLoading(true);

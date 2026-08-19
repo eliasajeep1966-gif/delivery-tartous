@@ -36,11 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch {
+      if (session) {
+        await deliverySupabase.auth.signOut();
+      }
       clearSession();
     } finally {
       setIsBootstrapping(false);
     }
-  }, [clearSession]);
+  }, [clearSession, session]);
 
   useEffect(() => {
     bootstrap();
@@ -65,8 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             setNeedsActivation(false);
           } catch {
+            await deliverySupabase.auth.signOut();
             clearSession();
-            setNeedsActivation(true);
           }
         } else {
           setProfile(null);

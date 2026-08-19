@@ -2,9 +2,10 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/features/auth/useAuth';
+import { AppRole } from '@/data/supabase/supabaseContract';
 
 interface ProtectedRoleGateProps {
-  allowedRoles: string[];
+  allowedRoles: AppRole[];
   children: React.ReactNode;
 }
 
