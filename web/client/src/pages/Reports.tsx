@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { BarChart3, Building2, ClipboardList, TrendingUp, Truck } from "lucide-react";
 import { MorePageLayout } from "@/components/MorePageLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { captainProfiles, filterWageOrders, formatMoney, monthOptions, wageOrders } from "@/lib/wage-data";
+import { captainProfiles, filterWageOrders, formatMoney, monthOptions, wageOrders } from "@/mocks/wage-data";
 
 export default function Reports() {
   const [month, setMonth] = useState(monthOptions[0].key);

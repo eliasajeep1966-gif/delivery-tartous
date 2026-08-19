@@ -2,7 +2,7 @@
  * Design reminder — Corporate Modern Mobile Operations:
  * RTL, information-first, operational blue #0060B8, flat white cards, no gradients.
  */
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   Bike,
@@ -14,45 +14,26 @@ import {
   Menu,
   Package,
   Settings2,
-  UsersRound,
   WalletCards,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { NewOrderDialog } from "@/components/NewOrderDialog";
+import { AdminBottomNav } from "@/components/AdminBottomNav";
 import {
   availableCaptains,
   recentOrders,
   summaryMetrics,
-  type OrderStatus,
-} from "@/lib/dashboard-data";
-import { useActivity } from "@/contexts/ActivityContext";
+} from "@/mocks/dashboard-data";
+import { orderStatusPresentation, type OrderStatus } from "@/features/admin/types";
 
 type Filter = "all" | OrderStatus;
-
-const statusMeta: Record<OrderStatus, { label: string; className: string; stripClass: string }> = {
-  delivered: {
-    label: "تم التوصيل",
-    className: "bg-emerald-50 text-emerald-600",
-    stripClass: "bg-emerald-500",
-  },
-  waiting: {
-    label: "بانتظار استلام الكابتن",
-    className: "bg-blue-50 text-[#0060B8]",
-    stripClass: "bg-[#0060B8]",
-  },
-  picked_up: {
-    label: "تم الاستلام",
-    className: "bg-violet-50 text-violet-600",
-    stripClass: "bg-violet-500",
-  },
-};
 
 const navItems = [
   { id: "more", label: "المزيد", icon: Menu },
   { id: "orders", label: "الطلبات", icon: Package },
   { id: "home", label: "الرئيسية", icon: HomeIcon },
-  { id: "users", label: "المستخدمون", icon: UsersRound },
+  { id: "captains", label: "الكباتن", icon: Bike },
   { id: "fees", label: "الأجور", icon: WalletCards },
 ];
 
@@ -61,26 +42,18 @@ export default function Home() {
   const [activeNav, setActiveNav] = useState("home");
   const [filter, setFilter] = useState<Filter>("all");
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
-  const { createdOrders } = useActivity();
-
-  const visibleOrders = useMemo(
-    () => {
-      const allOrders = [...createdOrders, ...recentOrders];
-      return filter === "all" ? allOrders : allOrders.filter((order) => order.status === filter);
-    },
-    [createdOrders, filter],
-  );
+  const visibleOrders = filter === "all" ? recentOrders : recentOrders.filter((order) => order.status === filter);
 
   const selectMetric = (metricId: string) => {
-    const filterByMetric: Record<string, Filter> = {
-      waiting: "waiting",
-      delivered: "delivered",
+    const filterByMetric: Record<string, OrderStatus> = {
+      pending: "pending",
+      completed: "completed",
     };
     const nextFilter = filterByMetric[metricId];
 
     if (nextFilter) {
       setFilter(nextFilter);
-      toast.info(`يتم عرض الطلبات: ${nextFilter === "waiting" ? "بانتظار استلام الكابتن" : "تم التوصيل"}`);
+      toast.info(`يتم عرض الطلبات: ${orderStatusPresentation[nextFilter].label}`);
       return;
     }
 
@@ -94,11 +67,11 @@ export default function Home() {
       return;
     }
     if (itemId === "orders") {
-      setLocation("/logs");
+      setLocation("/orders");
       return;
     }
-    if (itemId === "users") {
-      setLocation("/users");
+    if (itemId === "captains") {
+      setLocation("/captains");
       return;
     }
     if (itemId === "fees") {
@@ -202,7 +175,7 @@ export default function Home() {
               <h3 id="recent-orders-title" className="text-base font-semibold">آخر النشاطات</h3>
               <button
                 type="button"
-                onClick={() => setFilter("all")}
+                onClick={() => setLocation("/orders")}
                 className="text-xs font-bold text-[#0060B8] transition-opacity hover:opacity-70"
               >
                 عرض الكل
@@ -212,7 +185,7 @@ export default function Home() {
             <div className="space-y-2">
               {visibleOrders.length ? (
                 visibleOrders.map((order) => {
-                  const meta = statusMeta[order.status];
+                  const meta = orderStatusPresentation[order.status];
                   return (
                     <button
                       type="button"
@@ -275,33 +248,14 @@ export default function Home() {
                     <span className="absolute right-0 bottom-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
                   </span>
                   <span className="text-xs font-bold">{captain.name}</span>
-                  <span className="text-[10px] text-[#414752]">{captain.availability}</span>
+                  <span className="text-[10px] text-[#414752]">متاح</span>
                 </button>
               ))}
             </div>
           </section>
         </main>
 
-        <nav aria-label="التنقل الرئيسي" className="fixed right-0 bottom-0 left-0 z-30 mx-auto flex h-[72px] w-full max-w-[453px] items-center justify-around rounded-t-2xl border-t-2 border-[#a8c8ff]/60 bg-[#0060B8] px-2 text-white shadow-[0_-4px_18px_rgba(0,96,184,0.2)]">
-          {navItems.map((item) => {
-            const NavIcon = item.icon;
-            const isActive = activeNav === item.id;
-            return (
-              <button
-                type="button"
-                key={item.id}
-                onClick={() => onNavClick(item.id, item.label)}
-                className={`flex min-w-[54px] flex-col items-center justify-center rounded-xl px-2 py-1.5 transition-all duration-150 active:scale-[0.94] ${
-                  isActive ? "-translate-y-3 bg-white px-5 text-[#0060B8] shadow-[0_4px_12px_rgba(0,0,0,0.12)]" : "text-white hover:bg-white/10"
-                }`}
-                aria-current={isActive ? "page" : undefined}
-              >
-                <NavIcon size={21} strokeWidth={isActive ? 2.75 : 2.2} fill={isActive ? "currentColor" : "none"} />
-                <span className="mt-1 text-[11px] font-bold whitespace-nowrap">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <AdminBottomNav active="home" />
         <NewOrderDialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen} captains={availableCaptains} />
       </div>
     </div>

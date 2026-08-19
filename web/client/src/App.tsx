@@ -2,11 +2,12 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { ActivityProvider } from "./contexts/ActivityContext";
 import Home from "./pages/Home";
+import Orders from "./pages/Orders";
+import Captains from "./pages/Captains";
 import Users from "./pages/Users";
 import ActivityLogs from "./pages/ActivityLogs";
 import Wages from "./pages/Wages";
@@ -21,10 +22,15 @@ import ActivateAccount from "./pages/ActivateAccount";
 
 
 function Router() {
+  const [location] = useLocation();
+
   return (
+    <main key={location} className="relative isolate min-h-[100dvh]">
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/users"} component={Users} />
+      <Route path={"/orders"} component={Orders} />
+      <Route path={"/captains"} component={Captains} />
       <Route path={"/logs"} component={ActivityLogs} />
       <Route path={"/wages"} component={Wages} />
       <Route path={"/wage-orders"} component={WageOrders} />
@@ -39,6 +45,7 @@ function Router() {
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
+    </main>
   );
 }
 
@@ -55,10 +62,8 @@ function App() {
         // switchable
       >
         <TooltipProvider>
-          <ActivityProvider>
-            <Toaster />
-            <Router />
-          </ActivityProvider>
+          <Toaster />
+          <Router />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

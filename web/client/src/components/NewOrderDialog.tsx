@@ -2,7 +2,7 @@
  * Design reminder — Corporate Modern Mobile Operations:
  * RTL modal, stacked white information cards, #0060B8 for primary actions, Cairo Arabic typography.
  */
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { FileText, MapPin, Phone, Plus, Send, Store, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -19,8 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Captain } from "@/lib/dashboard-data";
-import { useActivity } from "@/contexts/ActivityContext";
+import type { CaptainOption, OrderDraft, OrderDraftSubmission } from "@/features/admin/types";
 
 type LocationEntry = {
   id: string;
@@ -33,11 +32,12 @@ type LocationEntry = {
 type NewOrderDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  captains: Captain[];
+  captains: CaptainOption[];
+  onSubmitDraft?: (submission: OrderDraftSubmission) => void;
 };
 
-const createLocationEntry = (): LocationEntry => ({
-  id: crypto.randomUUID(),
+const createLocationEntry = (id: string): LocationEntry => ({
+  id,
   name: "",
   phone: "",
   address: "",
@@ -157,13 +157,13 @@ function LocationFields({
   );
 }
 
-export function NewOrderDialog({ open, onOpenChange, captains }: NewOrderDialogProps) {
-  const [pickups, setPickups] = useState<LocationEntry[]>([createLocationEntry()]);
-  const [destinations, setDestinations] = useState<LocationEntry[]>([createLocationEntry()]);
+export function NewOrderDialog({ open, onOpenChange, captains, onSubmitDraft }: NewOrderDialogProps) {
+  const locationSequence = useRef(0);
+  const createDraftLocation = () => createLocationEntry(`location-${locationSequence.current++}`);
+  const [pickups, setPickups] = useState<LocationEntry[]>([createDraftLocation()]);
+  const [destinations, setDestinations] = useState<LocationEntry[]>([createDraftLocation()]);
   const [captainId, setCaptainId] = useState("");
-  const { createOrder } = useActivity();
-
-  const availableOnly = captains.filter((captain) => captain.availability === "متاح");
+  const availableOnly = captains.filter((captain) => captain.availability === "available");
 
   const updateLocation = (
     setter: React.Dispatch<React.SetStateAction<LocationEntry[]>>,
@@ -175,8 +175,8 @@ export function NewOrderDialog({ open, onOpenChange, captains }: NewOrderDialogP
   };
 
   const resetForm = () => {
-    setPickups([createLocationEntry()]);
-    setDestinations([createLocationEntry()]);
+    setPickups([createDraftLocation()]);
+    setDestinations([createDraftLocation()]);
     setCaptainId("");
   };
 
@@ -192,22 +192,17 @@ export function NewOrderDialog({ open, onOpenChange, captains }: NewOrderDialogP
       return;
     }
 
-    const captain = availableOnly.find((item) => item.id === captainId);
-    const firstPickup = pickups[0];
-    const firstDestination = destinations[0];
-    const order = createOrder({
-      customer: firstDestination.name,
-      location: firstDestination.address,
-      source: firstPickup.name,
-      captain: captain?.name ?? "المحدد",
-      note: firstPickup.note,
-    });
-    toast.success(`تم إنشاء الطلب #${order.id} وإسناده إلى الكابتن ${captain?.name ?? "المحدد"}.`);
+    const draft: OrderDraft = {
+      pickups: pickups.map(({ name, phone, address, note }) => ({ name, phone, address, note: note || undefined })),
+      destinations: destinations.map(({ name, phone, address }) => ({ name, phone, address })),
+    };
+    onSubmitDraft?.({ draft, captainId });
+    toast.info("تم تجهيز مسودة الطلب للربط. لم يُنشأ طلب أو رقم طلب داخل الواجهة.");
     handleOpenChange(false);
   };
 
   const addLocation = (setter: React.Dispatch<React.SetStateAction<LocationEntry[]>>) => {
-    setter((locations) => [...locations, createLocationEntry()]);
+    setter((locations) => [...locations, createDraftLocation()]);
   };
 
   const removeLocation = (setter: React.Dispatch<React.SetStateAction<LocationEntry[]>>, id: string) => {

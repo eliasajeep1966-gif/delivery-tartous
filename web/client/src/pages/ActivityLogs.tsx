@@ -18,13 +18,12 @@ import {
   Trash2,
   Truck,
   UserPlus,
-  UsersRound,
   WalletCards,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useActivity } from "@/contexts/ActivityContext";
+import { AdminBottomNav } from "@/components/AdminBottomNav";
 
 type LogCategory = "all" | "orders" | "users" | "captains" | "system";
 
@@ -70,7 +69,7 @@ const navItems = [
   { id: "more", label: "المزيد", icon: Menu },
   { id: "orders", label: "الطلبات", icon: Package },
   { id: "home", label: "الرئيسية", icon: HomeIcon },
-  { id: "users", label: "المستخدمون", icon: UsersRound },
+  { id: "captains", label: "الكباتن", icon: Truck },
   { id: "fees", label: "الأجور", icon: WalletCards },
 ];
 
@@ -78,20 +77,15 @@ export default function ActivityLogs() {
   const [, setLocation] = useLocation();
   const [category, setCategory] = useState<LogCategory>("all");
   const [query, setQuery] = useState("");
-  const { createdActivities } = useActivity();
-
   const filteredActivities = useMemo(() => {
-    const allActivities: ActivityLog[] = [
-      ...createdActivities.map((activity) => ({ ...activity, icon: Package })),
-      ...activities,
-    ];
+    const allActivities: ActivityLog[] = activities;
     const normalized = query.trim().toLowerCase();
     return allActivities.filter((activity) => {
       const matchesCategory = category === "all" || activity.category === category;
       const searchable = `${activity.action} ${activity.subject} ${activity.actor} ${activity.details}`.toLowerCase();
       return matchesCategory && (!normalized || searchable.includes(normalized));
     });
-  }, [category, createdActivities, query]);
+  }, [category, query]);
 
   const navigate = (itemId: string, label: string) => {
     if (itemId === "home") {
@@ -102,15 +96,19 @@ export default function ActivityLogs() {
       setLocation("/more");
       return;
     }
-    if (itemId === "users") {
-      setLocation("/logs");
+    if (itemId === "captains") {
+      setLocation("/captains");
       return;
     }
     if (itemId === "fees") {
       setLocation("/wages");
       return;
     }
-    if (itemId !== "orders") toast.info(`واجهة «${label}» ستُبنى عند اختيارك لها.`);
+    if (itemId === "orders") {
+      setLocation("/orders");
+      return;
+    }
+    toast.info(`واجهة «${label}» ستُبنى عند اختيارك لها.`);
   };
 
   return (
@@ -196,18 +194,7 @@ export default function ActivityLogs() {
           </section>
         </main>
 
-        <nav aria-label="التنقل الرئيسي" className="fixed right-0 bottom-0 left-0 z-30 mx-auto flex h-[72px] w-full max-w-[453px] items-center justify-around rounded-t-2xl border-t-2 border-[#a8c8ff]/60 bg-[#0060B8] px-2 text-white shadow-[0_-4px_18px_rgba(0,96,184,0.2)]">
-          {navItems.map((item) => {
-            const NavIcon = item.icon;
-            const isActive = item.id === "orders";
-            return (
-              <button type="button" key={item.id} onClick={() => navigate(item.id, item.label)} className={`flex min-w-[54px] flex-col items-center justify-center rounded-xl px-2 py-1.5 transition-all duration-150 active:scale-[0.94] ${isActive ? "-translate-y-3 bg-white px-5 text-[#0060B8] shadow-[0_4px_12px_rgba(0,0,0,0.12)]" : "text-white hover:bg-white/10"}`} aria-current={isActive ? "page" : undefined}>
-                <NavIcon size={21} strokeWidth={isActive ? 2.75 : 2.2} fill={isActive ? "currentColor" : "none"} />
-                <span className="mt-1 text-[11px] font-bold whitespace-nowrap">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <AdminBottomNav active="more" />
       </div>
     </div>
   );

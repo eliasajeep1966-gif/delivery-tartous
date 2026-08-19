@@ -1,12 +1,12 @@
 {
-  "name": "delivery-admin-dashboard",
+  "name": "delivery-tartous-web",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "start": "NODE_ENV=production node dist/index.js",
+    "build": "vite build --configLoader runner",
+    "start": "vite preview --host",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
     "format": "prettier --write ."

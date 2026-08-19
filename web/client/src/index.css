@@ -88,3 +88,17 @@
     transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
   }
 }
+
+/* Shared navigation invariant: every main tab keeps one fixed grid cell across every route. */
+nav[aria-label="التنقل الرئيسي"] {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  justify-content: initial !important;
+}
+
+nav[aria-label="التنقل الرئيسي"] > button {
+  width: 100% !important;
+  min-width: 0 !important;
+  transform: none !important;
+  padding-inline: 0.25rem !important;
+}

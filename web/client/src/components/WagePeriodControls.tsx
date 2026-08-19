@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getPeriodOptions, type Period } from "@/lib/wage-data";
+import { getPeriodOptions, type Period } from "@/mocks/wage-data";
 
 const labels: Record<Period, string> = { daily: "يومي", weekly: "أسبوعي", monthly: "شهري" };
 
