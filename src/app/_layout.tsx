@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AuthProvider } from '@/features/auth/AuthProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -12,8 +13,10 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <Slot />
+      <AuthProvider>
+        <AnimatedSplashOverlay />
+        <Slot />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
