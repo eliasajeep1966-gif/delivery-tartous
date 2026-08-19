@@ -113,6 +113,87 @@ export type Database = {
           },
         ]
       }
+      captain_payout_items: {
+        Row: {
+          captain_amount: number
+          created_at: string
+          financial_ledger_id: string
+          payout_id: string
+        }
+        Insert: {
+          captain_amount: number
+          created_at?: string
+          financial_ledger_id: string
+          payout_id: string
+        }
+        Update: {
+          captain_amount?: number
+          created_at?: string
+          financial_ledger_id?: string
+          payout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "captain_payout_items_financial_ledger_id_fkey"
+            columns: ["financial_ledger_id"]
+            isOneToOne: true
+            referencedRelation: "financial_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "captain_payout_items_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "captain_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      captain_payouts: {
+        Row: {
+          captain_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string
+          paid_by_user_id: string
+          total_amount: number
+        }
+        Insert: {
+          captain_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          paid_by_user_id: string
+          total_amount: number
+        }
+        Update: {
+          captain_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          paid_by_user_id?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "captain_payouts_captain_id_fkey"
+            columns: ["captain_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "captain_payouts_paid_by_user_id_fkey"
+            columns: ["paid_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       captain_status: {
         Row: {
           availability: Database["public"]["Enums"]["captain_availability"]
@@ -309,6 +390,79 @@ export type Database = {
             columns: ["created_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_account_activations: {
+        Row: {
+          activated_at: string | null
+          auth_user_id: string | null
+          cancelled_at: string | null
+          created_at: string
+          created_by_user_id: string
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          activated_at?: string | null
+          auth_user_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by_user_id: string
+          email: string
+          full_name?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          activated_at?: string | null
+          auth_user_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_account_activations_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_captain_custody: {
+        Row: {
+          created_at: string
+          id: string
+          item_name: string
+          pending_account_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_name: string
+          pending_account_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_name?: string
+          pending_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_captain_custody_pending_account_id_fkey"
+            columns: ["pending_account_id"]
+            isOneToOne: false
+            referencedRelation: "pending_account_activations"
             referencedColumns: ["id"]
           },
         ]
@@ -523,6 +677,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_pending_account: {
+        Args: { p_pending_id: string }
+        Returns: {
+          activated_at: string | null
+          auth_user_id: string | null
+          cancelled_at: string | null
+          created_at: string
+          created_by_user_id: string
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pending_account_activations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_account_activation: {
         Args: never
         Returns: {
@@ -538,6 +712,28 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_captain_payout: {
+        Args: {
+          p_captain_id: string
+          p_financial_ledger_ids: string[]
+          p_notes?: string
+        }
+        Returns: {
+          captain_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string
+          paid_by_user_id: string
+          total_amount: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "captain_payouts"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -577,6 +773,109 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_pending_account: {
+        Args: {
+          p_custody_items_text?: string
+          p_email: string
+          p_full_name?: string
+          p_role?: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: {
+          activated_at: string | null
+          auth_user_id: string | null
+          cancelled_at: string | null
+          created_at: string
+          created_by_user_id: string
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pending_account_activations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_pending_account_activation: {
+        Args: { p_auth_user_id: string; p_email: string }
+        Returns: {
+          account_activated_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_captain_wage_details: {
+        Args: { p_captain_id: string }
+        Returns: {
+          captain_amount: number
+          company_amount: number
+          completed_at: string
+          financial_ledger_id: string
+          gross_fee: number
+          order_id: string
+          order_number: number
+          paid_at: string
+          payout_id: string
+          settlement_amount: number
+          source_status: Database["public"]["Enums"]["order_status"]
+        }[]
+      }
+      get_captain_wage_summary: {
+        Args: { p_captain_id?: string }
+        Returns: {
+          captain_id: string
+          captain_name: string
+          captain_net_total: number
+          gross_total: number
+          order_count: number
+          paid_total: number
+          unpaid_total: number
+        }[]
+      }
+      get_wage_totals: {
+        Args: never
+        Returns: {
+          captain_net_total: number
+          company_total: number
+          gross_total: number
+          paid_total: number
+          settlement_total: number
+          unpaid_total: number
+        }[]
+      }
+      list_pending_accounts: {
+        Args: never
+        Returns: {
+          activated_at: string | null
+          auth_user_id: string | null
+          cancelled_at: string | null
+          created_at: string
+          created_by_user_id: string
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "pending_account_activations"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       return_captain_custody: {
         Args: { p_custody_id: string; p_return_notes?: string }
         Returns: {
@@ -594,6 +893,25 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "captain_custody"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_captain_active: {
+        Args: { p_captain_id: string; p_is_active: boolean }
+        Returns: {
+          account_activated_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
           isOneToOne: true
           isSetofReturn: false
         }

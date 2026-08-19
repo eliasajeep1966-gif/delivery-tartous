@@ -18,9 +18,14 @@ function validateEnv() {
   return { url, key };
 }
 
+/**
+ * The single Expo Supabase client. Do not create another client elsewhere.
+ * Auth sessions survive app restarts through AsyncStorage and refresh automatically.
+ */
 export function getSupabaseClient(): SupabaseClient<Database> {
   if (!cachedClient) {
     const { url, key } = validateEnv();
+
     cachedClient = createClient<Database>(url, key, {
       auth: {
         storage: AsyncStorage,

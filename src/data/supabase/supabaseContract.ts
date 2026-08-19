@@ -4,8 +4,8 @@ import { getSupabaseClient } from './supabaseClient';
 import type { Database, Tables } from './database.types';
 
 /**
- * This module is the only approved application-facing Supabase API.
- * Do not call getSupabaseClient().from(...).insert/update/delete from screens.
+ * The only approved application-facing Supabase API.
+ * Screens and hooks use this module; they never write directly to protected tables.
  */
 
 export type AppRole = Database['public']['Enums']['app_role'];
@@ -18,8 +18,20 @@ export type CaptainStatus = Tables<'captain_status'>;
 export type FinancialLedgerEntry = Tables<'financial_ledger'>;
 export type OrderStatusHistory = Tables<'order_status_history'>;
 export type CaptainCustody = Tables<'captain_custody'>;
+export type PendingAccountActivation = Tables<'pending_account_activations'>;
+export type PendingCaptainCustody = Tables<'pending_captain_custody'>;
+export type CaptainPayout = Tables<'captain_payouts'>;
+export type CaptainPayoutItem = Tables<'captain_payout_items'>;
 export type Permission = Tables<'permissions'>;
 export type UserPermissionOverride = Tables<'user_permission_overrides'>;
+
+type RpcName = keyof Database['public']['Functions'];
+type RpcReturn<Name extends RpcName> = Database['public']['Functions'][Name]['Returns'];
+type RpcRow<Name extends RpcName> = RpcReturn<Name> extends Array<infer Row> ? Row : never;
+
+export type WageTotals = RpcRow<'get_wage_totals'>;
+export type CaptainWageSummary = RpcRow<'get_captain_wage_summary'>;
+export type CaptainWageDetail = RpcRow<'get_captain_wage_details'>;
 
 export type CreateOrderInput = {
   customerName: string;
@@ -29,25 +41,23 @@ export type CreateOrderInput = {
   fee: number;
 };
 
-export type InviteUserInput = {
+export type CreatePendingAccountInput = {
   email: string;
   fullName?: string;
   role: AppRole;
-  /** One custody item per line. Valid only when role is captain. */
+  /** One custody item per line. Custody is valid only for a captain. */
   custodyItemsText?: string;
 };
 
-export type InviteUserResult = {
-  userId: string;
+export type ActivatePendingAccountInput = {
   email: string;
-  role: AppRole;
-  custodyItemCount: number;
-  message: string;
-};
-
-export type AccountActivationInput = {
   password: string;
   passwordConfirmation: string;
+};
+
+export type ActivatePendingAccountResult = {
+  message: string;
+  profile: Pick<Profile, 'id' | 'role'>;
 };
 
 type HasMessage = { message: string } | null;
@@ -58,13 +68,18 @@ function unwrap<T>(data: T | null, error: HasMessage, fallbackMessage: string): 
   return data;
 }
 
-function validatePasswordActivation(input: AccountActivationInput) {
+function validatePendingActivation(input: ActivatePendingAccountInput) {
+  const email = input.email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('A valid email is required.');
+  }
   if (input.password !== input.passwordConfirmation) {
     throw new Error('Password confirmation does not match.');
   }
   if (input.password.length < 12) {
     throw new Error('Password must be at least 12 characters long.');
   }
+  return email;
 }
 
 export const deliverySupabase = {
@@ -76,7 +91,10 @@ export const deliverySupabase = {
     },
 
     async signInWithPassword(email: string, password: string): Promise<Session> {
-      const { data, error } = await getSupabaseClient().auth.signInWithPassword({ email, password });
+      const { data, error } = await getSupabaseClient().auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
       return unwrap(data.session, error, 'Login did not create a session.');
     },
 
@@ -85,20 +103,20 @@ export const deliverySupabase = {
       if (error) throw new Error(error.message);
     },
 
-    /**
-     * Call only after Supabase has verified an invitation/deep-link token and created a session.
-     * This is the first-login screen: choose password, confirm password, then activate the profile.
-     */
-    async activateInvitedAccount(input: AccountActivationInput): Promise<Profile> {
-      validatePasswordActivation(input);
-
-      const { error: passwordError } = await getSupabaseClient().auth.updateUser({
-        password: input.password,
-      });
-      if (passwordError) throw new Error(passwordError.message);
-
-      const { data, error } = await getSupabaseClient().rpc('complete_account_activation');
-      return unwrap(data, error, 'Account activation did not return a profile.');
+    /** First use only: creates Auth user from an admin-created Pending account. No email link is used. */
+    async activatePendingAccount(input: ActivatePendingAccountInput): Promise<ActivatePendingAccountResult> {
+      const email = validatePendingActivation(input);
+      const { data, error } = await getSupabaseClient().functions.invoke<ActivatePendingAccountResult>(
+        'activate-pending-account',
+        {
+          body: {
+            email,
+            password: input.password,
+            passwordConfirmation: input.passwordConfirmation,
+          },
+        }
+      );
+      return unwrap(data, error, 'Account activation could not be completed.');
     },
   },
 
@@ -124,37 +142,12 @@ export const deliverySupabase = {
       return unwrap(data, error, 'Could not load captain availability.');
     },
 
-    async userPermissionOverrides(userId: string): Promise<UserPermissionOverride[]> {
-      const { data, error } = await getSupabaseClient()
-        .from('user_permission_overrides')
-        .select('*')
-        .eq('user_id', userId)
-        .order('permission_code', { ascending: true });
-      return unwrap(data, error, 'Could not load user permission overrides.');
-    },
-
     async orders(): Promise<Order[]> {
       const { data, error } = await getSupabaseClient()
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
       return unwrap(data, error, 'Could not load orders.');
-    },
-
-    async myCustody(): Promise<CaptainCustody[]> {
-      const { data, error } = await getSupabaseClient()
-        .from('captain_custody')
-        .select('*')
-        .order('assigned_at', { ascending: false });
-      return unwrap(data, error, 'Could not load custody records.');
-    },
-
-    async financialLedger(): Promise<FinancialLedgerEntry[]> {
-      const { data, error } = await getSupabaseClient()
-        .from('financial_ledger')
-        .select('*')
-        .order('created_at', { ascending: false });
-      return unwrap(data, error, 'Could not load financial ledger.');
     },
 
     async orderStatusHistory(orderId: string): Promise<OrderStatusHistory[]> {
@@ -166,12 +159,55 @@ export const deliverySupabase = {
       return unwrap(data, error, 'Could not load order history.');
     },
 
+    async myCustody(): Promise<CaptainCustody[]> {
+      const { data, error } = await getSupabaseClient()
+        .from('captain_custody')
+        .select('*')
+        .order('assigned_at', { ascending: false });
+      return unwrap(data, error, 'Could not load custody records.');
+    },
+
     async permissions(): Promise<Permission[]> {
       const { data, error } = await getSupabaseClient()
         .from('permissions')
         .select('*')
         .order('code', { ascending: true });
       return unwrap(data, error, 'Could not load permissions.');
+    },
+
+    async userPermissionOverrides(userId: string): Promise<UserPermissionOverride[]> {
+      const { data, error } = await getSupabaseClient()
+        .from('user_permission_overrides')
+        .select('*')
+        .eq('user_id', userId)
+        .order('permission_code', { ascending: true });
+      return unwrap(data, error, 'Could not load user permission overrides.');
+    },
+
+    async pendingAccounts(): Promise<PendingAccountActivation[]> {
+      const { data, error } = await getSupabaseClient().rpc('list_pending_accounts');
+      return unwrap(data, error, 'Could not load pending accounts.');
+    },
+
+    async wageTotals(): Promise<WageTotals> {
+      const { data, error } = await getSupabaseClient().rpc('get_wage_totals');
+      const rows = unwrap(data, error, 'Could not load wage totals.');
+      if (!rows[0]) throw new Error('Wage totals did not return a result.');
+      return rows[0];
+    },
+
+    async captainWageSummary(captainId?: string): Promise<CaptainWageSummary[]> {
+      const { data, error } = await getSupabaseClient().rpc('get_captain_wage_summary',
+        captainId ? { p_captain_id: captainId } : undefined
+      );
+      return unwrap(data, error, 'Could not load captain wage summary.');
+    },
+
+    async captainWageDetails(captainId: string): Promise<CaptainWageDetail[]> {
+      const { data, error } = await getSupabaseClient().rpc('get_captain_wage_details', {
+        p_captain_id: captainId,
+      });
+      return unwrap(data, error, 'Could not load captain wage details.');
     },
   },
 
@@ -218,6 +254,31 @@ export const deliverySupabase = {
       return unwrap(data, error, 'Availability update did not return a record.');
     },
 
+    async createPendingAccount(input: CreatePendingAccountInput): Promise<PendingAccountActivation> {
+      const { data, error } = await getSupabaseClient().rpc('create_pending_account', {
+        p_email: input.email.trim().toLowerCase(),
+        p_full_name: input.fullName?.trim() || undefined,
+        p_role: input.role,
+        p_custody_items_text: input.custodyItemsText || undefined,
+      });
+      return unwrap(data, error, 'Pending account creation did not return a record.');
+    },
+
+    async cancelPendingAccount(pendingId: string): Promise<PendingAccountActivation> {
+      const { data, error } = await getSupabaseClient().rpc('cancel_pending_account', {
+        p_pending_id: pendingId,
+      });
+      return unwrap(data, error, 'Pending account cancellation did not return a record.');
+    },
+
+    async setCaptainActive(captainId: string, isActive: boolean): Promise<Profile> {
+      const { data, error } = await getSupabaseClient().rpc('set_captain_active', {
+        p_captain_id: captainId,
+        p_is_active: isActive,
+      });
+      return unwrap(data, error, 'Captain status update did not return a profile.');
+    },
+
     async assignCaptainCustody(
       captainId: string,
       itemName: string,
@@ -237,6 +298,19 @@ export const deliverySupabase = {
         p_return_notes: returnNotes,
       });
       return unwrap(data, error, 'Custody return did not return a record.');
+    },
+
+    async createCaptainPayout(
+      captainId: string,
+      financialLedgerIds: string[],
+      notes?: string
+    ): Promise<CaptainPayout> {
+      const { data, error } = await getSupabaseClient().rpc('create_captain_payout', {
+        p_captain_id: captainId,
+        p_financial_ledger_ids: financialLedgerIds,
+        p_notes: notes,
+      });
+      return unwrap(data, error, 'Captain payout did not return a record.');
     },
 
     async setUserRole(userId: string, role: AppRole): Promise<Profile> {
@@ -259,28 +333,18 @@ export const deliverySupabase = {
       });
       return unwrap(data, error, 'Permission update did not return an override.');
     },
-
-    async inviteUser(input: InviteUserInput): Promise<InviteUserResult> {
-      const { data, error } = await getSupabaseClient().functions.invoke<InviteUserResult>('invite-user', {
-        body: {
-          email: input.email,
-          fullName: input.fullName ?? '',
-          role: input.role,
-          custodyItemsText: input.custodyItemsText ?? '',
-        },
-      });
-      return unwrap(data, error, 'Invitation did not return a result.');
-    },
   },
 } as const;
 
 /**
- * Banned in screens/hooks:
+ * Prohibited outside src/data/supabase:
  * - getSupabaseClient().from('orders').insert/update/delete(...)
  * - getSupabaseClient().from('financial_ledger').insert/update/delete(...)
- * - getSupabaseClient().from('order_status_history').insert/update/delete(...)
+ * - getSupabaseClient().from('captain_payouts').insert/update/delete(...)
+ * - getSupabaseClient().from('captain_payout_items').insert/update/delete(...)
+ * - getSupabaseClient().from('pending_account_activations').insert/update/delete(...)
  * - getSupabaseClient().from('profiles').insert/update/delete(...)
  * - getSupabaseClient().from('captain_custody').insert/update/delete(...)
- * - auth.signUp(...) from the mobile app
- * - service_role / secret keys in any Expo source file
+ * - auth.signUp(...) from Expo
+ * - service_role keys or any secret in Expo source
  */
