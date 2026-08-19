@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CaptainOption, OrderDraft, OrderDraftSubmission } from "@/features/admin/types";
+import type { CaptainOption, CreateOrderFlowDraft, OrderDraft } from "@/features/admin/types";
 
 type LocationEntry = {
   id: string;
@@ -33,7 +33,8 @@ type NewOrderDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   captains: CaptainOption[];
-  onSubmitDraft?: (submission: OrderDraftSubmission) => void;
+  // Integration must call create_order first, then assign_order_captain with the returned order id.
+  onSubmitCreateOrderFlow?: (flow: CreateOrderFlowDraft) => void;
 };
 
 const createLocationEntry = (id: string): LocationEntry => ({
@@ -157,7 +158,7 @@ function LocationFields({
   );
 }
 
-export function NewOrderDialog({ open, onOpenChange, captains, onSubmitDraft }: NewOrderDialogProps) {
+export function NewOrderDialog({ open, onOpenChange, captains, onSubmitCreateOrderFlow }: NewOrderDialogProps) {
   const locationSequence = useRef(0);
   const createDraftLocation = () => createLocationEntry(`location-${locationSequence.current++}`);
   const [pickups, setPickups] = useState<LocationEntry[]>([createDraftLocation()]);
@@ -192,11 +193,11 @@ export function NewOrderDialog({ open, onOpenChange, captains, onSubmitDraft }: 
       return;
     }
 
-    const draft: OrderDraft = {
+    const order: OrderDraft = {
       pickups: pickups.map(({ name, phone, address, note }) => ({ name, phone, address, note: note || undefined })),
       destinations: destinations.map(({ name, phone, address }) => ({ name, phone, address })),
     };
-    onSubmitDraft?.({ draft, captainId });
+    onSubmitCreateOrderFlow?.({ order, assignedCaptainId: captainId });
     toast.info("تم تجهيز مسودة الطلب للربط. لم يُنشأ طلب أو رقم طلب داخل الواجهة.");
     handleOpenChange(false);
   };
