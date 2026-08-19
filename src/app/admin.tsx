@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { deliverySupabase } from '@/data/supabase/supabaseContract';
@@ -37,12 +37,27 @@ export default function AdminScreen() {
     }
   }
 
+  useEffect(() => {
+    loadPendingAccounts();
+  }, []);
+
   async function handleCreate() {
-    setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
     setError(null);
+
+    if (!normalizedEmail) {
+      setError('أدخل البريد الإلكتروني أولاً.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError('أدخل بريداً إلكترونياً صحيحاً، مثل name@example.com.');
+      return;
+    }
+
+    setLoading(true);
     try {
       await deliverySupabase.actions.createPendingAccount({
-        email,
+        email: normalizedEmail,
         fullName: fullName || undefined,
         role,
         custodyItemsText: role === 'captain' ? custodyText : undefined,
@@ -52,8 +67,10 @@ export default function AdminScreen() {
       setRole('captain');
       setCustodyText('');
       await loadPendingAccounts();
-    } catch {
-      setError('تعذر إنشاء الحساب المعلّق.');
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'تعذر إنشاء الحساب المعلّق.';
+      setError(message);
+      Alert.alert('تعذر إنشاء الحساب', message);
     } finally {
       setLoading(false);
     }
@@ -88,7 +105,10 @@ export default function AdminScreen() {
           placeholder="البريد الإلكتروني"
           placeholderTextColor="#64748B"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            if (error) setError(null);
+          }}
           autoCapitalize="none"
           keyboardType="email-address"
           textAlign="right"
