@@ -2,23 +2,20 @@ import { useState } from 'react';
 import { router, Stack } from 'expo-router';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { deliverySupabase } from '@/data/supabase/supabaseContract';
-import { useAuth } from '@/features/auth/useAuth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { signOut } = useAuth();
 
   async function handleLogin() {
     setLoading(true);
     setError(null);
     try {
       await deliverySupabase.auth.signInWithPassword(email, password);
-      await signOut();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر تسجيل الدخول');
+    } catch {
+      setError('بيانات الدخول غير صحيحة أو الحساب غير مفعّل.');
     } finally {
       setLoading(false);
     }

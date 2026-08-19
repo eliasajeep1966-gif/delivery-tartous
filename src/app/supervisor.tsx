@@ -1,23 +1,21 @@
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ProtectedRoleGate } from '@/features/auth/ProtectedRoleGate';
 import { useAuth } from '@/features/auth/useAuth';
 
 export default function SupervisorScreen() {
-  const { role, signOut } = useAuth();
-
-  if (role !== 'supervisor') {
-    router.replace('/');
-    return null;
-  }
+  const { signOut } = useAuth();
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'لوحة المشرف' }} />
-      <Text style={styles.roleText}>دخولك كمشرف</Text>
-      <TouchableOpacity style={styles.button} onPress={signOut}>
-        <Text style={styles.buttonText}>تسجيل الخروج</Text>
-      </TouchableOpacity>
-    </View>
+    <ProtectedRoleGate allowedRoles={['supervisor']}>
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: 'لوحة المشرف' }} />
+        <Text style={styles.roleText}>دخولك كمشرف</Text>
+        <TouchableOpacity style={styles.button} onPress={signOut}>
+          <Text style={styles.buttonText}>تسجيل الخروج</Text>
+        </TouchableOpacity>
+      </View>
+    </ProtectedRoleGate>
   );
 }
 

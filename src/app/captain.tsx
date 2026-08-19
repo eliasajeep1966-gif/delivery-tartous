@@ -1,23 +1,21 @@
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ProtectedRoleGate } from '@/features/auth/ProtectedRoleGate';
 import { useAuth } from '@/features/auth/useAuth';
 
 export default function CaptainScreen() {
-  const { role, signOut } = useAuth();
-
-  if (role !== 'captain') {
-    router.replace('/');
-    return null;
-  }
+  const { signOut } = useAuth();
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'لوحة الكابتن' }} />
-      <Text style={styles.roleText}>دخولك ككابتن</Text>
-      <TouchableOpacity style={styles.button} onPress={signOut}>
-        <Text style={styles.buttonText}>تسجيل الخروج</Text>
-      </TouchableOpacity>
-    </View>
+    <ProtectedRoleGate allowedRoles={['captain']}>
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: 'لوحة الكابتن' }} />
+        <Text style={styles.roleText}>دخولك ككابتن</Text>
+        <TouchableOpacity style={styles.button} onPress={signOut}>
+          <Text style={styles.buttonText}>تسجيل الخروج</Text>
+        </TouchableOpacity>
+      </View>
+    </ProtectedRoleGate>
   );
 }
 

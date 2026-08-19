@@ -8,7 +8,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [needsActivation, setNeedsActivation] = useState(false);
 
   const clearSession = useCallback(() => {
@@ -19,7 +18,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const bootstrap = useCallback(async () => {
     setIsBootstrapping(true);
-    setError(null);
     try {
       const currentSession = await deliverySupabase.auth.getSession();
       setSession(currentSession);
@@ -29,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profileData);
 
         const isInactive = profileData.is_active !== true;
-        const notActivated = (profileData as Profile & { account_activated_at: string | null }).account_activated_at === null;
+        const notActivated = profileData.account_activated_at === null;
 
         if (isInactive || notActivated) {
           await deliverySupabase.auth.signOut();
@@ -37,8 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setNeedsActivation(true);
         }
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع');
+    } catch {
       clearSession();
     } finally {
       setIsBootstrapping(false);
@@ -58,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(profileData);
 
             const isInactive = profileData.is_active !== true;
-            const notActivated = (profileData as Profile & { account_activated_at: string | null }).account_activated_at === null;
+            const notActivated = profileData.account_activated_at === null;
 
             if (isInactive || notActivated) {
               await deliverySupabase.auth.signOut();
@@ -98,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     profile,
     role: profile?.role ?? null,
-    error,
+    error: null,
     needsActivation,
     signOut,
   };

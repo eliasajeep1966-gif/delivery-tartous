@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AppRole } from '@/data/supabase/supabaseContract';
+import { Tables } from '@/data/supabase/database.types';
 
 export interface AuthContextValue {
   isBootstrapping: boolean;
@@ -22,12 +23,4 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-export type Profile = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: AppRole;
-  is_active: boolean | null;
-  created_at: string;
-  updated_at: string;
-};
+export type Profile = Tables<'profiles'>;
