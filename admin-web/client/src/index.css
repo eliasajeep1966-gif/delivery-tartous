@@ -1,0 +1,90 @@
+/*
+ * Design reminder — Corporate Modern Mobile Operations:
+ * RTL Arabic interface, #0060B8 operational blue, low-depth white cards, no gradients.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --radius: 1rem;
+  --background: #f0f7ff;
+  --foreground: #1c1b1b;
+  --card: #ffffff;
+  --card-foreground: #1c1b1b;
+  --popover: #ffffff;
+  --popover-foreground: #1c1b1b;
+  --primary: #0060b8;
+  --primary-foreground: #ffffff;
+  --secondary: #dce3eb;
+  --secondary-foreground: #414752;
+  --muted: #edf4fa;
+  --muted-foreground: #414752;
+  --accent: #d5e3ff;
+  --accent-foreground: #00488d;
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+  --border: #dbe7f2;
+  --input: #d1d5db;
+  --ring: #0060b8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    background: #eaf5ff;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-width: 320px;
+    font-family: "Cairo", sans-serif;
+    direction: rtl;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button:focus-visible {
+    outline: 2px solid #0060b8;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button {
+    transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+}
