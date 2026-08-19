@@ -24,7 +24,7 @@ export function SectionHeader({ title, actionLabel, onActionPress }: SectionHead
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: deliverySpacing.md,

@@ -1,6 +1,5 @@
-import { Pressable, Text, View, type ViewStyle, StyleSheet } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { SymbolView } from 'expo-symbols';
-import type { ReactNode } from 'react';
 
 import { deliveryColors, deliverySpacing } from '@/constants/deliveryTheme';
 
@@ -22,21 +21,32 @@ const CAPTAIN_TABS = [
 type RoleBottomNavigationProps = {
   role: 'admin' | 'supervisor' | 'captain';
   activeTab: string;
-  onTabPress: (key: string) => void;
+  onTabPress?: (key: string) => void;
+  disabledTabs?: string[];
 };
 
-export function RoleBottomNavigation({ role, activeTab, onTabPress }: RoleBottomNavigationProps) {
+export function RoleBottomNavigation({
+  role,
+  activeTab,
+  onTabPress,
+  disabledTabs = [],
+}: RoleBottomNavigationProps) {
   const tabs = role === 'captain' ? CAPTAIN_TABS : ADMIN_TABS;
 
   return (
     <View style={styles.container}>
       {tabs.map((tab) => {
-        const isActive = activeTab === tab.key;
+        const isDisabled = disabledTabs.includes(tab.key);
+        const isActive = !isDisabled && activeTab === tab.key;
+        const onPress = !isDisabled && onTabPress ? () => onTabPress(tab.key) : undefined;
+
         return (
           <Pressable
             key={tab.key}
-            onPress={() => onTabPress(tab.key)}
-            style={styles.tab}
+            disabled={isDisabled}
+            onPress={onPress}
+            style={[styles.tab, isDisabled && styles.disabledTab]}
+            accessibilityState={{ disabled: isDisabled, selected: isActive }}
             hitSlop={8}
           >
             <SymbolView
@@ -74,6 +84,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 4,
+  },
+  disabledTab: {
+    opacity: 0.42,
   },
   label: {
     fontSize: 11,

@@ -1,98 +1,98 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { AppHeader } from '@/components/layout/AppHeader';
+import { AppShell } from '@/components/layout/AppShell';
+import { RoleBottomNavigation } from '@/components/layout/RoleBottomNavigation';
+import { AvailableCaptainsRow } from '@/components/management/AvailableCaptainsRow';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { OrderSummaryCard } from '@/components/ui/OrderSummaryCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { deliverySpacing } from '@/constants/deliveryTheme';
+import {
+  getManagementDashboard,
+  managementDashboardRole,
+} from '@/data/mock/managementDashboard';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const disabledTabs = ['orders', 'captains', 'salaries', 'more'];
+const dashboard = getManagementDashboard(managementDashboardRole);
 
 export default function HomeScreen() {
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+    <AppShell
+      header={<AppHeader roleLabel={dashboard.roleLabel} showNotifications />}
+      bottomNavigation={
+        <RoleBottomNavigation
+          role={dashboard.role}
+          activeTab="home"
+          disabledTabs={disabledTabs}
+        />
+      }
+    >
+      <View style={styles.metricsGrid}>
+        <View style={styles.metricSlot}>
+          <MetricCard
+            icon={<SymbolView name="person.crop.circle.badge.checkmark" size={28} tintColor="#0060B8" />}
+            label="بانتظار استلام الكابتن"
+            value={dashboard.metrics.awaitingCaptainAcceptance}
+            tone="primary"
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
+        </View>
+        <View style={styles.metricSlot}>
+          <MetricCard
+            icon={<SymbolView name="bicycle" size={28} tintColor="#16A34A" />}
+            label="قيد التوصيل"
+            value={dashboard.metrics.inDelivery}
+            tone="success"
           />
-        </ThemedView>
+        </View>
+        <View style={styles.metricSlot}>
+          <MetricCard
+            icon={<SymbolView name="checkmark.circle" size={28} tintColor="#0060B8" />}
+            label="تم التوصيل اليوم"
+            value={dashboard.metrics.completed}
+            tone="primary"
+          />
+        </View>
+        <View style={styles.metricSlot}>
+          <MetricCard
+            icon={<SymbolView name="xmark.circle" size={28} tintColor="#DC2626" />}
+            label="طلبات مغلقة"
+            value={dashboard.metrics.closed}
+            tone="danger"
+          />
+        </View>
+      </View>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      <SectionHeader title="أحدث الطلبات" />
+      <View style={styles.ordersList}>
+        {dashboard.orders.slice(0, 3).map((order) => (
+          <OrderSummaryCard key={order.id} order={order} />
+        ))}
+      </View>
+
+      <SectionHeader title="الكباتن المتاحون" />
+      <View style={styles.captainsSection}>
+        <AvailableCaptainsRow captains={dashboard.captains} />
+      </View>
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+  metricsGrid: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: deliverySpacing.md,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+  metricSlot: {
+    width: '48%',
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+  ordersList: {
+    gap: deliverySpacing.md,
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  captainsSection: {
+    marginHorizontal: -deliverySpacing.lg,
+    marginBottom: deliverySpacing.lg,
   },
 });
