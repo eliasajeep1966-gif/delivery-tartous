@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -8,7 +8,7 @@ import { AvailableCaptainsRow } from '@/components/management/AvailableCaptainsR
 import { MetricCard } from '@/components/ui/MetricCard';
 import { OrderSummaryCard } from '@/components/ui/OrderSummaryCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { deliverySpacing } from '@/constants/deliveryTheme';
+import { deliveryColors, deliveryRadius, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   getManagementDashboard,
   managementDashboardRole,
@@ -29,6 +29,28 @@ export default function HomeScreen() {
         />
       }
     >
+      <View style={styles.greeting}>
+        <Text style={styles.greetingTitle}>مرحباً، {dashboard.roleLabel}</Text>
+        <Text style={styles.greetingSubtitle}>إليك ملخص حركة الطلبات اليوم</Text>
+      </View>
+
+      <Pressable
+        disabled
+        accessibilityState={{ disabled: true }}
+        style={[styles.createOrderButton, styles.createOrderButtonDisabled]}
+      >
+        <View style={styles.createOrderContent}>
+          <View style={styles.createOrderIcon}>
+            <SymbolView name="plus" size={22} tintColor={deliveryColors.surface} />
+          </View>
+          <View style={styles.createOrderText}>
+            <Text style={styles.createOrderTitle}>إنشاء طلب جديد</Text>
+            <Text style={styles.createOrderSubtitle}>ستتوفر هذه الميزة قريباً</Text>
+          </View>
+        </View>
+        <SymbolView name="chevron.left" size={18} tintColor={deliveryColors.surface} />
+      </Pressable>
+
       <View style={styles.metricsGrid}>
         <View style={styles.metricSlot}>
           <MetricCard
@@ -57,8 +79,8 @@ export default function HomeScreen() {
         <View style={styles.metricSlot}>
           <MetricCard
             icon={<SymbolView name="xmark.circle" size={28} tintColor="#DC2626" />}
-            label="طلبات مغلقة"
-            value={dashboard.metrics.closed}
+            label="طلبات ملغاة"
+            value={dashboard.metrics.cancelled}
             tone="danger"
           />
         </View>
@@ -80,6 +102,65 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  greeting: {
+    alignItems: 'flex-end',
+    gap: deliverySpacing.xs,
+  },
+  greetingTitle: {
+    color: deliveryColors.text,
+    fontSize: 24,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  greetingSubtitle: {
+    color: deliveryColors.muted,
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  createOrderButton: {
+    marginTop: deliverySpacing.xl,
+    marginBottom: deliverySpacing.md,
+    minHeight: 84,
+    borderRadius: deliveryRadius.lg,
+    backgroundColor: deliveryColors.primary,
+    paddingHorizontal: deliverySpacing.lg,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  createOrderButtonDisabled: {
+    opacity: 0.58,
+  },
+  createOrderContent: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: deliverySpacing.md,
+  },
+  createOrderIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: deliveryRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createOrderText: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  createOrderTitle: {
+    color: deliveryColors.surface,
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  createOrderSubtitle: {
+    color: '#D9ECFF',
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
   metricsGrid: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',

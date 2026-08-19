@@ -13,7 +13,7 @@ export type ManagementDashboard = {
     awaitingCaptainAcceptance: number;
     inDelivery: number;
     completed: number;
-    closed: number;
+    cancelled: number;
   };
 };
 
@@ -95,9 +95,7 @@ const metrics = {
   awaitingCaptainAcceptance: orders.filter((order) => order.status === 'assigned').length,
   inDelivery: orders.filter((order) => order.status === 'in_delivery').length,
   completed: orders.filter((order) => order.status === 'completed').length,
-  closed: orders.filter(
-    (order) => order.status === 'cancelled' || order.status === 'false_order'
-  ).length,
+  cancelled: orders.filter((order) => order.status === 'cancelled').length,
 };
 
 const dashboards: Record<ManagementDashboardRole, ManagementDashboard> = {

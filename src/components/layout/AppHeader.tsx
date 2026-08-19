@@ -1,6 +1,5 @@
-import { Pressable, Text, View, type ViewStyle, StyleSheet } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { SymbolView } from 'expo-symbols';
-import type { ReactNode } from 'react';
 
 import { deliveryColors, deliverySpacing } from '@/constants/deliveryTheme';
 
@@ -17,6 +16,9 @@ export function AppHeader({
   onNotificationsPress,
   onSettingsPress,
 }: AppHeaderProps) {
+  const notificationsDisabled = !onNotificationsPress;
+  const settingsDisabled = !onSettingsPress;
+
   return (
     <View style={styles.container}>
       <View style={styles.titleBlock}>
@@ -25,11 +27,23 @@ export function AppHeader({
       </View>
       <View style={styles.actions}>
         {showNotifications && (
-          <Pressable onPress={onNotificationsPress} style={styles.iconButton} hitSlop={8}>
+          <Pressable
+            disabled={notificationsDisabled}
+            onPress={onNotificationsPress}
+            style={[styles.iconButton, notificationsDisabled && styles.disabledIconButton]}
+            accessibilityState={{ disabled: notificationsDisabled }}
+            hitSlop={8}
+          >
             <SymbolView name="bell" size={20} tintColor={deliveryColors.surface} />
           </Pressable>
         )}
-        <Pressable onPress={onSettingsPress} style={styles.iconButton} hitSlop={8}>
+        <Pressable
+          disabled={settingsDisabled}
+          onPress={onSettingsPress}
+          style={[styles.iconButton, settingsDisabled && styles.disabledIconButton]}
+          accessibilityState={{ disabled: settingsDisabled }}
+          hitSlop={8}
+        >
           <SymbolView name="gearshape" size={20} tintColor={deliveryColors.surface} />
         </Pressable>
       </View>
@@ -74,5 +88,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  disabledIconButton: {
+    opacity: 0.42,
   },
 });
