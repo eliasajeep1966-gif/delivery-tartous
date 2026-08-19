@@ -4,15 +4,9 @@ import { Stack } from 'expo-router';
 import { deliverySupabase } from '@/data/supabase/supabaseContract';
 import { ProtectedRoleGate } from '@/features/auth/ProtectedRoleGate';
 import { useAuth } from '@/features/auth/useAuth';
-import { AppRole } from '@/data/supabase/supabaseContract';
+import { AppRole, PendingAccountActivation } from '@/data/supabase/supabaseContract';
 
-type PendingAccount = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: AppRole;
-  created_at: string;
-};
+type PendingAccount = PendingAccountActivation;
 
 export default function AdminScreen() {
   const { signOut } = useAuth();
@@ -20,7 +14,8 @@ export default function AdminScreen() {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<AppRole>('captain');
   const [custodyText, setCustodyText] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingAccounts, setPendingAccounts] = useState<PendingAccount[]>([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -54,25 +49,25 @@ export default function AdminScreen() {
       return;
     }
 
-    setLoading(true);
+    setIsCreating(true);
     try {
-      await deliverySupabase.actions.createPendingAccount({
+      const created = await deliverySupabase.actions.createPendingAccount({
         email: normalizedEmail,
         fullName: fullName || undefined,
         role,
         custodyItemsText: role === 'captain' ? custodyText : undefined,
       });
+      setPendingAccounts((current) => [created as PendingAccount, ...current.filter((item) => item.id !== created.id)]);
       setEmail('');
       setFullName('');
       setRole('captain');
       setCustodyText('');
-      await loadPendingAccounts();
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'تعذر إنشاء الحساب المعلّق.';
       setError(message);
       Alert.alert('تعذر إنشاء الحساب', message);
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   }
 
@@ -83,16 +78,23 @@ export default function AdminScreen() {
         text: 'نعم',
         style: 'destructive',
         onPress: async () => {
+          setCancellingId(id);
           try {
             await deliverySupabase.actions.cancelPendingAccount(id);
-            await loadPendingAccounts();
-          } catch {
-            setError('تعذر إلغاء الحساب.');
+            setPendingAccounts((current) => current.filter((item) => item.id !== id));
+          } catch (cause) {
+            const message = cause instanceof Error ? cause.message : 'تعذر إلغاء الحساب.';
+            setError(message);
+            Alert.alert('تعذر إلغاء الحساب', message);
+          } finally {
+            setCancellingId(null);
           }
         },
       },
     ]);
   }
+
+  const isAccountClosed = (account: PendingAccount) => account.activated_at !== null || account.cancelled_at !== null;
 
   return (
     <ProtectedRoleGate allowedRoles={['admin']}>
@@ -150,11 +152,11 @@ export default function AdminScreen() {
         )}
         {error && <Text style={styles.error}>{error}</Text>}
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, isCreating && styles.buttonDisabled]}
           onPress={handleCreate}
-          disabled={loading}
+          disabled={isCreating}
         >
-          <Text style={styles.buttonText}>{loading ? 'جارٍ الإنشاء...' : 'إنشاء الحساب المعلّق'}</Text>
+          <Text style={styles.buttonText}>{isCreating ? 'جارٍ الإنشاء...' : 'إنشاء الحساب المعلّق'}</Text>
         </TouchableOpacity>
 
         <View style={styles.divider} />
@@ -179,12 +181,17 @@ export default function AdminScreen() {
               <Text style={styles.cardMeta}>
                 {account.full_name || '—'} • {new Date(account.created_at).toLocaleDateString('ar-SY')}
               </Text>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => handleCancel(account.id)}
-              >
-                <Text style={styles.cancelButtonText}>إلغاء</Text>
-              </TouchableOpacity>
+              {!isAccountClosed(account) && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => handleCancel(account.id)}
+                  disabled={cancellingId === account.id}
+                >
+                  <Text style={styles.cancelButtonText}>
+                    {cancellingId === account.id ? 'جارٍ الإلغاء...' : 'إلغاء'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))
         )}
