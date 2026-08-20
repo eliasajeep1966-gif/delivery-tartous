@@ -68,20 +68,6 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Pre-check avoids creating an Auth user for a non-pending email.
-    // The final server-only RPC locks the row and repeats the state check atomically.
-    const { data: pending, error: pendingError } = await adminClient
-      .from("pending_account_activations")
-      .select("id")
-      .eq("email", email)
-      .is("activated_at", null)
-      .is("cancelled_at", null)
-      .maybeSingle();
-
-    if (pendingError || !pending) {
-      return json(genericActivationFailure, 400);
-    }
-
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -105,8 +91,8 @@ Deno.serve(async (req: Request) => {
     if (finalizeError || !profile) {
       console.error("Pending activation finalization failed", finalizeError);
 
-      // Best-effort compensation: auth.users -> profiles is cascade-linked.
-      // A failed finalization must not leave a usable Auth account behind.
+      // The server-only finalization RPC locks and validates the pending row atomically.
+      // Best-effort compensation prevents an Auth account from remaining usable when it fails.
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(authUserId);
       if (deleteError) console.error("Failed activation compensation delete", deleteError);
 

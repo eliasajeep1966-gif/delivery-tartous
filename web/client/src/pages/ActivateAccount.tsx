@@ -36,6 +36,10 @@ export default function ActivateAccount() {
   useEffect(() => {
     if (status === 'authenticated' && profile?.role === 'admin') {
       setLocation('/', { replace: true });
+      return;
+    }
+    if (status === 'authenticated' && profile?.role === 'captain') {
+      setLocation('/captain', { replace: true });
     }
   }, [profile?.role, setLocation, status]);
 
@@ -67,7 +71,7 @@ export default function ActivateAccount() {
     setIsSubmitting(true);
 
     try {
-      await withAuthRequestTimeout(
+      const activation = await withAuthRequestTimeout(
         webSupabase.auth.activatePendingAccount({
           email: normalizedEmail,
           password,
@@ -83,7 +87,7 @@ export default function ActivateAccount() {
 
       await refresh();
       toast.success('تم تفعيل الحساب وتسجيل الدخول بنجاح.');
-      setLocation('/', { replace: true });
+      setLocation(activation.profile.role === 'captain' ? '/captain' : '/', { replace: true });
     } catch (error) {
       toast.error(activationErrorMessage(error));
     } finally {

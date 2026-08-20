@@ -3,6 +3,7 @@ import { type ComponentType } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 
 import { AdminRouteGuard } from '@/components/AdminRouteGuard';
+import { CaptainRouteGuard } from '@/components/CaptainRouteGuard';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -10,6 +11,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { WebAuthProvider } from '@/contexts/WebAuthContext';
 import ActivateAccount from '@/pages/ActivateAccount';
 import ActivityLogs from '@/pages/ActivityLogs';
+import CaptainHome from '@/pages/CaptainHome';
 import Captains from '@/pages/Captains';
 import CompanyWages from '@/pages/CompanyWages';
 import Custody from '@/pages/Custody';
@@ -33,6 +35,14 @@ function AdminRoute({ component: Component }: { component: ComponentType }) {
   );
 }
 
+function CaptainRoute({ component: Component }: { component: ComponentType }) {
+  return (
+    <CaptainRouteGuard>
+      <Component />
+    </CaptainRouteGuard>
+  );
+}
+
 function Router() {
   const [location] = useLocation();
 
@@ -42,6 +52,7 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/activate-account" component={ActivateAccount} />
         <Route path="/activate" component={ActivateAccount} />
+        <Route path="/captain" component={() => <CaptainRoute component={CaptainHome} />} />
         <Route path="/" component={() => <AdminRoute component={Home} />} />
         <Route path="/users" component={() => <AdminRoute component={Users} />} />
         <Route path="/orders" component={() => <AdminRoute component={Orders} />} />

@@ -38,8 +38,13 @@ export default function Login() {
       return;
     }
 
+    if (status === 'authenticated' && profile?.role === 'captain') {
+      setLocation('/captain', { replace: true });
+      return;
+    }
+
     if (status === 'authenticated' && profile) {
-      toast.error('هذا الحساب لا يملك صلاحية الدخول إلى لوحة الأدمن.');
+      toast.error('هذا الحساب لا يملك واجهة مفعّلة على الويب حالياً.');
       void signOut().catch(() => undefined);
       return;
     }

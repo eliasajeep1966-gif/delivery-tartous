@@ -7,6 +7,7 @@ import { getWebSupabaseClient } from './webSupabaseClient';
 export type WebAppRole = Database['public']['Enums']['app_role'];
 export type WebProfile = Tables<'profiles'>;
 export type WebCaptainStatus = Tables<'captain_status'>;
+export type WebCaptainAvailability = Database['public']['Enums']['captain_availability'];
 export type WebPendingAccount = Tables<'pending_account_activations'>;
 export type WebPermission = Tables<'permissions'>;
 export type WebUserPermissionOverride = Tables<'user_permission_overrides'>;
@@ -207,6 +208,14 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحميل حالات الكباتن.');
     },
 
+    async myCustody(): Promise<Tables<'captain_custody'>[]> {
+      const { data, error } = await getWebSupabaseClient()
+        .from('captain_custody')
+        .select('*')
+        .order('assigned_at', { ascending: false });
+      return unwrap(data, error, 'تعذر تحميل الأمانات.');
+    },
+
     async orders(): Promise<WebOrder[]> {
       const { data, error } = await getWebSupabaseClient()
         .from('orders')
@@ -315,6 +324,21 @@ export const webSupabase = {
         p_cancellation_reason: normalizedReason,
       });
       return unwrap(data, error, 'تعذر إلغاء الطلب.');
+    },
+
+    async transitionAssignedOrder(orderId: string, nextStatus: Extract<WebOrderStatus, 'received' | 'in_delivery' | 'completed'>): Promise<WebOrder> {
+      const { data, error } = await getWebSupabaseClient().rpc('transition_assigned_order', {
+        p_order_id: orderId,
+        p_next_status: nextStatus,
+      });
+      return unwrap(data, error, 'تعذر تحديث مرحلة الطلب.');
+    },
+
+    async setCaptainAvailability(availability: WebCaptainAvailability): Promise<WebCaptainStatus> {
+      const { data, error } = await getWebSupabaseClient().rpc('set_captain_availability', {
+        new_availability: availability,
+      });
+      return unwrap(data, error, 'تعذر تحديث حالة التوفر.');
     },
 
     async createPendingAccount(input: CreatePendingAccountInput): Promise<WebPendingAccount> {
