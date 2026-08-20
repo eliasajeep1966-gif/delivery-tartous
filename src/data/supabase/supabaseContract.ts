@@ -34,6 +34,13 @@ type RpcRow<Name extends RpcName> = RpcReturn<Name> extends Array<infer Row> ? R
 export type WageTotals = RpcRow<'get_wage_totals'>;
 export type CaptainWageSummary = RpcRow<'get_captain_wage_summary'>;
 export type CaptainWageDetail = RpcRow<'get_captain_wage_details'>;
+export type CaptainWageDetailV2 = RpcRow<'get_captain_wage_details_v2'>;
+
+export type CreateCaptainPartialPayoutInput = {
+  captainId: string;
+  amount: number;
+  notes?: string;
+};
 
 export type CreateOrderInput = {
   customerName: string;
@@ -237,6 +244,13 @@ export const deliverySupabase = {
       });
       return unwrap(data, error, 'Could not load captain wage details.');
     },
+
+    async captainWageDetailsV2(captainId: string): Promise<CaptainWageDetailV2[]> {
+      const { data, error } = await getSupabaseClient().rpc('get_captain_wage_details_v2', {
+        p_captain_id: captainId,
+      });
+      return unwrap(data, error, 'Could not load captain wage details.');
+    },
   },
 
   actions: {
@@ -355,6 +369,17 @@ export const deliverySupabase = {
         p_notes: notes,
       });
       return unwrap(data, error, 'Captain payout did not return a record.');
+    },
+
+    async createCaptainPartialPayout(
+      input: CreateCaptainPartialPayoutInput
+    ): Promise<CaptainPayout> {
+      const { data, error } = await getSupabaseClient().rpc('create_captain_partial_payout', {
+        p_captain_id: input.captainId,
+        p_amount: input.amount,
+        p_notes: input.notes?.trim() || undefined,
+      });
+      return unwrap(data, error, 'Partial captain payout did not return a record.');
     },
 
     async setUserRole(userId: string, role: AppRole): Promise<Profile> {
