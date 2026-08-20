@@ -11,6 +11,7 @@ import Captains from "./pages/Captains";
 import Users from "./pages/Users";
 import ActivityLogs from "./pages/ActivityLogs";
 import Wages from "./pages/Wages";
+import CompanyWages from "./pages/CompanyWages";
 import WageOrders from "./pages/WageOrders";
 import More from "./pages/More";
 import Custody from "./pages/Custody";
@@ -33,6 +34,7 @@ function Router() {
       <Route path={"/captains"} component={Captains} />
       <Route path={"/logs"} component={ActivityLogs} />
       <Route path={"/wages"} component={Wages} />
+      <Route path={"/company-wages"} component={CompanyWages} />
       <Route path={"/wage-orders"} component={WageOrders} />
       <Route path={"/more"} component={More} />
       <Route path={"/custody"} component={Custody} />

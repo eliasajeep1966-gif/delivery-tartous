@@ -3,7 +3,7 @@
  * RTL modal, stacked white information cards, #0060B8 for primary actions, Cairo Arabic typography.
  */
 import { useRef, useState, type FormEvent } from "react";
-import { FileText, MapPin, Phone, Plus, Send, Store, Trash2, UserRound } from "lucide-react";
+import { Banknote, FileText, MapPin, Phone, Plus, Send, Store, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -163,6 +163,7 @@ export function NewOrderDialog({ open, onOpenChange, captains, onSubmitCreateOrd
   const createDraftLocation = () => createLocationEntry(`location-${locationSequence.current++}`);
   const [pickups, setPickups] = useState<LocationEntry[]>([createDraftLocation()]);
   const [destinations, setDestinations] = useState<LocationEntry[]>([createDraftLocation()]);
+  const [feeInput, setFeeInput] = useState("");
   const [captainId, setCaptainId] = useState("");
   const availableOnly = captains.filter((captain) => captain.availability === "available");
 
@@ -178,6 +179,7 @@ export function NewOrderDialog({ open, onOpenChange, captains, onSubmitCreateOrd
   const resetForm = () => {
     setPickups([createDraftLocation()]);
     setDestinations([createDraftLocation()]);
+    setFeeInput("");
     setCaptainId("");
   };
 
@@ -188,6 +190,11 @@ export function NewOrderDialog({ open, onOpenChange, captains, onSubmitCreateOrd
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const totalFee = Number(feeInput.trim());
+    if (!feeInput.trim() || !Number.isFinite(totalFee) || totalFee <= 0) {
+      toast.error("أدخل أجرة الطلب كاملة كرقم موجب.");
+      return;
+    }
     if (!captainId) {
       toast.error("اختر كابتناً متاحاً قبل إرسال الطلب.");
       return;
@@ -197,7 +204,7 @@ export function NewOrderDialog({ open, onOpenChange, captains, onSubmitCreateOrd
       pickups: pickups.map(({ name, phone, address, note }) => ({ name, phone, address, note: note || undefined })),
       destinations: destinations.map(({ name, phone, address }) => ({ name, phone, address })),
     };
-    onSubmitCreateOrderFlow?.({ order, assignedCaptainId: captainId });
+    onSubmitCreateOrderFlow?.({ order, totalFee, assignedCaptainId: captainId });
     toast.info("تم تجهيز مسودة الطلب للربط. لم يُنشأ طلب أو رقم طلب داخل الواجهة.");
     handleOpenChange(false);
   };
@@ -238,6 +245,32 @@ export function NewOrderDialog({ open, onOpenChange, captains, onSubmitCreateOrd
             onAdd={() => addLocation(setDestinations)}
             onRemove={(id) => removeLocation(setDestinations, id)}
           />
+
+          <section className="rounded-2xl border border-[#dbe7f2] bg-white p-3.5">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-100 text-amber-700"><Banknote size={19} strokeWidth={2.25} /></span>
+              <div>
+                <h3 className="text-sm font-bold text-[#1c1b1b]">أجرة الطلب كاملة</h3>
+                <p className="text-[11px] leading-4 text-[#58616b]">أدخل الأجرة الإجمالية للطلب بالكامل</p>
+              </div>
+            </div>
+            <div className="relative">
+              <input
+                type="number"
+                min="0.01"
+                step="any"
+                inputMode="decimal"
+                value={feeInput}
+                onChange={(event) => { event.currentTarget.setCustomValidity(""); setFeeInput(event.target.value); }}
+                onInvalid={(event) => event.currentTarget.setCustomValidity("أدخل أجرة الطلب كاملة كرقم موجب.")}
+                placeholder="مثال: 25000"
+                className="h-11 w-full rounded-xl border border-[#c9d9e7] bg-[#fbfdff] pr-3 pl-14 text-right text-sm text-[#1c1b1b] placeholder:text-[#8a98a6] focus:border-[#0060B8] focus:outline-none focus:ring-2 focus:ring-[#0060B8]/15"
+                aria-label="أجرة الطلب كاملة بالليرة السورية"
+                required
+              />
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xs font-bold text-[#58616b]">ل.س</span>
+            </div>
+          </section>
 
           <section className="rounded-2xl border border-[#dbe7f2] bg-white p-3.5">
             <div className="mb-2 flex items-center gap-2">
