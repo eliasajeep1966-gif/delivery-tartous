@@ -35,7 +35,7 @@ import { WebRequestTimeoutError } from '@/lib/authRequest';
 type StatusFilter = 'all' | OrderStatus;
 
 const filters: StatusFilter[] = ['all', 'pending', 'assigned', 'received', 'in_delivery', 'completed', 'cancelled', 'false_order'];
-const cancellableStatuses: WebOrderStatus[] = ['pending', 'assigned', 'received', 'in_delivery'];
+const cancellableStatuses: WebOrderStatus[] = ['pending'];
 
 function formatMoney(amount: number): string {
   return `${new Intl.NumberFormat('en-US').format(amount)} ل.س`;

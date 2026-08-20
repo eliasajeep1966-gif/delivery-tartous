@@ -1,6 +1,6 @@
 /*
- * Design reminder — Corporate Modern Mobile Operations:
- * RTL Arabic interface, #0060B8 operational blue, low-depth white cards, no gradients.
+ * Design reminder — Delivery Tartous shared chrome:
+ * RTL Arabic interface, compact white headers, airy pale-blue surfaces, dense white cards, blue focus states, and one shared floating navigation.
  */
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -62,11 +62,12 @@
   }
 
   html {
-    background: #eaf5ff;
+    background: linear-gradient(180deg, #d9f3fb 0%, #9dd8ee 47%, #4e9fc9 100%);
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: linear-gradient(180deg, #d9f3fb 0%, #9dd8ee 47%, #4e9fc9 100%);
     min-width: 320px;
     font-family: "Cairo", sans-serif;
     direction: rtl;
@@ -80,6 +81,103 @@
   button:focus-visible {
     outline: 2px solid #0060b8;
     outline-offset: 2px;
+  }
+}
+
+/* Shared delivery app shell — targets every RTL operational screen without changing its content or route structure. */
+#root > main > div[dir="rtl"] {
+  background: linear-gradient(180deg, #f9fdff 0%, #eaf7fc 62%, #dbeff8 100%) !important;
+}
+
+#root > main > div[dir="rtl"] > div {
+  background: linear-gradient(180deg, rgba(249, 253, 255, 0.94) 0%, rgba(234, 247, 252, 0.88) 62%, rgba(219, 239, 248, 0.92) 100%) !important;
+}
+
+#root > main > div[dir="rtl"] > div > header.fixed:not(.home-reference-header) {
+  height: 4.25rem !important;
+  padding-inline: 0.75rem !important;
+  color: #005ba8 !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid #dceef7;
+  border-bottom-left-radius: 0 !important;
+  box-shadow: 0 2px 10px rgba(0, 90, 168, 0.06) !important;
+}
+
+#root > main > div[dir="rtl"] > div > main {
+  padding-top: 5rem !important;
+  padding-bottom: 7.5rem !important;
+  padding-inline: 0.75rem !important;
+}
+
+/* Reuse the compact home header hierarchy: one centered page title, one restrained control, and no secondary chrome. */
+#root > main > div[dir="rtl"] > div > header.fixed:not(.home-reference-header) > div:last-child > div > p {
+  display: none;
+}
+
+#root > main > div[dir="rtl"] > div > header.fixed:not(.home-reference-header) > div:last-child > div > h1 {
+  position: absolute;
+  top: 1.3rem;
+  left: 50%;
+  z-index: 1;
+  margin: 0;
+  transform: translateX(-50%);
+  color: #075b9f !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  line-height: 1rem !important;
+  white-space: nowrap;
+}
+
+#root > main > div[dir="rtl"] > div > header.fixed:not(.home-reference-header) > div:last-child > span {
+  display: none;
+}
+
+#root > main > div[dir="rtl"] > div > header.fixed:not(.home-reference-header) :is(.bg-white\/10, .bg-white\/15) {
+  border: 1px solid #d7eaf5 !important;
+  background: #eef8fc !important;
+  color: #1475ae !important;
+}
+
+/* Pages inherit the same light, dense card treatment as the adopted home design. */
+#root > main > div[dir="rtl"] > div:not(.home-reference-shell) main :is(section, article, button)[class*="bg-white"] {
+  border-color: rgba(255, 255, 255, 0.94) !important;
+  border-radius: 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 96, 184, 0.055) !important;
+}
+
+#root > main > div[dir="rtl"] > div:not(.home-reference-shell) main :is(input, textarea, [role="combobox"])[class*="bg-"] {
+  border-color: #dbeef7 !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+
+/* Home reference direction — compact white top bar and a quiet pale surface override the general watery shell only on the home route. */
+#root > main > div[dir="rtl"] > div.home-reference-shell {
+  background: linear-gradient(180deg, #f9fdff 0%, #ecf7fc 58%, #d9eff9 100%) !important;
+}
+
+#root > main > div[dir="rtl"] > div > header.fixed.home-reference-header {
+  height: 4.25rem !important;
+  padding-inline: 0.75rem !important;
+  color: #005ba8 !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid #dceef7;
+  border-bottom-left-radius: 0 !important;
+  box-shadow: 0 2px 10px rgba(0, 90, 168, 0.06) !important;
+}
+
+#root > main > div[dir="rtl"] > div.home-reference-shell > main {
+  padding-top: 5rem !important;
+}
+
+@keyframes navigation-water-sheen {
+  from { transform: translateX(-155%) rotate(13deg); }
+  to { transform: translateX(235%) rotate(13deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  nav[aria-label="التنقل الرئيسي"]::before {
+    animation: navigation-water-sheen 6.5s cubic-bezier(0.23, 1, 0.32, 1) infinite;
   }
 }
 
