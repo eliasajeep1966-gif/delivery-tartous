@@ -16,6 +16,21 @@ export type WebOrderStatusHistory = Tables<'order_status_history'>;
 export type WebOrderStatus = Database['public']['Enums']['order_status'];
 export type WebOrderStopType = Database['public']['Enums']['order_stop_type'];
 
+type WebRpcName = keyof Database['public']['Functions'];
+type WebRpcReturn<Name extends WebRpcName> = Database['public']['Functions'][Name]['Returns'];
+type WebRpcRow<Name extends WebRpcName> = WebRpcReturn<Name> extends Array<infer Row> ? Row : never;
+
+export type WebWageTotals = WebRpcRow<'get_wage_totals'>;
+export type WebCaptainWageSummary = WebRpcRow<'get_captain_wage_summary'>;
+export type WebCaptainWageDetailV2 = WebRpcRow<'get_captain_wage_details_v2'>;
+export type WebCaptainPayout = WebRpcReturn<'create_captain_partial_payout'>;
+
+export type CreateCaptainPartialPayoutInput = {
+  captainId: string;
+  amount: number;
+  notes?: string;
+};
+
 export type WebOrderStopInput = {
   stopType: WebOrderStopType;
   sequence: number;
@@ -64,6 +79,19 @@ function validateEmail(email: string): void {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error('أدخل بريداً إلكترونياً صحيحاً.');
   }
+}
+
+function validatePartialPayout(input: CreateCaptainPartialPayoutInput): CreateCaptainPartialPayoutInput {
+  const captainId = input.captainId.trim();
+  const amount = input.amount;
+
+  if (!captainId) throw new Error('تعذر تحديد الكابتن للدفعة.');
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error('أدخل مبلغ دفعة موجباً وصحيحاً.');
+  if (Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001) {
+    throw new Error('يمكن تسجيل مبلغ الدفعة بمنزلتين عشريتين كحد أقصى.');
+  }
+
+  return { captainId, amount: Number(amount.toFixed(2)), notes: input.notes?.trim() || undefined };
 }
 
 function validatePendingActivation(input: ActivatePendingAccountInput): string {
@@ -227,6 +255,28 @@ export const webSupabase = {
         .order('permission_code', { ascending: true });
       return unwrap(data, error, 'تعذر تحميل التخصيصات الحالية للصلاحيات.');
     },
+
+    async wageTotals(): Promise<WebWageTotals> {
+      const { data, error } = await getWebSupabaseClient().rpc('get_wage_totals');
+      const rows = unwrap(data, error, 'تعذر تحميل إجماليات الأجور.');
+      if (!rows[0]) throw new Error('لم تُرجع إجماليات الأجور نتيجة.');
+      return rows[0];
+    },
+
+    async captainWageSummary(captainId?: string): Promise<WebCaptainWageSummary[]> {
+      const { data, error } = await getWebSupabaseClient().rpc(
+        'get_captain_wage_summary',
+        captainId ? { p_captain_id: captainId } : undefined,
+      );
+      return unwrap(data, error, 'تعذر تحميل ملخص أجور الكباتن.');
+    },
+
+    async captainWageDetailsV2(captainId: string): Promise<WebCaptainWageDetailV2[]> {
+      const { data, error } = await getWebSupabaseClient().rpc('get_captain_wage_details_v2', {
+        p_captain_id: captainId,
+      });
+      return unwrap(data, error, 'تعذر تحميل تفاصيل أجر الكابتن.');
+    },
   },
 
   actions: {
@@ -312,6 +362,16 @@ export const webSupabase = {
         p_is_allowed: isAllowed,
       });
       return unwrap(data, error, 'تعذر حفظ تخصيص الصلاحية.');
+    },
+
+    async createCaptainPartialPayout(input: CreateCaptainPartialPayoutInput): Promise<WebCaptainPayout> {
+      const normalizedInput = validatePartialPayout(input);
+      const { data, error } = await getWebSupabaseClient().rpc('create_captain_partial_payout', {
+        p_captain_id: normalizedInput.captainId,
+        p_amount: normalizedInput.amount,
+        p_notes: normalizedInput.notes,
+      });
+      return unwrap(data, error, 'تعذر تسجيل دفعة الكابتن.');
     },
   },
 } as const;
