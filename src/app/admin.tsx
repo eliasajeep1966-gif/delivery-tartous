@@ -50,6 +50,8 @@ export default function AdminScreen() {
     }
 
     setIsCreating(true);
+    const createStartedAt = Date.now();
+    console.log('[pending:create] start', { email: normalizedEmail });
     try {
       const created = await deliverySupabase.actions.createPendingAccount({
         email: normalizedEmail,
@@ -57,12 +59,14 @@ export default function AdminScreen() {
         role,
         custodyItemsText: role === 'captain' ? custodyText : undefined,
       });
+      console.log('[pending:create] success', { durationMs: Date.now() - createStartedAt, id: created.id });
       setPendingAccounts((current) => [created as PendingAccount, ...current.filter((item) => item.id !== created.id)]);
       setEmail('');
       setFullName('');
       setRole('captain');
       setCustodyText('');
     } catch (cause) {
+      console.error('[pending:create] failed', { durationMs: Date.now() - createStartedAt, cause });
       const message = cause instanceof Error ? cause.message : 'تعذر إنشاء الحساب المعلّق.';
       setError(message);
       Alert.alert('تعذر إنشاء الحساب', message);
@@ -79,10 +83,14 @@ export default function AdminScreen() {
         style: 'destructive',
         onPress: async () => {
           setCancellingId(id);
+          const cancelStartedAt = Date.now();
+          console.log('[pending:cancel] start', { id });
           try {
             await deliverySupabase.actions.cancelPendingAccount(id);
+            console.log('[pending:cancel] success', { durationMs: Date.now() - cancelStartedAt, id });
             setPendingAccounts((current) => current.filter((item) => item.id !== id));
           } catch (cause) {
+            console.error('[pending:cancel] failed', { durationMs: Date.now() - cancelStartedAt, id, cause });
             const message = cause instanceof Error ? cause.message : 'تعذر إلغاء الحساب.';
             setError(message);
             Alert.alert('تعذر إلغاء الحساب', message);
