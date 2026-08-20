@@ -94,7 +94,7 @@ export function useAdminFinanceData(): AdminFinanceData {
         webSupabase.actions.createCaptainPartialPayout({ captainId, amount, notes }),
         PAYOUT_TIMEOUT,
       );
-      await reload({ background: true });
+      void reload({ background: true });
       return payout;
     } catch (error) {
       if (error instanceof WebRequestTimeoutError) void reload({ background: true });
