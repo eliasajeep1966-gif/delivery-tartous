@@ -287,12 +287,14 @@ export default function Users() {
     setDraft(createDraft());
   };
 
-  const reportMutationFailure = async (label: string, error: unknown, fallbackMessage: string) => {
+  const reportMutationFailure = (label: string, error: unknown, fallbackMessage: string) => {
     console.error(`${label} failed.`, error);
     toast.error(getUsersErrorMessage(error, fallbackMessage));
 
     if (error instanceof WebRequestTimeoutError) {
-      await reload();
+      // Do not keep the mutation control pending. The RPC may have completed after its response timed out.
+      // This performs a read-only verification and never retries the mutation automatically.
+      void reload({ background: true });
     }
   };
 
@@ -335,7 +337,7 @@ export default function Users() {
       setDraft(createDraft());
       toast.success('تم إنشاء الحساب المعلّق بنجاح.');
     } catch (error) {
-      await reportMutationFailure('Create pending account', error, 'تعذر إنشاء الحساب المعلّق.');
+      reportMutationFailure('Create pending account', error, 'تعذر إنشاء الحساب المعلّق.');
     } finally {
       if (mounted.current) setIsCreatingPending(false);
     }
@@ -354,7 +356,7 @@ export default function Users() {
       removePendingAccount(cancelledAccount.id);
       toast.success('تم إلغاء الحساب المعلّق.');
     } catch (error) {
-      await reportMutationFailure('Cancel pending account', error, 'تعذر إلغاء الحساب المعلّق.');
+      reportMutationFailure('Cancel pending account', error, 'تعذر إلغاء الحساب المعلّق.');
     } finally {
       if (mounted.current) setCancellingPendingId(null);
     }
@@ -395,7 +397,7 @@ export default function Users() {
         await refreshAuth();
       }
     } catch (error) {
-      await reportMutationFailure('Set user role', error, 'تعذر تغيير دور المستخدم.');
+      reportMutationFailure('Set user role', error, 'تعذر تغيير دور المستخدم.');
     } finally {
       if (mounted.current) setChangingRoleUserId(null);
     }
@@ -414,7 +416,7 @@ export default function Users() {
       replaceProfile(updatedProfile);
       toast.success(updatedProfile.is_active ? 'تم تفعيل الكابتن.' : 'تم تعطيل الكابتن.');
     } catch (error) {
-      await reportMutationFailure('Set captain active', error, 'تعذر تحديث حالة الكابتن.');
+      reportMutationFailure('Set captain active', error, 'تعذر تحديث حالة الكابتن.');
     } finally {
       if (mounted.current) setTogglingCaptainId(null);
     }
@@ -498,7 +500,7 @@ export default function Users() {
       });
       toast.success('تم حفظ تخصيص الصلاحية.');
     } catch (error) {
-      await reportMutationFailure('Set permission override', error, 'تعذر حفظ تخصيص الصلاحية.');
+      reportMutationFailure('Set permission override', error, 'تعذر حفظ تخصيص الصلاحية.');
     } finally {
       if (mounted.current) setSavingOverrideKey(null);
     }

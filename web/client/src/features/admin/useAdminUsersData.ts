@@ -8,13 +8,17 @@ import {
 } from '@/data/supabase/webSupabaseContract';
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
 
+type ReloadOptions = {
+  background?: boolean;
+};
+
 export type AdminUsersData = {
   profiles: WebProfile[];
   captainStatuses: WebCaptainStatus[];
   pendingAccounts: WebPendingAccount[];
   isInitialLoading: boolean;
   readError: string | null;
-  reload: () => Promise<void>;
+  reload: (options?: ReloadOptions) => Promise<void>;
   addPendingAccount: (account: WebPendingAccount) => void;
   removePendingAccount: (pendingId: string) => void;
   replaceProfile: (profile: WebProfile) => void;
@@ -39,9 +43,9 @@ export function useAdminUsersData(): AdminUsersData {
   const mounted = useRef(true);
   const requestVersion = useRef(0);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async ({ background = false }: ReloadOptions = {}) => {
     const version = ++requestVersion.current;
-    setReadError(null);
+    if (!background) setReadError(null);
 
     try {
       const [nextProfiles, nextCaptainStatuses, nextPendingAccounts] = await Promise.all([
@@ -68,7 +72,9 @@ export function useAdminUsersData(): AdminUsersData {
       console.error('Admin Users data load failed.', error);
       if (!mounted.current || version !== requestVersion.current) return;
 
-      setReadError(getUsersErrorMessage(error, 'تعذر تحميل بيانات المستخدمين. حاول مرة أخرى.'));
+      if (!background) {
+        setReadError(getUsersErrorMessage(error, 'تعذر تحميل بيانات المستخدمين. حاول مرة أخرى.'));
+      }
     } finally {
       if (mounted.current && version === requestVersion.current) {
         setIsInitialLoading(false);
@@ -86,16 +92,22 @@ export function useAdminUsersData(): AdminUsersData {
   }, [reload]);
 
   const addPendingAccount = useCallback((account: WebPendingAccount) => {
+    // A locally confirmed mutation is newer than any in-flight list request.
+    ++requestVersion.current;
     setPendingAccounts((current) => (
       current.some((item) => item.id === account.id) ? current : [account, ...current]
     ));
   }, []);
 
   const removePendingAccount = useCallback((pendingId: string) => {
+    // Prevent an older reload from restoring a Pending record that was cancelled successfully.
+    ++requestVersion.current;
     setPendingAccounts((current) => current.filter((item) => item.id !== pendingId));
   }, []);
 
   const replaceProfile = useCallback((profile: WebProfile) => {
+    // Prevent an older reload from replacing a confirmed role or active-state change.
+    ++requestVersion.current;
     setProfiles((current) => current.map((item) => (item.id === profile.id ? profile : item)));
   }, []);
 
