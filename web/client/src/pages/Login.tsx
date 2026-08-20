@@ -26,7 +26,7 @@ function loginErrorMessage(error: unknown): string {
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { profile, refresh, status } = useWebAuth();
+  const { profile, status, errorMessage, signOut } = useWebAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
@@ -35,8 +35,20 @@ export default function Login() {
   useEffect(() => {
     if (status === 'authenticated' && profile?.role === 'admin') {
       setLocation('/', { replace: true });
+      return;
     }
-  }, [profile?.role, setLocation, status]);
+
+    if (status === 'authenticated' && profile) {
+      toast.error('هذا الحساب لا يملك صلاحية الدخول إلى لوحة الأدمن.');
+      void signOut().catch(() => undefined);
+      return;
+    }
+
+    if (status === 'profile-error' && errorMessage) {
+      toast.error(errorMessage);
+      void signOut().catch(() => undefined);
+    }
+  }, [errorMessage, profile, setLocation, signOut, status]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,25 +73,8 @@ export default function Login() {
         'انتهت مهلة تسجيل الدخول بعد 15 ثانية. حاول مرة أخرى.',
       );
 
-      const currentProfile = await withAuthRequestTimeout(
-        webSupabase.reads.myProfile(),
-        'انتهت مهلة التحقق من صلاحية الحساب بعد 15 ثانية. حاول مرة أخرى.',
-      );
-
-      if (!currentProfile.is_active) {
-        await webSupabase.auth.signOut().catch(() => undefined);
-        toast.error('هذا الحساب معطّل حالياً. تواصل مع الإدارة.');
-        return;
-      }
-
-      if (currentProfile.role !== 'admin') {
-        await webSupabase.auth.signOut().catch(() => undefined);
-        toast.error('هذا الحساب لا يملك صلاحية الدخول إلى لوحة الأدمن.');
-        return;
-      }
-
-      await refresh();
-      setLocation('/', { replace: true });
+      // WebAuthProvider owns the single Profile lookup and role validation after SIGNED_IN.
+      // The effect above redirects a verified admin or safely signs out a rejected account.
     } catch (error) {
       toast.error(loginErrorMessage(error));
     } finally {

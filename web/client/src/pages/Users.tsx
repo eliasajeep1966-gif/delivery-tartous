@@ -434,6 +434,11 @@ export default function Users() {
   };
 
   const openPermissionsDialog = async (user: WebProfile) => {
+    if (currentProfile?.role !== 'admin' || user.role !== 'supervisor') {
+      toast.error('تخصيص الصلاحيات مسموح للمشرفين فقط.');
+      return;
+    }
+
     const requestVersion = ++permissionsRequestVersion.current;
     setPermissionTarget(user);
     setPermissions([]);
@@ -472,7 +477,10 @@ export default function Users() {
   };
 
   const savePermissionOverride = async (permission: WebPermission) => {
-    if (!permissionTarget) return;
+    if (currentProfile?.role !== 'admin' || !permissionTarget || permissionTarget.role !== 'supervisor') {
+      toast.error('تخصيص الصلاحيات مسموح للمشرفين فقط.');
+      return;
+    }
     const isAllowed = overrideChoices[permission.code];
     const overrideKey = `${permissionTarget.id}:${permission.code}`;
 
@@ -619,7 +627,9 @@ export default function Users() {
                       const captainStatus = user.role === 'captain' ? captainStatusById.get(user.id) : undefined;
                       const isToggling = togglingCaptainId === user.id;
                       const isChangingRole = changingRoleUserId === user.id;
-                      const actionColumns = user.role === 'captain' ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))';
+                      const canConfigureOverrides = currentProfile?.role === 'admin' && user.role === 'supervisor';
+                      const actionCount = 1 + (user.role === 'captain' ? 1 : 0) + (canConfigureOverrides ? 1 : 0);
+                      const actionColumns = `repeat(${actionCount}, minmax(0, 1fr))`;
 
                       return (
                         <article key={user.id} className="rounded-2xl border border-[#dbe7f2] bg-white p-4 shadow-[0_2px_8px_rgba(0,72,141,0.05)]">
@@ -656,10 +666,12 @@ export default function Users() {
                               </button>
                             )}
 
-                            <button type="button" onClick={() => void openPermissionsDialog(user)} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 text-xs font-bold text-violet-700 active:scale-[0.98]">
-                              <SlidersHorizontal size={16} />
-                              تخصيص الصلاحيات
-                            </button>
+                            {canConfigureOverrides && (
+                              <button type="button" onClick={() => void openPermissionsDialog(user)} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 text-xs font-bold text-violet-700 active:scale-[0.98]">
+                                <SlidersHorizontal size={16} />
+                                تخصيص الصلاحيات
+                              </button>
+                            )}
                           </div>
                         </article>
                       );

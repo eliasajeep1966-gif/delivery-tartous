@@ -51,7 +51,6 @@ export default function Home() {
     readError: captainsReadError,
     createOrderWithStops,
     assignOrderCaptain,
-    reload: reloadOrders,
   } = useAvailableCaptains();
   const visibleOrders = filter === "all" ? recentOrders : recentOrders.filter((order) => order.status === filter);
 
@@ -108,13 +107,22 @@ export default function Home() {
         toast.success(`تم إنشاء وتعيين الطلب #${assignedOrder.order_number}.`);
       } catch (assignmentError) {
         console.error("Order assignment after creation failed.", assignmentError);
-        if (assignmentError instanceof WebRequestTimeoutError) void reloadOrders({ background: true });
         setIsCreateOrderOpen(false);
+        if (assignmentError instanceof WebRequestTimeoutError) {
+          toast.error('تم إنشاء الطلب، وتعذر تأكيد تعيين الكابتن. افتح تفاصيل الطلب وتحقق من حالته قبل تنفيذ أي إجراء.');
+          setLocation('/orders');
+          return;
+        }
         toast.error(`تم إنشاء الطلب #${createdOrder.order_number}، لكن تعيين الكابتن لم ينجح. عيّنه من تفاصيل الطلب.`);
       }
     } catch (error) {
       console.error("Create multi-stop order failed.", error);
-      if (error instanceof WebRequestTimeoutError) void reloadOrders({ background: true });
+      if (error instanceof WebRequestTimeoutError) {
+        setIsCreateOrderOpen(false);
+        toast.error('انتهت مهلة تأكيد إنشاء الطلب. قد يكون قد حُفظ؛ افتح قائمة الطلبات وتحقق قبل إنشاء طلب جديد.');
+        setLocation('/orders');
+        return;
+      }
       toast.error(getOrdersErrorMessage(error, "تعذر إنشاء الطلب. تحقق من البيانات وحاول مرة أخرى."));
     } finally {
       setIsCreatingOrder(false);
