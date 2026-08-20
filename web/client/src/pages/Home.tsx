@@ -21,10 +21,12 @@ import { toast } from "sonner";
 import { NewOrderDialog } from "@/components/NewOrderDialog";
 import { AdminBottomNav } from "@/components/AdminBottomNav";
 import {
-  availableCaptains,
   recentOrders,
   summaryMetrics,
 } from "@/mocks/dashboard-data";
+import { getOrdersErrorMessage, useAvailableCaptains } from "@/features/admin/useAdminOrdersData";
+import type { CreateOrderFlowDraft } from "@/features/admin/types";
+import { WebRequestTimeoutError } from "@/lib/authRequest";
 import { orderStatusPresentation, type OrderStatus } from "@/features/admin/types";
 
 type Filter = "all" | OrderStatus;
@@ -42,6 +44,15 @@ export default function Home() {
   const [activeNav, setActiveNav] = useState("home");
   const [filter, setFilter] = useState<Filter>("all");
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const {
+    availableCaptains,
+    isInitialLoading: isCaptainsLoading,
+    readError: captainsReadError,
+    createOrderWithStops,
+    assignOrderCaptain,
+    reload: reloadOrders,
+  } = useAvailableCaptains();
   const visibleOrders = filter === "all" ? recentOrders : recentOrders.filter((order) => order.status === filter);
 
   const selectMetric = (metricId: string) => {
@@ -58,6 +69,72 @@ export default function Home() {
     }
 
     toast.info("سيتم ربط هذا المؤشر ببيانات الخلفية لاحقاً.");
+  };
+
+  const submitCreateOrderFlow = async (flow: CreateOrderFlowDraft): Promise<void> => {
+    if (isCreatingOrder) return;
+    const selectedCaptain = availableCaptains.find((captain) => captain.id === flow.assignedCaptainId);
+    if (!selectedCaptain) {
+      toast.error("اختر كابتناً مفعّلاً ومتاحاً قبل إرسال الطلب.");
+      return;
+    }
+
+    setIsCreatingOrder(true);
+    try {
+      const stops = [
+        ...flow.order.pickups.map((pickup, index) => ({
+          stopType: "pickup" as const,
+          sequence: index + 1,
+          contactName: pickup.name.trim(),
+          contactPhone: pickup.phone.trim(),
+          address: pickup.address.trim(),
+          note: pickup.note?.trim() || undefined,
+        })),
+        ...flow.order.destinations.map((destination, index) => ({
+          stopType: "delivery" as const,
+          sequence: index + 1,
+          contactName: destination.name.trim(),
+          contactPhone: destination.phone.trim(),
+          address: destination.address.trim(),
+          note: undefined,
+        })),
+      ];
+
+      const createdOrder = await createOrderWithStops({ stops, fee: flow.totalFee });
+
+      try {
+        const assignedOrder = await assignOrderCaptain(createdOrder.id, flow.assignedCaptainId);
+        setIsCreateOrderOpen(false);
+        toast.success(`تم إنشاء وتعيين الطلب #${assignedOrder.order_number}.`);
+      } catch (assignmentError) {
+        console.error("Order assignment after creation failed.", assignmentError);
+        if (assignmentError instanceof WebRequestTimeoutError) void reloadOrders({ background: true });
+        setIsCreateOrderOpen(false);
+        toast.error(`تم إنشاء الطلب #${createdOrder.order_number}، لكن تعيين الكابتن لم ينجح. عيّنه من تفاصيل الطلب.`);
+      }
+    } catch (error) {
+      console.error("Create multi-stop order failed.", error);
+      if (error instanceof WebRequestTimeoutError) void reloadOrders({ background: true });
+      toast.error(getOrdersErrorMessage(error, "تعذر إنشاء الطلب. تحقق من البيانات وحاول مرة أخرى."));
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
+
+  const openCreateOrder = () => {
+    if (isCaptainsLoading) {
+      toast.info("جارٍ تحميل الكباتن المتاحين.");
+      return;
+    }
+    if (captainsReadError) {
+      toast.error("تعذر تحميل الكباتن المتاحين. حاول مرة أخرى.");
+      return;
+    }
+    if (availableCaptains.length === 0) {
+      toast.error("لا يوجد كابتن متاح حالياً.");
+      return;
+    }
+    setIsCreateOrderOpen(true);
   };
 
   const onNavClick = (itemId: string, label: string) => {
@@ -153,12 +230,13 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => setIsCreateOrderOpen(true)}
-            className="relative mt-6 flex min-h-[86px] w-full items-center justify-between overflow-hidden rounded-2xl border-2 border-[#a8c8ff] bg-[#0060B8] px-4 py-3 text-right text-white shadow-[0_6px_18px_rgba(0,96,184,0.26)] transition-transform duration-150 hover:bg-[#0057a7] active:scale-[0.98]"
+            onClick={openCreateOrder}
+            disabled={isCaptainsLoading || Boolean(captainsReadError) || availableCaptains.length === 0 || isCreatingOrder}
+            className="relative mt-6 flex min-h-[86px] w-full items-center justify-between overflow-hidden rounded-2xl border-2 border-[#a8c8ff] bg-[#0060B8] px-4 py-3 text-right text-white shadow-[0_6px_18px_rgba(0,96,184,0.26)] transition-transform duration-150 hover:bg-[#0057a7] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="relative z-10 flex flex-col items-start">
               <span className="text-base font-semibold">إنشاء طلب جديد</span>
-              <span className="mt-1 text-sm text-[#dbeaff]">أضف طلباً وعيّن كابتناً متاحاً</span>
+              <span className="mt-1 text-sm text-[#dbeaff]">{isCaptainsLoading ? "جارٍ تحميل الكباتن..." : captainsReadError ? "تعذر تحميل الكباتن المتاحين" : availableCaptains.length === 0 ? "لا يوجد كابتن متاح حالياً" : "أضف طلباً وعيّن كابتناً متاحاً"}</span>
             </span>
             <img
               src="/assets/new-order-illustration.png"
@@ -256,7 +334,7 @@ export default function Home() {
         </main>
 
         <AdminBottomNav active="home" />
-        <NewOrderDialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen} captains={availableCaptains} />
+        <NewOrderDialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen} captains={availableCaptains} isSubmitting={isCreatingOrder} onSubmitCreateOrderFlow={submitCreateOrderFlow} />
       </div>
     </div>
   );

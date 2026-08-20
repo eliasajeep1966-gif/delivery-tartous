@@ -18,7 +18,7 @@ export const orderStatusPresentation: Record<OrderStatus, { label: string; class
 
 export type OrderLocationDraft = { name: string; phone: string; address: string; note?: string };
 export type OrderDraft = { pickups: OrderLocationDraft[]; destinations: OrderLocationDraft[] };
-// Integration must call create_order first, then assign_order_captain with the returned order id.
+// Integration must call create_order_with_stops, then assign_order_captain with the returned order id.
 export type CreateOrderFlowDraft = { order: OrderDraft; totalFee: number; assignedCaptainId: string };
 
 export type CaptainOption = { id: string; name: string; initial: string; availability: "available" };

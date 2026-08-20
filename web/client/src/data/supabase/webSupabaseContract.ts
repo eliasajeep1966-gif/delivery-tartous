@@ -1,6 +1,6 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
-import type { Database, Tables } from '@delivery-contract/database.types';
+import type { Database, Json, Tables } from '@delivery-contract/database.types';
 
 import { getWebSupabaseClient } from './webSupabaseClient';
 
@@ -10,6 +10,25 @@ export type WebCaptainStatus = Tables<'captain_status'>;
 export type WebPendingAccount = Tables<'pending_account_activations'>;
 export type WebPermission = Tables<'permissions'>;
 export type WebUserPermissionOverride = Tables<'user_permission_overrides'>;
+export type WebOrder = Tables<'orders'>;
+export type WebOrderStop = Tables<'order_stops'>;
+export type WebOrderStatusHistory = Tables<'order_status_history'>;
+export type WebOrderStatus = Database['public']['Enums']['order_status'];
+export type WebOrderStopType = Database['public']['Enums']['order_stop_type'];
+
+export type WebOrderStopInput = {
+  stopType: WebOrderStopType;
+  sequence: number;
+  contactName: string;
+  contactPhone: string;
+  address: string;
+  note?: string | null;
+};
+
+export type CreateOrderWithStopsInput = {
+  stops: WebOrderStopInput[];
+  fee: number;
+};
 
 export type ActivatePendingAccountInput = {
   email: string;
@@ -160,6 +179,33 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحميل حالات الكباتن.');
     },
 
+    async orders(): Promise<WebOrder[]> {
+      const { data, error } = await getWebSupabaseClient()
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      return unwrap(data, error, 'تعذر تحميل الطلبات.');
+    },
+
+    async orderStops(orderId: string): Promise<WebOrderStop[]> {
+      const { data, error } = await getWebSupabaseClient()
+        .from('order_stops')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('stop_type', { ascending: true })
+        .order('sequence', { ascending: true });
+      return unwrap(data, error, 'تعذر تحميل نقاط الطلب.');
+    },
+
+    async orderStatusHistory(orderId: string): Promise<WebOrderStatusHistory[]> {
+      const { data, error } = await getWebSupabaseClient()
+        .from('order_status_history')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('changed_at', { ascending: true });
+      return unwrap(data, error, 'تعذر تحميل تسلسل حالات الطلب.');
+    },
+
     async pendingAccounts(): Promise<WebPendingAccount[]> {
       const { data, error } = await getWebSupabaseClient().rpc('list_pending_accounts');
       return unwrap(data, error, 'تعذر تحميل الحسابات المعلّقة.');
@@ -184,6 +230,43 @@ export const webSupabase = {
   },
 
   actions: {
+    async createOrderWithStops(input: CreateOrderWithStopsInput): Promise<WebOrder> {
+      const stops: Json = input.stops.map((stop) => ({
+        stop_type: stop.stopType,
+        sequence: stop.sequence,
+        contact_name: stop.contactName,
+        contact_phone: stop.contactPhone,
+        address: stop.address,
+        note: stop.note ?? null,
+      }));
+      const { data, error } = await getWebSupabaseClient().rpc('create_order_with_stops', {
+        p_stops: stops,
+        p_fee: input.fee,
+      });
+      return unwrap(data, error, 'تعذر إنشاء الطلب متعدد النقاط.');
+    },
+
+    async assignOrderCaptain(orderId: string, captainId: string): Promise<WebOrder> {
+      const { data, error } = await getWebSupabaseClient().rpc('assign_order_captain', {
+        p_order_id: orderId,
+        p_captain_id: captainId,
+      });
+      return unwrap(data, error, 'تعذر تعيين الكابتن للطلب.');
+    },
+
+    async cancelOrder(orderId: string, reason: string): Promise<WebOrder> {
+      const normalizedReason = reason.trim();
+      if (!normalizedReason) {
+        throw new Error('أدخل سبب إلغاء الطلب.');
+      }
+
+      const { data, error } = await getWebSupabaseClient().rpc('cancel_order', {
+        p_order_id: orderId,
+        p_cancellation_reason: normalizedReason,
+      });
+      return unwrap(data, error, 'تعذر إلغاء الطلب.');
+    },
+
     async createPendingAccount(input: CreatePendingAccountInput): Promise<WebPendingAccount> {
       const normalizedInput = validatePendingAccountInput(input);
       const { data, error } = await getWebSupabaseClient().rpc('create_pending_account', {
