@@ -1,71 +1,76 @@
 /** Design reminder — Corporate Modern Mobile Operations with Arabic RTL routes and operational blue hierarchy. */
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch, useLocation } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import Orders from "./pages/Orders";
-import Captains from "./pages/Captains";
-import Users from "./pages/Users";
-import ActivityLogs from "./pages/ActivityLogs";
-import Wages from "./pages/Wages";
-import CompanyWages from "./pages/CompanyWages";
-import WageOrders from "./pages/WageOrders";
-import More from "./pages/More";
-import Custody from "./pages/Custody";
-import Reports from "./pages/Reports";
-import OfficeSettings from "./pages/OfficeSettings";
-import Help from "./pages/Help";
-import Login from "./pages/Login";
-import ActivateAccount from "./pages/ActivateAccount";
+import { type ComponentType } from 'react';
+import { Route, Switch, useLocation } from 'wouter';
 
+import { AdminRouteGuard } from '@/components/AdminRouteGuard';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { WebAuthProvider } from '@/contexts/WebAuthContext';
+import ActivateAccount from '@/pages/ActivateAccount';
+import ActivityLogs from '@/pages/ActivityLogs';
+import Captains from '@/pages/Captains';
+import CompanyWages from '@/pages/CompanyWages';
+import Custody from '@/pages/Custody';
+import Help from '@/pages/Help';
+import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import More from '@/pages/More';
+import NotFound from '@/pages/NotFound';
+import OfficeSettings from '@/pages/OfficeSettings';
+import Orders from '@/pages/Orders';
+import Reports from '@/pages/Reports';
+import Users from '@/pages/Users';
+import WageOrders from '@/pages/WageOrders';
+import Wages from '@/pages/Wages';
+
+function AdminRoute({ component: Component }: { component: ComponentType }) {
+  return (
+    <AdminRouteGuard>
+      <Component />
+    </AdminRouteGuard>
+  );
+}
 
 function Router() {
   const [location] = useLocation();
 
   return (
     <main key={location} className="relative isolate min-h-[100dvh]">
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/users"} component={Users} />
-      <Route path={"/orders"} component={Orders} />
-      <Route path={"/captains"} component={Captains} />
-      <Route path={"/logs"} component={ActivityLogs} />
-      <Route path={"/wages"} component={Wages} />
-      <Route path={"/company-wages"} component={CompanyWages} />
-      <Route path={"/wage-orders"} component={WageOrders} />
-      <Route path={"/more"} component={More} />
-      <Route path={"/custody"} component={Custody} />
-      <Route path={"/reports"} component={Reports} />
-      <Route path={"/office-settings"} component={OfficeSettings} />
-      <Route path={"/help"} component={Help} />
-      <Route path={"/login"} component={Login} />
-      <Route path={"/activate"} component={ActivateAccount} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/activate-account" component={ActivateAccount} />
+        <Route path="/activate" component={ActivateAccount} />
+        <Route path="/" component={() => <AdminRoute component={Home} />} />
+        <Route path="/users" component={() => <AdminRoute component={Users} />} />
+        <Route path="/orders" component={() => <AdminRoute component={Orders} />} />
+        <Route path="/captains" component={() => <AdminRoute component={Captains} />} />
+        <Route path="/logs" component={() => <AdminRoute component={ActivityLogs} />} />
+        <Route path="/wages" component={() => <AdminRoute component={Wages} />} />
+        <Route path="/company-wages" component={() => <AdminRoute component={CompanyWages} />} />
+        <Route path="/wage-orders" component={() => <AdminRoute component={WageOrders} />} />
+        <Route path="/more" component={() => <AdminRoute component={More} />} />
+        <Route path="/custody" component={() => <AdminRoute component={Custody} />} />
+        <Route path="/reports" component={() => <AdminRoute component={Reports} />} />
+        <Route path="/office-settings" component={() => <AdminRoute component={OfficeSettings} />} />
+        <Route path="/help" component={() => <AdminRoute component={Help} />} />
+        <Route path="/404" component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
     </main>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <WebAuthProvider>
+            <Toaster />
+            <Router />
+          </WebAuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
