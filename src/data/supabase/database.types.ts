@@ -136,7 +136,7 @@ export type Database = {
           {
             foreignKeyName: "captain_payout_items_financial_ledger_id_fkey"
             columns: ["financial_ledger_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "financial_ledger"
             referencedColumns: ["id"]
           },
@@ -760,6 +760,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_captain_partial_payout: {
+        Args: { p_amount: number; p_captain_id: string; p_notes?: string }
+        Returns: {
+          captain_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string
+          paid_by_user_id: string
+          total_amount: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "captain_payouts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_captain_payout: {
         Args: {
           p_captain_id: string
@@ -904,6 +922,25 @@ export type Database = {
           payout_id: string
           settlement_amount: number
           source_status: Database["public"]["Enums"]["order_status"]
+        }[]
+      }
+      get_captain_wage_details_v2: {
+        Args: { p_captain_id: string }
+        Returns: {
+          captain_amount: number
+          company_amount: number
+          completed_at: string
+          financial_ledger_id: string
+          gross_fee: number
+          is_fully_paid: boolean
+          latest_paid_at: string
+          latest_payout_id: string
+          order_id: string
+          order_number: number
+          paid_amount: number
+          settlement_amount: number
+          source_status: Database["public"]["Enums"]["order_status"]
+          unpaid_amount: number
         }[]
       }
       get_captain_wage_summary: {
@@ -1234,3 +1271,4 @@ export const Constants = {
     },
   },
 } as const
+
