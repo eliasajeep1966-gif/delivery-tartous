@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseClient } from './supabaseClient';
-import type { Database, Tables } from './database.types';
+import type { Database, Json, Tables } from './database.types';
 
 /**
  * The only approved application-facing Supabase API.
@@ -14,6 +14,8 @@ export type CaptainAvailability = Database['public']['Enums']['captain_availabil
 
 export type Profile = Tables<'profiles'>;
 export type Order = Tables<'orders'>;
+export type OrderStop = Tables<'order_stops'>;
+export type OrderStopType = Database['public']['Enums']['order_stop_type'];
 export type CaptainStatus = Tables<'captain_status'>;
 export type FinancialLedgerEntry = Tables<'financial_ledger'>;
 export type OrderStatusHistory = Tables<'order_status_history'>;
@@ -38,6 +40,22 @@ export type CreateOrderInput = {
   customerPhone: string;
   pickupAddress: string;
   deliveryAddress: string;
+  fee: number;
+};
+
+/** A single ordered pickup or delivery point for a multi-stop order. */
+export type OrderStopInput = {
+  stopType: OrderStopType;
+  sequence: number;
+  contactName: string;
+  contactPhone: string;
+  address: string;
+  note?: string | null;
+};
+
+/** One order-level fee applies to all stops; individual stops never carry fees. */
+export type CreateOrderWithStopsInput = {
+  stops: OrderStopInput[];
   fee: number;
 };
 
@@ -159,6 +177,16 @@ export const deliverySupabase = {
       return unwrap(data, error, 'Could not load order history.');
     },
 
+    async orderStops(orderId: string): Promise<OrderStop[]> {
+      const { data, error } = await getSupabaseClient()
+        .from('order_stops')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('stop_type', { ascending: true })
+        .order('sequence', { ascending: true });
+      return unwrap(data, error, 'Could not load order stops.');
+    },
+
     async myCustody(): Promise<CaptainCustody[]> {
       const { data, error } = await getSupabaseClient()
         .from('captain_custody')
@@ -221,6 +249,22 @@ export const deliverySupabase = {
         p_fee: input.fee,
       });
       return unwrap(data, error, 'Order creation did not return an order.');
+    },
+
+    async createOrderWithStops(input: CreateOrderWithStopsInput): Promise<Order> {
+      const stops: Json = input.stops.map((stop) => ({
+        stop_type: stop.stopType,
+        sequence: stop.sequence,
+        contact_name: stop.contactName,
+        contact_phone: stop.contactPhone,
+        address: stop.address,
+        note: stop.note ?? null,
+      }));
+      const { data, error } = await getSupabaseClient().rpc('create_order_with_stops', {
+        p_stops: stops,
+        p_fee: input.fee,
+      });
+      return unwrap(data, error, 'Multi-stop order creation did not return an order.');
     },
 
     async assignOrderCaptain(orderId: string, captainId: string): Promise<Order> {
@@ -339,6 +383,7 @@ export const deliverySupabase = {
 /**
  * Prohibited outside src/data/supabase:
  * - getSupabaseClient().from('orders').insert/update/delete(...)
+ * - getSupabaseClient().from('order_stops').insert/update/delete(...)
  * - getSupabaseClient().from('financial_ledger').insert/update/delete(...)
  * - getSupabaseClient().from('captain_payouts').insert/update/delete(...)
  * - getSupabaseClient().from('captain_payout_items').insert/update/delete(...)

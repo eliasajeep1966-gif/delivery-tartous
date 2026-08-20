@@ -1,6 +1,6 @@
 # عقد Supabase الرسمي — دليفري طرطوس
 
-> **الإصدار:** 2026-08-19. هذا الملف و`database.types.ts` هما مرجع Kilo الوحيد لطبقة Supabase. لا تُخترع جداول أو RPCs أو أنواع أخرى.
+> **الإصدار:** 2026-08-20. هذا الملف و`database.types.ts` هما مرجع Kilo الوحيد لطبقة Supabase. لا تُخترع جداول أو RPCs أو أنواع أخرى.
 
 ## 1. مصدر الحقيقة
 
@@ -43,7 +43,7 @@
 | الهوية والصلاحيات | `profiles`, `permissions`, `role_permissions`, `user_permission_overrides` |
 | الكباتن | `captain_status`, `captain_custody` |
 | Pending Activation | `pending_account_activations`, `pending_captain_custody` |
-| الطلبات | `orders`, `order_status_history` |
+| الطلبات | `orders`, `order_stops`, `order_status_history` |
 | المال | `financial_ledger`, `captain_payouts`, `captain_payout_items` |
 | التتبع | `audit_logs` |
 
@@ -54,13 +54,18 @@ RLS مفعّل على الجداول. التطبيق لا يكتب مباشرة 
 ### الطلبات والكابتن
 
 ```text
-create_order
+create_order                         # Legacy single-stop RPC; يبقى للتوافق فقط
+create_order_with_stops              # RPC المعتمدة للويب والواجهات الجديدة متعددة النقاط
 assign_order_captain
 cancel_order
 transition_assigned_order
 set_captain_availability
 set_captain_active
 ```
+
+`create_order_with_stops(p_stops, p_fee)` هو مسار الإنشاء الجديد. يستقبل مصفوفة نقاط مرتبة من `pickup` و`delivery`، ويشترط مصدر استلام واحداً ووجهة تسليم واحدة على الأقل. الأجرة `p_fee` هي **أجرة واحدة للطلب كله**؛ لا يحمل `order_stops` أي أجر. ينشئ الطلب والنقاط وسجل الحالة وسجل التدقيق في معاملة واحدة، ثم تستدعي الواجهة `assign_order_captain` باستخدام `order.id` الناتج.
+
+قراءة تفاصيل الطلب تستخدم `deliverySupabase.reads.orderStops(orderId)` فقط. RLS تسمح بالقراءة إذا كان الطلب نفسه مرئياً للمستخدم، وتمنع أي كتابة مباشرة على `order_stops`.
 
 ### المستخدمون وPending
 
@@ -110,7 +115,7 @@ create_captain_payout
 ## 8. ممنوعات صريحة
 
 ```text
-ممنوع: insert/update/delete مباشر على orders أو financial_ledger أو profiles
+ممنوع: insert/update/delete مباشر على orders أو order_stops أو financial_ledger أو profiles
 ممنوع: insert/update/delete مباشر على payout أو custody أو pending tables
 ممنوع: استدعاء invite-user
 ممنوع: auth.signUp من Expo
@@ -131,6 +136,9 @@ create_captain_payout
 20260818213353_add_pending_account_activation_flow
 20260819041446_add_supervisor_captain_management
 20260819042617_add_captain_payouts_and_supervisor_finance_access
+20260819050110_fix_pending_email_reuse_and_last_admin_guard
+20260819073603_filter_open_pending_accounts
+20260820052533_add_multi_stop_orders
 ```
 
 ## 10. قاعدة تحديث العقد

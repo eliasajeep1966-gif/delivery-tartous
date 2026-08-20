@@ -316,6 +316,50 @@ export type Database = {
           },
         ]
       }
+      order_stops: {
+        Row: {
+          address: string
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          note: string | null
+          order_id: string
+          sequence: number
+          stop_type: Database["public"]["Enums"]["order_stop_type"]
+        }
+        Insert: {
+          address: string
+          contact_name: string
+          contact_phone: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_id: string
+          sequence: number
+          stop_type: Database["public"]["Enums"]["order_stop_type"]
+        }
+        Update: {
+          address?: string
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_id?: string
+          sequence?: number
+          stop_type?: Database["public"]["Enums"]["order_stop_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_stops_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           assigned_at: string | null
@@ -773,6 +817,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_order_with_stops: {
+        Args: { p_fee: number; p_stops: Json }
+        Returns: {
+          assigned_at: string | null
+          assigned_captain_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string
+          created_by_user_id: string
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          false_order_at: string | null
+          fee: number
+          id: string
+          order_number: number
+          pickup_address: string
+          received_at: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_pending_account: {
         Args: {
           p_custody_items_text?: string
@@ -1018,6 +1091,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "false_order"
+      order_stop_type: "pickup" | "delivery"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1156,6 +1230,7 @@ export const Constants = {
         "cancelled",
         "false_order",
       ],
+      order_stop_type: ["pickup", "delivery"],
     },
   },
 } as const
