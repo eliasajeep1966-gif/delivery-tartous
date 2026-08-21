@@ -16,7 +16,7 @@ import {
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
 
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل لوحة الإدارة بعد 15 ثانية. حاول مرة أخرى.';
-const ACTIVITY_LIMIT = 6;
+const ACTIVITY_LIMIT = 50;
 
 type ReloadOptions = {
   background?: boolean;

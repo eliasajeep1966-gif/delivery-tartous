@@ -10,12 +10,14 @@ const DAMASCUS_TIME_ZONE = 'Asia/Damascus';
 
 export type HomeMetricId = 'pending' | 'in_delivery' | 'completed_today' | 'cancelled_today';
 
+export type HomeOrderFilter = 'assigned' | 'delivery_active' | 'completed' | 'cancelled';
+
 export type HomeMetric = {
   id: HomeMetricId;
   label: string;
   value: number;
   icon: 'package' | 'bike' | 'check' | 'cancel';
-  orderStatus: WebOrderStatus;
+  orderFilter: HomeOrderFilter;
 };
 
 export type HomeActivity = {
@@ -122,7 +124,8 @@ function activityHref(log: WebAuditLog): HomeActivity['href'] {
 
 export function buildHomeMetrics(orders: WebOrder[]): HomeMetric[] {
   const today = damascusDayKey(new Date());
-  const countStatus = (status: WebOrderStatus) => orders.filter((order) => order.status === status).length;
+  const awaitingReceiptCount = orders.filter((order) => order.status === 'assigned').length;
+  const deliveryActiveCount = orders.filter((order) => order.status === 'received' || order.status === 'in_delivery').length;
   const countCompletedToday = orders.filter((order) => (
     order.status === 'completed' && order.completed_at && damascusDayKey(order.completed_at) === today
   )).length;
@@ -131,30 +134,40 @@ export function buildHomeMetrics(orders: WebOrder[]): HomeMetric[] {
   )).length;
 
   return [
-    { id: 'pending', label: 'قيد الانتظار', value: countStatus('pending'), icon: 'package', orderStatus: 'pending' },
-    { id: 'in_delivery', label: 'قيد التوصيل', value: countStatus('in_delivery'), icon: 'bike', orderStatus: 'in_delivery' },
-    { id: 'completed_today', label: 'طلبات مكتملة اليوم', value: countCompletedToday, icon: 'check', orderStatus: 'completed' },
-    { id: 'cancelled_today', label: 'طلبات ملغاة اليوم', value: countCancelledToday, icon: 'cancel', orderStatus: 'cancelled' },
+    { id: 'pending', label: 'قيد الانتظار', value: awaitingReceiptCount, icon: 'package', orderFilter: 'assigned' },
+    { id: 'in_delivery', label: 'قيد التوصيل', value: deliveryActiveCount, icon: 'bike', orderFilter: 'delivery_active' },
+    { id: 'completed_today', label: 'طلبات مكتملة اليوم', value: countCompletedToday, icon: 'check', orderFilter: 'completed' },
+    { id: 'cancelled_today', label: 'طلبات ملغاة اليوم', value: countCancelledToday, icon: 'cancel', orderFilter: 'cancelled' },
   ];
 }
 
 export function buildHomeActivities(logs: WebAuditLog[], orders: WebOrder[], profiles: WebProfile[]): HomeActivity[] {
   const ordersById = new Map(orders.map((order) => [order.id, order]));
   const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
+  const seenOrderIds = new Set<string>();
 
-  return logs.map((log) => {
-    const order = log.entity_type === 'order' && log.entity_id ? ordersById.get(log.entity_id) : undefined;
-    const loggedStatus = orderStatusFrom(metadataValue(log, 'next_status'));
+  return logs
+    .filter((log) => log.entity_type === 'order' || log.action.startsWith('order_'))
+    .filter((log) => {
+      const orderKey = log.entity_id ?? metadataOrderNumber(log);
+      if (!orderKey || seenOrderIds.has(orderKey)) return false;
+      seenOrderIds.add(orderKey);
+      return true;
+    })
+    .slice(0, 6)
+    .map((log) => {
+      const order = log.entity_id ? ordersById.get(log.entity_id) : undefined;
+      const loggedStatus = orderStatusFrom(metadataValue(log, 'next_status'));
 
-    return {
-      id: log.id,
-      title: activityTitle(log, order),
-      subtitle: `بواسطة ${profileName(log.actor_user_id ? profilesById.get(log.actor_user_id) : undefined)}`,
-      timestamp: formatActivityTime(log.created_at),
-      status: loggedStatus ?? order?.status ?? null,
-      href: activityHref(log),
-    };
-  });
+      return {
+        id: log.id,
+        title: activityTitle(log, order),
+        subtitle: `بواسطة ${profileName(log.actor_user_id ? profilesById.get(log.actor_user_id) : undefined)}`,
+        timestamp: formatActivityTime(log.created_at),
+        status: loggedStatus ?? order?.status ?? null,
+        href: '/orders',
+      };
+    });
 }
 
 export function buildAvailableHomeCaptains(profiles: WebProfile[], statuses: WebCaptainStatus[]): HomeCaptain[] {

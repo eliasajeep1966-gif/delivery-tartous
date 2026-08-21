@@ -7,10 +7,9 @@ import { toast } from 'sonner';
 import { AdminBottomNav } from '@/components/AdminBottomNav';
 import { NewOrderDialog } from '@/components/NewOrderDialog';
 import { orderStatusPresentation, type CreateOrderFlowDraft, type OrderStatus } from '@/features/admin/types';
+import type { HomeOrderFilter } from '@/features/admin/homeMappers';
 import { useAdminHomeData } from '@/features/admin/useAdminHomeData';
 import { WebRequestTimeoutError } from '@/lib/authRequest';
-
-type Filter = 'all' | OrderStatus;
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -27,8 +26,8 @@ export default function Home() {
     assignOrderCaptain,
   } = useAdminHomeData();
 
-  const openOrdersWithFilter = (status: OrderStatus) => {
-    setLocation(`/orders?status=${status}`);
+  const openOrdersWithFilter = (filter: HomeOrderFilter) => {
+    setLocation(`/orders?status=${filter}`);
   };
 
   const submitCreateOrderFlow = async (flow: CreateOrderFlowDraft): Promise<void> => {
@@ -120,7 +119,7 @@ export default function Home() {
 
           {readError && <section className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-center"><p className="text-xs font-bold text-[#ba1a1a]">{readError}</p><button type="button" onClick={() => void reload()} className="mx-auto mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-[#0060B8]"><RefreshCw size={13} />إعادة المحاولة</button></section>}
 
-          <section aria-label="ملخص اليوم" className="grid grid-cols-2 gap-2.5">{isInitialLoading ? Array.from({ length: 4 }, (_, index) => <div key={index} className="min-h-[104px] animate-pulse rounded-xl border border-white/90 bg-white/75 p-3.5" />) : metrics.map((metric) => { const isHighlight = metric.id === 'in_delivery'; const MetricIcon = metric.icon === 'package' ? Package : metric.icon === 'bike' ? Bike : metric.icon === 'check' ? CheckCircle2 : XCircle; const accentClass = metric.icon === 'check' ? 'text-emerald-500' : metric.icon === 'cancel' ? 'text-red-400' : 'text-[#1478bf]'; return <button type="button" key={metric.id} onClick={() => openOrdersWithFilter(metric.orderStatus)} className={`min-h-[104px] rounded-xl border p-3.5 text-right shadow-[0_3px_8px_rgba(0,96,184,0.06)] transition-all duration-150 active:scale-[0.98] ${isHighlight ? 'border-[#086fc4] bg-[linear-gradient(135deg,#169fde_0%,#0060b8_100%)] text-white shadow-[0_5px_13px_rgba(0,96,184,0.22)]' : 'border-white/90 bg-white text-[#1b557e]'}`}><span className="flex items-center justify-between"><MetricIcon className={isHighlight ? 'text-white/85' : accentClass} size={18} strokeWidth={2.35} /><strong className="text-[24px] leading-6">{metric.value}</strong></span><span className={`mt-2 block text-[11px] font-bold ${isHighlight ? 'text-white/90' : 'text-[#617b90]'}`}>{metric.label}</span></button>; })}</section>
+          <section aria-label="ملخص اليوم" className="grid grid-cols-2 gap-2.5">{isInitialLoading ? Array.from({ length: 4 }, (_, index) => <div key={index} className="min-h-[104px] animate-pulse rounded-xl border border-white/90 bg-white/75 p-3.5" />) : metrics.map((metric) => { const isHighlight = metric.id === 'in_delivery'; const MetricIcon = metric.icon === 'package' ? Package : metric.icon === 'bike' ? Bike : metric.icon === 'check' ? CheckCircle2 : XCircle; const accentClass = metric.icon === 'check' ? 'text-emerald-500' : metric.icon === 'cancel' ? 'text-red-400' : 'text-[#1478bf]'; return <button type="button" key={metric.id} onClick={() => openOrdersWithFilter(metric.orderFilter)} className={`min-h-[104px] rounded-xl border p-3.5 text-right shadow-[0_3px_8px_rgba(0,96,184,0.06)] transition-all duration-150 active:scale-[0.98] ${isHighlight ? 'border-[#086fc4] bg-[linear-gradient(135deg,#169fde_0%,#0060b8_100%)] text-white shadow-[0_5px_13px_rgba(0,96,184,0.22)]' : 'border-white/90 bg-white text-[#1b557e]'}`}><span className="flex items-center justify-between"><MetricIcon className={isHighlight ? 'text-white/85' : accentClass} size={18} strokeWidth={2.35} /><strong className="text-[24px] leading-6">{metric.value}</strong></span><span className={`mt-2 block text-[11px] font-bold ${isHighlight ? 'text-white/90' : 'text-[#617b90]'}`}>{metric.label}</span></button>; })}</section>
 
           <button type="button" onClick={openCreateOrder} disabled={isInitialLoading || Boolean(readError) || availableCaptains.length === 0 || isCreatingOrder} className="relative mt-3.5 flex min-h-[94px] w-full items-center justify-between overflow-hidden rounded-xl bg-[linear-gradient(105deg,#1aa6e0_0%,#0060b8_67%,#07529b_100%)] px-3.5 py-3 text-right text-white shadow-[0_5px_13px_rgba(0,96,184,0.23)] transition-transform duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"><span className="relative z-10"><span className="block text-[15px] font-extrabold">إنشاء طلب جديد</span><span className="mt-1 block text-[11px] text-white/80">{isInitialLoading ? 'جارٍ تحميل الكباتن...' : readError ? 'تعذر تحميل الكباتن المتاحين' : availableCaptains.length === 0 ? 'لا يوجد كابتن متاح حالياً' : 'أضف طلباً وعيّن كابتناً متاحاً'}</span></span><img src="/assets/new-order-illustration.png" alt="" className="pointer-events-none absolute left-6 top-1/2 h-[84px] w-[116px] -translate-y-1/2 object-contain opacity-25" /><span className="relative z-10 grid h-9 w-9 place-items-center rounded-full bg-white/18"><CirclePlus size={22} /></span></button>
 
