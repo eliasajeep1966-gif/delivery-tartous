@@ -955,6 +955,43 @@ export type Database = {
           unpaid_total: number
         }[]
       }
+      get_company_profit_day_details: {
+        Args: {
+          p_before_completed_at?: string
+          p_before_ledger_id?: string
+          p_business_day: string
+          p_limit?: number
+        }
+        Returns: {
+          captain_amount: number
+          captain_id: string
+          captain_name: string
+          company_amount: number
+          completed_at: string
+          financial_ledger_id: string
+          gross_fee: number
+          order_id: string
+          order_number: number
+          settlement_amount: number
+          source_status: Database["public"]["Enums"]["order_status"]
+        }[]
+      }
+      get_company_profit_history: {
+        Args: {
+          p_before_day?: string
+          p_end_date?: string
+          p_limit_days?: number
+          p_start_date?: string
+        }
+        Returns: {
+          business_day: string
+          captain_net_total: number
+          company_total: number
+          gross_total: number
+          order_count: number
+          settlement_total: number
+        }[]
+      }
       get_wage_totals: {
         Args: never
         Returns: {
