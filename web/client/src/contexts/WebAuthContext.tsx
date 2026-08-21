@@ -4,7 +4,14 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { webSupabase, type WebProfile } from '@/data/supabase/webSupabaseContract';
 import { withAuthRequestTimeout } from '@/lib/authRequest';
 
-export type WebAuthStatus = 'initializing' | 'unauthenticated' | 'authenticated' | 'profile-error';
+export type WebAuthStatus =
+  | 'initializing'
+  | 'unauthenticated'
+  | 'authenticated'
+  | 'account-disabled'
+  | 'profile-unavailable'
+  | 'profile-missing'
+  | 'auth-invalid';
 
 type WebAuthState = {
   status: WebAuthStatus;
@@ -15,11 +22,13 @@ type WebAuthState = {
 
 type WebAuthContextValue = WebAuthState & {
   refresh: () => Promise<void>;
+  retryProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const PROFILE_TIMEOUT_MESSAGE = 'انتهت مهلة التحقق من صلاحية الحساب بعد 15 ثانية. تحقق من الاتصال ثم حاول مرة أخرى.';
 const SESSION_TIMEOUT_MESSAGE = 'انتهت مهلة التحقق من الجلسة بعد 15 ثانية. تحقق من الاتصال ثم حاول مرة أخرى.';
+const PROFILE_MISSING_MESSAGE = 'تعذر العثور على ملف الحساب.';
 
 const initialState: WebAuthState = {
   status: 'initializing',
@@ -30,13 +39,38 @@ const initialState: WebAuthState = {
 
 const WebAuthContext = createContext<WebAuthContextValue | null>(null);
 
-function profileErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return `تعذر التحقق من صلاحية الحساب: ${error.message}`;
-  return 'تعذر التحقق من صلاحية الحساب. حاول مرة أخرى.';
+function errorMessage(error: unknown): string {
+  return error instanceof Error && error.message.trim() ? error.message.trim() : '';
+}
+
+function isNetworkOrTimeoutError(error: unknown): boolean {
+  const message = errorMessage(error);
+  return /15 ثانية|network|fetch|timeout|timed out|temporarily|offline/i.test(message);
+}
+
+function isAuthInvalidError(error: unknown): boolean {
+  const message = errorMessage(error);
+  return /invalid.*(token|session)|jwt|refresh token|not authenticated|session.*invalid/i.test(message);
 }
 
 function isTrustedProfileForSession(state: WebAuthState, session: Session): boolean {
-  return state.status === 'authenticated' && state.profile?.id === session.user.id;
+  return state.profile?.id === session.user.id;
+}
+
+function profileErrorState(error: unknown): Pick<WebAuthState, 'status' | 'errorMessage'> {
+  const message = errorMessage(error);
+  if (message.includes(PROFILE_MISSING_MESSAGE)) {
+    return {
+      status: 'profile-missing',
+      errorMessage: 'تم تسجيل الدخول، لكن ملف الحساب غير موجود. أعد المحاولة بعد التأكد من إنشاء الملف.',
+    };
+  }
+  return {
+    status: 'profile-unavailable',
+    errorMessage: isNetworkOrTimeoutError(error)
+      ? 'تعذر الوصول إلى ملف الحساب مؤقتاً. تحقق من الاتصال ثم أعد المحاولة.'
+      : `تعذر التحقق من ملف الحساب${message ? `: ${message}` : ''}. أعد المحاولة دون تسجيل الخروج.`,
+  };
 }
 
 export function WebAuthProvider({ children }: PropsWithChildren) {
@@ -44,6 +78,11 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
   const stateRef = useRef<WebAuthState>(initialState);
   const requestVersion = useRef(0);
   const mounted = useRef(true);
+  const initialSessionReceived = useRef(false);
+  const profileLoadStarted = useRef(false);
+  const fallbackUsed = useRef(false);
+  const authInvalidSignOutInFlight = useRef(false);
+  const pendingProfileUserId = useRef<string | null>(null);
 
   const applyState = useCallback((nextState: WebAuthState) => {
     stateRef.current = nextState;
@@ -51,17 +90,51 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const clearAuthState = useCallback(() => {
-    ++requestVersion.current;
+    requestVersion.current += 1;
     applyState({ status: 'unauthenticated', session: null, profile: null, errorMessage: null });
   }, [applyState]);
 
+  const markAuthInvalid = useCallback((session: Session | null, message = 'جلسة الدخول غير صالحة. سجّل الدخول مرة أخرى.') => {
+    if (authInvalidSignOutInFlight.current) return;
+    authInvalidSignOutInFlight.current = true;
+    const version = ++requestVersion.current;
+    applyState({ status: 'auth-invalid', session, profile: null, errorMessage: message });
+
+    void webSupabase.auth.localSignOut()
+      .catch((error) => {
+        console.error('Local sign out for invalid auth failed.', error);
+      })
+      .finally(() => {
+        authInvalidSignOutInFlight.current = false;
+        if (mounted.current && version === requestVersion.current) clearAuthState();
+      });
+  }, [applyState, clearAuthState]);
+
+  const handleDisabledAccount = useCallback((session: Session) => {
+    const version = ++requestVersion.current;
+    applyState({
+      status: 'account-disabled',
+      session,
+      profile: null,
+      errorMessage: 'هذا الحساب معطّل حالياً. تواصل مع الإدارة.',
+    });
+
+    void webSupabase.auth.localSignOut()
+      .catch((error) => {
+        console.error('Local sign out for disabled account failed.', error);
+      })
+      .finally(() => {
+        if (mounted.current && version === requestVersion.current) clearAuthState();
+      });
+  }, [applyState, clearAuthState]);
+
   const loadProfile = useCallback(async (session: Session) => {
+    profileLoadStarted.current = true;
     const version = ++requestVersion.current;
     const currentState = stateRef.current;
-    const hasTrustedProfile = isTrustedProfileForSession(currentState, session);
 
-    // Only a first bootstrap or a real user change blocks the route. Refreshes preserve trusted UI.
-    if (!hasTrustedProfile) {
+    // A user switch always clears the previous profile before the new profile is trusted.
+    if (currentState.session?.user.id !== session.user.id || !isTrustedProfileForSession(currentState, session)) {
       applyState({ status: 'initializing', session, profile: null, errorMessage: null });
     } else if (currentState.session?.access_token !== session.access_token) {
       applyState({ ...currentState, session });
@@ -74,37 +147,35 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
       );
       if (!mounted.current || version !== requestVersion.current) return;
 
-      if (!profile.is_active) {
+      if (profile.id !== session.user.id) {
         applyState({
-          status: 'profile-error',
+          status: 'profile-missing',
           session,
           profile: null,
-          errorMessage: 'هذا الحساب معطّل حالياً. تواصل مع الإدارة.',
+          errorMessage: 'ملف الحساب الذي تم تحميله لا يطابق جلسة الدخول.',
         });
+        return;
+      }
+
+      if (!profile.is_active) {
+        handleDisabledAccount(session);
         return;
       }
 
       applyState({ status: 'authenticated', session, profile, errorMessage: null });
     } catch (error) {
       if (!mounted.current || version !== requestVersion.current) return;
-
-      // A slow/failed background check must never blank a last verified profile.
-      if (hasTrustedProfile) {
-        console.error('Background profile refresh failed.', error);
+      if (isAuthInvalidError(error)) {
+        markAuthInvalid(session);
         return;
       }
 
-      applyState({
-        status: 'profile-error',
-        session,
-        profile: null,
-        errorMessage: profileErrorMessage(error),
-      });
+      const classified = profileErrorState(error);
+      applyState({ status: classified.status, session, profile: null, errorMessage: classified.errorMessage });
     }
-  }, [applyState]);
+  }, [applyState, handleDisabledAccount, markAuthInvalid]);
 
   const refresh = useCallback(async () => {
-    const currentState = stateRef.current;
     try {
       const session = await withAuthRequestTimeout(webSupabase.auth.getSession(), SESSION_TIMEOUT_MESSAGE);
       if (!session) {
@@ -113,37 +184,61 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
       }
       await loadProfile(session);
     } catch (error) {
-      // Preserve a verified session if a manual/background refresh cannot reach Supabase.
-      if (currentState.session && currentState.profile && currentState.status === 'authenticated') {
-        console.error('Session refresh failed; preserving trusted profile.', error);
+      if (isAuthInvalidError(error)) {
+        markAuthInvalid(stateRef.current.session);
         return;
       }
-      applyState({ status: 'profile-error', session: null, profile: null, errorMessage: profileErrorMessage(error) });
+      applyState({
+        status: 'profile-unavailable',
+        session: stateRef.current.session,
+        profile: null,
+        errorMessage: isNetworkOrTimeoutError(error)
+          ? 'تعذر الوصول إلى الجلسة أو ملف الحساب مؤقتاً. أعد المحاولة دون تسجيل الخروج.'
+          : 'تعذر التحقق من الجلسة. أعد المحاولة.',
+      });
     }
-  }, [applyState, clearAuthState, loadProfile]);
+  }, [applyState, clearAuthState, loadProfile, markAuthInvalid]);
+
+  const retryProfile = useCallback(async () => {
+    const session = stateRef.current.session;
+    if (!session) {
+      await refresh();
+      return;
+    }
+    await loadProfile(session);
+  }, [loadProfile, refresh]);
 
   const signOut = useCallback(async () => {
     try {
       await webSupabase.auth.signOut();
     } finally {
-      if (mounted.current) clearAuthState();
+      clearAuthState();
     }
   }, [clearAuthState]);
 
+  const deferProfileLoad = useCallback((session: Session) => {
+    // Mark before queueing so INITIAL_SESSION followed by SIGNED_IN cannot schedule two loads.
+    if (pendingProfileUserId.current === session.user.id) return;
+    profileLoadStarted.current = true;
+    pendingProfileUserId.current = session.user.id;
+    queueMicrotask(() => {
+      if (!mounted.current || pendingProfileUserId.current !== session.user.id) return;
+      pendingProfileUserId.current = null;
+      void loadProfile(session);
+    });
+  }, [loadProfile]);
+
   const handleAuthEvent = useCallback((event: AuthChangeEvent, session: Session | null) => {
     if (event === 'INITIAL_SESSION') {
+      initialSessionReceived.current = true;
       if (!session) {
         clearAuthState();
         return;
       }
 
       const currentState = stateRef.current;
-      if (isTrustedProfileForSession(currentState, session)) {
-        applyState({ ...currentState, session });
-        return;
-      }
-
-      void loadProfile(session);
+      if (profileLoadStarted.current && currentState.session?.user.id === session.user.id) return;
+      deferProfileLoad(session);
       return;
     }
 
@@ -156,29 +251,30 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
     const sameUser = currentState.session?.user.id === session.user.id;
 
     if (event === 'TOKEN_REFRESHED' && sameUser) {
-      // Refresh token updates the session only; the last verified profile remains authoritative in React state.
+      // Token refresh updates the session only. It never reloads Profile or shows Loading.
       applyState({ ...currentState, session });
       return;
     }
 
-    if (event === 'USER_UPDATED' && sameUser && currentState.profile?.id === session.user.id) {
-      void loadProfile(session);
+    if (event === 'USER_UPDATED' && sameUser) {
+      deferProfileLoad(session);
       return;
     }
 
     if (event === 'SIGNED_IN' || !sameUser) {
-      void loadProfile(session);
+      if (pendingProfileUserId.current === session.user.id) return;
+      deferProfileLoad(session);
     }
-  }, [applyState, clearAuthState, loadProfile]);
+  }, [applyState, clearAuthState, deferProfileLoad]);
 
   useEffect(() => {
     mounted.current = true;
-
-    // Supabase emits INITIAL_SESSION immediately. Use it as the primary bootstrap source
-    // so a stored session is not delayed behind a second getSession request.
     const subscription = webSupabase.auth.onAuthStateChange(handleAuthEvent);
     const fallbackId = window.setTimeout(() => {
-      if (stateRef.current.status === 'initializing') void refresh();
+      if (!initialSessionReceived.current && !profileLoadStarted.current && !fallbackUsed.current) {
+        fallbackUsed.current = true;
+        void refresh();
+      }
     }, 2500);
 
     return () => {
@@ -188,7 +284,10 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
     };
   }, [handleAuthEvent, refresh]);
 
-  const value = useMemo<WebAuthContextValue>(() => ({ ...state, refresh, signOut }), [refresh, signOut, state]);
+  const value = useMemo<WebAuthContextValue>(
+    () => ({ ...state, refresh, retryProfile, signOut }),
+    [refresh, retryProfile, signOut, state],
+  );
 
   return <WebAuthContext.Provider value={value}>{children}</WebAuthContext.Provider>;
 }

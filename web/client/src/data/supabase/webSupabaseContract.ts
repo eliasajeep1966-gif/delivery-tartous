@@ -167,6 +167,11 @@ export const webSupabase = {
       if (error) throw new Error(error.message);
     },
 
+    async localSignOut(): Promise<void> {
+      const { error } = await getWebSupabaseClient().auth.signOut({ scope: 'local' });
+      if (error) throw new Error(error.message);
+    },
+
     async activatePendingAccount(input: ActivatePendingAccountInput): Promise<ActivatePendingAccountResult> {
       const email = validatePendingActivation(input);
       const { data, error } = await getWebSupabaseClient().functions.invoke<ActivatePendingAccountResult>(

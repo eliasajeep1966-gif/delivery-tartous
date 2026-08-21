@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { Eye, EyeOff, LogIn, LockKeyhole, Mail } from 'lucide-react';
+import { Eye, EyeOff, LogIn, LockKeyhole, Mail, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 
@@ -26,7 +26,7 @@ function loginErrorMessage(error: unknown): string {
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { profile, status, errorMessage, signOut } = useWebAuth();
+  const { profile, status, errorMessage, retryProfile } = useWebAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [visible, setVisible] = useState(false);
@@ -50,15 +50,8 @@ export default function Login() {
 
     if (status === 'authenticated' && profile && profile.role !== 'admin' && profile.role !== 'supervisor' && profile.role !== 'captain') {
       toast.error('هذا الحساب لا يملك واجهة مفعّلة على الويب حالياً.');
-      void signOut().catch(() => undefined);
-      return;
     }
-
-    if (status === 'profile-error' && errorMessage) {
-      toast.error(errorMessage);
-      void signOut().catch(() => undefined);
-    }
-  }, [errorMessage, profile, setLocation, signOut, status]);
+  }, [profile, setLocation, status]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -94,6 +87,15 @@ export default function Login() {
 
   return (
     <AuthShell title="مرحباً بعودتك" subtitle="سجّل الدخول للوصول إلى حسابك">
+      {status === 'profile-unavailable' || status === 'profile-missing' ? (
+        <section className="mt-7 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center" dir="rtl">
+          <p className="text-sm font-bold text-amber-900">{errorMessage ?? 'تعذر التحقق من ملف الحساب.'}</p>
+          <button type="button" onClick={() => void retryProfile()} className="mx-auto mt-3 flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0060B8] px-4 text-xs font-bold text-white active:scale-[0.98]">
+            <RefreshCw size={15} />
+            إعادة المحاولة
+          </button>
+        </section>
+      ) : (
       <form onSubmit={submit} className="mt-7 space-y-4">
         <label className="block text-right text-xs font-bold text-[#475663]">
           البريد الإلكتروني
@@ -155,6 +157,7 @@ export default function Login() {
           تفعيل حساب جديد
         </button>
       </form>
+      )}
     </AuthShell>
   );
 }

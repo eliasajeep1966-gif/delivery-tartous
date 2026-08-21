@@ -1,14 +1,33 @@
 import { type PropsWithChildren, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 import { useWebAuth } from '@/contexts/WebAuthContext';
 
-function StatusScreen({ title, message }: { title: string; message: string }) {
+function StatusScreen({
+  title,
+  message,
+  retry,
+}: {
+  title: string;
+  message: string;
+  retry?: () => void;
+}) {
   return (
     <main className="grid min-h-[100dvh] place-items-center bg-[#eaf5ff] px-5" dir="rtl">
       <section className="w-full max-w-sm rounded-2xl border border-[#d3e3f0] bg-white p-6 text-center shadow-[0_8px_28px_rgba(0,72,141,0.1)]">
         <h1 className="text-lg font-bold text-[#14213D]">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-[#58616b]">{message}</p>
+        {retry ? (
+          <button
+            type="button"
+            onClick={retry}
+            className="mx-auto mt-4 flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0060B8] px-4 text-xs font-bold text-white active:scale-[0.98]"
+          >
+            <RefreshCw size={15} />
+            إعادة المحاولة
+          </button>
+        ) : null}
       </section>
     </main>
   );
@@ -16,37 +35,34 @@ function StatusScreen({ title, message }: { title: string; message: string }) {
 
 export function AdminRouteGuard({ children }: PropsWithChildren) {
   const [, setLocation] = useLocation();
-  const { status, profile, session, errorMessage, signOut } = useWebAuth();
-  const isRejected = status === 'profile-error' || (status === 'authenticated' && profile?.role !== 'admin');
+  const { status, profile, session, errorMessage, retryProfile } = useWebAuth();
+  const needsProfileRetry = status === 'profile-unavailable' || status === 'profile-missing';
+  const isRejected = status === 'authenticated' && profile?.role !== 'admin';
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || status === 'auth-invalid') {
       setLocation('/login', { replace: true });
-      return;
     }
-
-    if (isRejected && session) {
-      void signOut()
-        .catch(() => undefined)
-        .finally(() => setLocation('/login', { replace: true }));
-    }
-  }, [isRejected, session, setLocation, signOut, status]);
+  }, [setLocation, status]);
 
   if (status === 'initializing') {
     return <StatusScreen title="جارٍ التحقق من الجلسة" message="انتظر لحظة قبل فتح لوحة الإدارة." />;
   }
 
-  if (status === 'unauthenticated') {
+  if (status === 'unauthenticated' || status === 'auth-invalid') {
     return <StatusScreen title="جارٍ تحويلك لتسجيل الدخول" message="يجب تسجيل الدخول للوصول إلى لوحة الإدارة." />;
   }
 
-  if (isRejected) {
-    return (
-      <StatusScreen
-        title="لا تملك صلاحية لوحة الأدمن"
-        message={errorMessage ?? 'هذا الحساب لا يملك دور الأدمن في النظام.'}
-      />
-    );
+  if (status === 'account-disabled') {
+    return <StatusScreen title="الحساب معطّل" message={errorMessage ?? 'هذا الحساب معطّل حالياً. تواصل مع الإدارة.'} />;
+  }
+
+  if (needsProfileRetry) {
+    return <StatusScreen title="تعذر التحقق من الحساب" message={errorMessage ?? 'لا يمكن فتح لوحة الإدارة قبل التحقق من ملف الحساب.'} retry={() => void retryProfile()} />;
+  }
+
+  if (isRejected || !session || !profile || profile.id !== session.user.id) {
+    return <StatusScreen title="لا تملك صلاحية لوحة الأدمن" message={errorMessage ?? 'هذا الحساب لا يملك دور الأدمن في النظام.'} />;
   }
 
   return <>{children}</>;
