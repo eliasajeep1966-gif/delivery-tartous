@@ -221,6 +221,8 @@ const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(
 export default defineConfig({
   plugins,
   resolve: {
+    // Keep React and React DOM on one module instance across Windows paths and pnpm links.
+    dedupe: ["react", "react-dom"],
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
@@ -230,6 +232,9 @@ export default defineConfig({
   },
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
+  optimizeDeps: {
+    include: ["react", "react-dom", "@radix-ui/react-switch"],
+  },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
