@@ -371,7 +371,7 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر إلغاء الطلب.');
     },
 
-    async transitionAssignedOrder(orderId: string, nextStatus: Extract<WebOrderStatus, 'received' | 'in_delivery' | 'completed'>): Promise<WebOrder> {
+    async transitionAssignedOrder(orderId: string, nextStatus: Extract<WebOrderStatus, 'received' | 'in_delivery' | 'completed' | 'false_order'>): Promise<WebOrder> {
       const { data, error } = await getWebSupabaseClient().rpc('transition_assigned_order', {
         p_order_id: orderId,
         p_next_status: nextStatus,

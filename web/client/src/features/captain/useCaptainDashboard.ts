@@ -74,7 +74,7 @@ export function useCaptainDashboard() {
     }
   }, [updatingAvailability]);
 
-  const transitionOrder = useCallback(async (orderId: string, nextStatus: Extract<WebOrder['status'], 'received' | 'in_delivery' | 'completed'>): Promise<boolean> => {
+  const transitionOrder = useCallback(async (orderId: string, nextStatus: Extract<WebOrder['status'], 'received' | 'in_delivery' | 'completed' | 'false_order'>): Promise<boolean> => {
     if (updatingOrderId) return false;
     setUpdatingOrderId(orderId);
     try {
