@@ -92,4 +92,5 @@
 - [x] تصحيح زر «طلب كاذب» ليظهر في حالتي received وin_delivery ويختفي عند completed أو false_order.
 - [x] تنفيذ Finance Web عبر get_company_profit_history وget_company_profit_day_details دون N+1 أو تغيير التصميم.
 - [x] جعل CaptainWageDetail يجلب orderStops عند فتح طلب محدد فقط مع cache، ثم تشغيل الفحوصات وعرض diff دون commit أو push.
-- [ ] رفع نسخة Finance Web المختبرة إلى main حتى يتم اختبار history وتفاصيل اليوم وفتح نقاط الطلب عند الطلب.
+- [x] رفع نسخة Finance Web المختبرة إلى main حتى يتم اختبار history وتفاصيل اليوم وفتح نقاط الطلب عند الطلب.
+- [x] إعادة فلاتر يومي/أسبوعي/شهري لسجل أرباح الشركة كتجميع محلي من history اليومية دون زيادة استدعاءات Supabase.
