@@ -967,7 +967,11 @@ export type Database = {
         }[]
       }
       list_pending_accounts: {
-        Args: never
+        Args: {
+          p_cursor_created_at?: string | null
+          p_cursor_id?: string | null
+          p_limit?: number
+        }
         Returns: {
           activated_at: string | null
           auth_user_id: string | null
