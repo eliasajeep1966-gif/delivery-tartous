@@ -26,6 +26,8 @@ type WebRpcRow<Name extends WebRpcName> = WebRpcReturn<Name> extends Array<infer
 export type WebWageTotals = WebRpcRow<'get_wage_totals'>;
 export type WebCaptainWageSummary = WebRpcRow<'get_captain_wage_summary'>;
 export type WebCaptainWageDetailV2 = WebRpcRow<'get_captain_wage_details_v2'>;
+export type WebBackofficeHomeSummary = WebRpcRow<'get_backoffice_home_summary'>;
+export type WebCaptainHomeMetrics = WebRpcRow<'get_captain_home_metrics'>;
 export type WebCompanyProfitHistoryRow = WebRpcRow<'get_company_profit_history'>;
 export type WebCompanyProfitPeriodHistoryRow = WebRpcRow<'get_company_profit_period_history'>;
 export type CompanyProfitPeriod = 'daily' | 'weekly' | 'monthly';
@@ -352,6 +354,20 @@ export const webSupabase = {
         .order('created_at', { ascending: false })
         .limit(safeLimit);
       return unwrap(data, error, 'تعذر تحميل آخر النشاطات.');
+    },
+
+    async backofficeHomeSummary(): Promise<WebBackofficeHomeSummary> {
+      const { data, error } = await getWebSupabaseClient().rpc('get_backoffice_home_summary');
+      const rows = unwrap(data, error, 'تعذر تحميل ملخص لوحة الإدارة.');
+      if (!rows[0]) throw new Error('لم يُرجع ملخص لوحة الإدارة نتيجة.');
+      return rows[0];
+    },
+
+    async captainHomeMetrics(): Promise<WebCaptainHomeMetrics> {
+      const { data, error } = await getWebSupabaseClient().rpc('get_captain_home_metrics');
+      const rows = unwrap(data, error, 'تعذر تحميل ملخص الكابتن.');
+      if (!rows[0]) throw new Error('لم يُرجع ملخص الكابتن نتيجة.');
+      return rows[0];
     },
 
     async auditLogsPage(input: WebListPageInput = {}): Promise<WebListPage<WebAuditLog>> {

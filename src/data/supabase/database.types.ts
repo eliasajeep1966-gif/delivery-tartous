@@ -908,6 +908,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_backoffice_home_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          assigned_count: number
+          cancelled_today_count: number
+          completed_today_count: number
+          in_delivery_count: number
+          recent_order_activities: Json
+        }[]
+      }
+      get_captain_home_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          availability: Database["public"]["Enums"]["captain_availability"]
+          completed_count: number
+          completed_gross: number
+        }[]
+      }
       get_captain_wage_details: {
         Args: { p_captain_id: string }
         Returns: {

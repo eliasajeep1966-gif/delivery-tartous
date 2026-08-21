@@ -1,8 +1,8 @@
-/** Design reminder — Captain dashboard derives only the authenticated captain's RLS-visible status and assigned orders. */
+/** Design reminder — Preserve the approved Captain Home layout; replace only aggregate metrics with the live typed summary RPC. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useWebAuth } from '@/contexts/WebAuthContext';
-import { webSupabase, type WebCaptainAvailability, type WebOrder, type WebOrderStop, type WebProfile } from '@/data/supabase/webSupabaseContract';
+import { webSupabase, type WebCaptainAvailability, type WebCaptainHomeMetrics, type WebOrder, type WebOrderStop, type WebProfile } from '@/data/supabase/webSupabaseContract';
 import { withWebRequestTimeout } from '@/lib/authRequest';
 
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل حساب الكابتن بعد 15 ثانية. حاول مرة أخرى.';
@@ -16,6 +16,7 @@ export function useCaptainDashboard() {
   const { session } = useWebAuth();
   const userId = session?.user.id ?? null;
   const [profile, setProfile] = useState<WebProfile | null>(null);
+  const [homeMetrics, setHomeMetrics] = useState<WebCaptainHomeMetrics | null>(null);
   const [availability, setAvailability] = useState<WebCaptainAvailability | null>(null);
   const [orders, setOrders] = useState<WebOrder[]>([]);
   const [currentOrderStops, setCurrentOrderStops] = useState<WebOrderStop[]>([]);
@@ -28,15 +29,17 @@ export function useCaptainDashboard() {
 
   const reload = useCallback(async () => {
     if (!userId) {
+      setHomeMetrics(null);
+      setAvailability(null);
       setIsInitialLoading(false);
       return;
     }
 
     setReadError(null);
     try {
-      const [nextProfile, statuses, nextOrders] = await Promise.all([
+      const [nextProfile, nextMetrics, nextOrders] = await Promise.all([
         withWebRequestTimeout(webSupabase.reads.myProfile(userId), LOAD_TIMEOUT_MESSAGE),
-        withWebRequestTimeout(webSupabase.reads.captainStatuses(), LOAD_TIMEOUT_MESSAGE),
+        withWebRequestTimeout(webSupabase.reads.captainHomeMetrics(), LOAD_TIMEOUT_MESSAGE),
         withWebRequestTimeout(webSupabase.reads.captainOrders(userId), LOAD_TIMEOUT_MESSAGE),
       ]);
       const activeStatuses = new Set<WebOrder['status']>(['assigned', 'received', 'in_delivery']);
@@ -44,7 +47,8 @@ export function useCaptainDashboard() {
       const nextStops = nextCurrentOrder ? await withWebRequestTimeout(webSupabase.reads.orderStops(nextCurrentOrder.id), LOAD_TIMEOUT_MESSAGE) : [];
       if (!mounted.current) return;
       setProfile(nextProfile);
-      setAvailability(statuses.find((status) => status.captain_id === nextProfile.id)?.availability ?? 'unavailable');
+      setHomeMetrics(nextMetrics);
+      setAvailability(nextMetrics.availability);
       setOrders(nextOrders);
       setCurrentOrderStops(nextStops);
     } catch (error) {
@@ -99,15 +103,13 @@ export function useCaptainDashboard() {
 
   const derived = useMemo(() => {
     const activeStatuses = new Set<WebOrder['status']>(['assigned', 'received', 'in_delivery']);
-    const currentOrder = orders.find((order) => activeStatuses.has(order.status)) ?? null;
-    const completedOrders = orders.filter((order) => order.status === 'completed');
     return {
-      currentOrder,
+      currentOrder: orders.find((order) => activeStatuses.has(order.status)) ?? null,
       recentOrders: orders.slice(0, 4),
-      completedCount: completedOrders.length,
-      completedGross: completedOrders.reduce((total, order) => total + order.fee, 0),
+      completedCount: homeMetrics?.completed_count ?? 0,
+      completedGross: homeMetrics?.completed_gross ?? 0,
     };
-  }, [orders]);
+  }, [homeMetrics, orders]);
 
   return { profile, availability, orders, currentOrderStops, isInitialLoading, readError, transitionError, clearTransitionError, updatingAvailability, updatingOrderId, reload, updateAvailability, transitionOrder, ...derived };
 }
