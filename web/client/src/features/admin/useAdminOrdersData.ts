@@ -4,7 +4,9 @@ import {
   webSupabase,
   type CreateOrderWithStopsInput,
   type WebCaptainStatus,
+  type WebKeysetCursor,
   type WebOrder,
+  type WebOrderStatus,
   type WebOrderStatusHistory,
   type WebOrderStop,
   type WebProfile,
@@ -12,23 +14,10 @@ import {
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
 
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل بيانات الطلبات بعد 15 ثانية. حاول مرة أخرى.';
+type ReloadOptions = { background?: boolean };
 
-type ReloadOptions = {
-  background?: boolean;
-};
-
-export type LiveCaptainOption = {
-  id: string;
-  name: string;
-  initial: string;
-  availability: 'available';
-};
-
-export type OrderDetails = {
-  orderId: string;
-  stops: WebOrderStop[];
-  history: WebOrderStatusHistory[];
-};
+export type LiveCaptainOption = { id: string; name: string; initial: string; availability: 'available' };
+export type OrderDetails = { orderId: string; stops: WebOrderStop[]; history: WebOrderStatusHistory[] };
 
 export type AdminOrdersData = {
   orders: WebOrder[];
@@ -40,7 +29,12 @@ export type AdminOrdersData = {
   details: OrderDetails | null;
   detailsLoadingOrderId: string | null;
   detailsError: string | null;
+  pageNumber: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
   reload: (options?: ReloadOptions) => Promise<void>;
+  nextPage: () => Promise<void>;
+  previousPage: () => Promise<void>;
   addOrder: (order: WebOrder) => void;
   replaceOrder: (order: WebOrder) => void;
   loadOrderDetails: (orderId: string) => Promise<void>;
@@ -59,7 +53,7 @@ function profileDisplayName(profile: WebProfile): string {
   return profile.full_name?.trim() || profile.email;
 }
 
-export function useAdminOrdersData(): AdminOrdersData {
+export function useAdminOrdersData(status?: WebOrderStatus): AdminOrdersData {
   const [orders, setOrders] = useState<WebOrder[]>([]);
   const [profiles, setProfiles] = useState<WebProfile[]>([]);
   const [captainStatuses, setCaptainStatuses] = useState<WebCaptainStatus[]>([]);
@@ -68,59 +62,70 @@ export function useAdminOrdersData(): AdminOrdersData {
   const [details, setDetails] = useState<OrderDetails | null>(null);
   const [detailsLoadingOrderId, setDetailsLoadingOrderId] = useState<string | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<(WebKeysetCursor | null)[]>([null]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [nextCursor, setNextCursor] = useState<WebKeysetCursor | null>(null);
   const mounted = useRef(true);
   const listRequestVersion = useRef(0);
   const detailsRequestVersion = useRef(0);
 
-  const reload = useCallback(async ({ background = false }: ReloadOptions = {}) => {
+  const loadPage = useCallback(async (cursor: WebKeysetCursor | null, index: number, { background = false }: ReloadOptions = {}) => {
     const version = ++listRequestVersion.current;
     if (!background) setReadError(null);
-
     try {
-      const [nextOrders, nextProfiles, nextCaptainStatuses] = await Promise.all([
-        withWebRequestTimeout(webSupabase.reads.orders(), LOAD_TIMEOUT_MESSAGE),
-        withWebRequestTimeout(webSupabase.reads.profiles(), 'انتهت مهلة تحميل بيانات المستخدمين بعد 15 ثانية. حاول مرة أخرى.'),
+      const [ordersPage, nextProfiles, nextCaptainStatuses] = await Promise.all([
+        withWebRequestTimeout(webSupabase.reads.ordersPage({ cursor, status }), LOAD_TIMEOUT_MESSAGE),
+        withWebRequestTimeout(webSupabase.reads.profiles(), 'انتهت مهلة تحميل بيانات الكباتن بعد 15 ثانية. حاول مرة أخرى.'),
         withWebRequestTimeout(webSupabase.reads.captainStatuses(), 'انتهت مهلة تحميل حالات الكباتن بعد 15 ثانية. حاول مرة أخرى.'),
       ]);
-
       if (!mounted.current || version !== listRequestVersion.current) return;
-      setOrders(nextOrders);
+      setOrders(ordersPage.items);
       setProfiles(nextProfiles);
       setCaptainStatuses(nextCaptainStatuses);
+      setNextCursor(ordersPage.nextCursor);
+      setPageIndex(index);
     } catch (error) {
-      console.error('Admin Orders data load failed.', error);
+      console.error('Admin Orders page load failed.', error);
       if (!mounted.current || version !== listRequestVersion.current) return;
       if (!background) setReadError(getOrdersErrorMessage(error, 'تعذر تحميل بيانات الطلبات. حاول مرة أخرى.'));
     } finally {
       if (mounted.current && version === listRequestVersion.current) setIsInitialLoading(false);
     }
-  }, []);
+  }, [status]);
+
+  const reload = useCallback((options: ReloadOptions = {}) => loadPage(cursorHistory[pageIndex] ?? null, pageIndex, options), [cursorHistory, loadPage, pageIndex]);
 
   useEffect(() => {
     mounted.current = true;
-    void reload();
-    return () => {
-      mounted.current = false;
-    };
-  }, [reload]);
+    setCursorHistory([null]);
+    setPageIndex(0);
+    setNextCursor(null);
+    void loadPage(null, 0);
+    return () => { mounted.current = false; };
+  }, [loadPage]);
+
+  const nextPage = useCallback(async () => {
+    if (!nextCursor) return;
+    const nextIndex = pageIndex + 1;
+    setCursorHistory((current) => [...current.slice(0, nextIndex), nextCursor]);
+    await loadPage(nextCursor, nextIndex);
+  }, [loadPage, nextCursor, pageIndex]);
+
+  const previousPage = useCallback(async () => {
+    if (pageIndex === 0) return;
+    const previousIndex = pageIndex - 1;
+    await loadPage(cursorHistory[previousIndex] ?? null, previousIndex);
+  }, [cursorHistory, loadPage, pageIndex]);
 
   const availableCaptains = useMemo(() => {
-    const availabilityByCaptainId = new Map(captainStatuses.map((status) => [status.captain_id, status.availability]));
-    return profiles
-      .filter((profile) => profile.role === 'captain' && profile.is_active && availabilityByCaptainId.get(profile.id) === 'available')
-      .map((profile) => ({
-        id: profile.id,
-        name: profileDisplayName(profile),
-        initial: profileDisplayName(profile).slice(0, 1),
-        availability: 'available' as const,
-      }));
+    const availabilityByCaptainId = new Map(captainStatuses.map((item) => [item.captain_id, item.availability]));
+    return profiles.filter((profile) => profile.role === 'captain' && profile.is_active && availabilityByCaptainId.get(profile.id) === 'available').map((profile) => ({ id: profile.id, name: profileDisplayName(profile), initial: profileDisplayName(profile).slice(0, 1), availability: 'available' as const }));
   }, [captainStatuses, profiles]);
 
   const addOrder = useCallback((order: WebOrder) => {
     ++listRequestVersion.current;
-    setOrders((current) => (current.some((item) => item.id === order.id) ? current : [order, ...current]));
+    setOrders((current) => (current.some((item) => item.id === order.id) ? current : [order, ...current].slice(0, 25)));
   }, []);
-
   const replaceOrder = useCallback((order: WebOrder) => {
     ++listRequestVersion.current;
     setOrders((current) => current.map((item) => (item.id === order.id ? order : item)));
@@ -130,13 +135,11 @@ export function useAdminOrdersData(): AdminOrdersData {
     const version = ++detailsRequestVersion.current;
     setDetailsError(null);
     setDetailsLoadingOrderId(orderId);
-
     try {
       const [stops, history] = await Promise.all([
         withWebRequestTimeout(webSupabase.reads.orderStops(orderId), 'انتهت مهلة تحميل نقاط الطلب بعد 15 ثانية. حاول مرة أخرى.'),
         withWebRequestTimeout(webSupabase.reads.orderStatusHistory(orderId), 'انتهت مهلة تحميل تسلسل حالة الطلب بعد 15 ثانية. حاول مرة أخرى.'),
       ]);
-
       if (!mounted.current || version !== detailsRequestVersion.current) return;
       setDetails({ orderId, stops, history });
     } catch (error) {
@@ -148,57 +151,15 @@ export function useAdminOrdersData(): AdminOrdersData {
     }
   }, []);
 
-  const createOrderWithStops = useCallback((input: CreateOrderWithStopsInput) => (
-    withWebRequestTimeout(
-      webSupabase.actions.createOrderWithStops(input),
-      'انتهت مهلة إنشاء الطلب بعد 15 ثانية. تحقّق من قائمة الطلبات قبل إعادة الإرسال.',
-    )
-  ), []);
+  const createOrderWithStops = useCallback((input: CreateOrderWithStopsInput) => withWebRequestTimeout(webSupabase.actions.createOrderWithStops(input), 'انتهت مهلة إنشاء الطلب بعد 15 ثانية. تحقّق من قائمة الطلبات قبل إعادة الإرسال.'), []);
+  const assignOrderCaptain = useCallback((orderId: string, captainId: string) => withWebRequestTimeout(webSupabase.actions.assignOrderCaptain(orderId, captainId), 'انتهت مهلة تعيين الكابتن بعد 15 ثانية. تحقّق من حالة الطلب قبل إعادة المحاولة.'), []);
+  const cancelOrder = useCallback((orderId: string, reason: string) => withWebRequestTimeout(webSupabase.actions.cancelOrder(orderId, reason), 'انتهت مهلة إلغاء الطلب بعد 15 ثانية. تحقّق من حالة الطلب قبل إعادة المحاولة.'), []);
 
-  const assignOrderCaptain = useCallback((orderId: string, captainId: string) => (
-    withWebRequestTimeout(
-      webSupabase.actions.assignOrderCaptain(orderId, captainId),
-      'انتهت مهلة تعيين الكابتن بعد 15 ثانية. تحقّق من حالة الطلب قبل إعادة المحاولة.',
-    )
-  ), []);
-
-  const cancelOrder = useCallback((orderId: string, reason: string) => (
-    withWebRequestTimeout(
-      webSupabase.actions.cancelOrder(orderId, reason),
-      'انتهت مهلة إلغاء الطلب بعد 15 ثانية. تحقّق من حالة الطلب قبل إعادة المحاولة.',
-    )
-  ), []);
-
-  return {
-    orders,
-    profiles,
-    captainStatuses,
-    availableCaptains,
-    isInitialLoading,
-    readError,
-    details,
-    detailsLoadingOrderId,
-    detailsError,
-    reload,
-    addOrder,
-    replaceOrder,
-    loadOrderDetails,
-    createOrderWithStops,
-    assignOrderCaptain,
-    cancelOrder,
-  };
+  return { orders, profiles, captainStatuses, availableCaptains, isInitialLoading, readError, details, detailsLoadingOrderId, detailsError, pageNumber: pageIndex + 1, hasNextPage: nextCursor !== null, hasPreviousPage: pageIndex > 0, reload, nextPage, previousPage, addOrder, replaceOrder, loadOrderDetails, createOrderWithStops, assignOrderCaptain, cancelOrder };
 }
 
-export type AvailableCaptainsData = {
-  availableCaptains: LiveCaptainOption[];
-  isInitialLoading: boolean;
-  readError: string | null;
-  reload: (options?: ReloadOptions) => Promise<void>;
-  createOrderWithStops: (input: CreateOrderWithStopsInput) => Promise<WebOrder>;
-  assignOrderCaptain: (orderId: string, captainId: string) => Promise<WebOrder>;
-};
+export type AvailableCaptainsData = { availableCaptains: LiveCaptainOption[]; isInitialLoading: boolean; readError: string | null; reload: (options?: ReloadOptions) => Promise<void>; createOrderWithStops: (input: CreateOrderWithStopsInput) => Promise<WebOrder>; assignOrderCaptain: (orderId: string, captainId: string) => Promise<WebOrder> };
 
-/** Lightweight Home data scope: only captain options and the approved create/assign RPCs. */
 export function useAvailableCaptains(): AvailableCaptainsData {
   const [profiles, setProfiles] = useState<WebProfile[]>([]);
   const [captainStatuses, setCaptainStatuses] = useState<WebCaptainStatus[]>([]);
@@ -206,19 +167,16 @@ export function useAvailableCaptains(): AvailableCaptainsData {
   const [readError, setReadError] = useState<string | null>(null);
   const mounted = useRef(true);
   const requestVersion = useRef(0);
-
   const reload = useCallback(async ({ background = false }: ReloadOptions = {}) => {
     const version = ++requestVersion.current;
     if (!background) setReadError(null);
-
     try {
       const [nextProfiles, nextCaptainStatuses] = await Promise.all([
         withWebRequestTimeout(webSupabase.reads.profiles(), 'انتهت مهلة تحميل بيانات الكباتن بعد 15 ثانية. حاول مرة أخرى.'),
         withWebRequestTimeout(webSupabase.reads.captainStatuses(), 'انتهت مهلة تحميل حالات الكباتن بعد 15 ثانية. حاول مرة أخرى.'),
       ]);
       if (!mounted.current || version !== requestVersion.current) return;
-      setProfiles(nextProfiles);
-      setCaptainStatuses(nextCaptainStatuses);
+      setProfiles(nextProfiles); setCaptainStatuses(nextCaptainStatuses);
     } catch (error) {
       console.error('Available captains load failed.', error);
       if (!mounted.current || version !== requestVersion.current) return;
@@ -227,47 +185,12 @@ export function useAvailableCaptains(): AvailableCaptainsData {
       if (mounted.current && version === requestVersion.current) setIsInitialLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    mounted.current = true;
-    void reload();
-    return () => {
-      mounted.current = false;
-    };
-  }, [reload]);
-
+  useEffect(() => { mounted.current = true; void reload(); return () => { mounted.current = false; }; }, [reload]);
   const availableCaptains = useMemo(() => {
-    const availabilityByCaptainId = new Map(captainStatuses.map((status) => [status.captain_id, status.availability]));
-    return profiles
-      .filter((profile) => profile.role === 'captain' && profile.is_active && availabilityByCaptainId.get(profile.id) === 'available')
-      .map((profile) => ({
-        id: profile.id,
-        name: profileDisplayName(profile),
-        initial: profileDisplayName(profile).slice(0, 1),
-        availability: 'available' as const,
-      }));
+    const availabilityByCaptainId = new Map(captainStatuses.map((item) => [item.captain_id, item.availability]));
+    return profiles.filter((profile) => profile.role === 'captain' && profile.is_active && availabilityByCaptainId.get(profile.id) === 'available').map((profile) => ({ id: profile.id, name: profileDisplayName(profile), initial: profileDisplayName(profile).slice(0, 1), availability: 'available' as const }));
   }, [captainStatuses, profiles]);
-
-  const createOrderWithStops = useCallback((input: CreateOrderWithStopsInput) => (
-    withWebRequestTimeout(
-      webSupabase.actions.createOrderWithStops(input),
-      'انتهت مهلة إنشاء الطلب بعد 15 ثانية. تحقّق من قائمة الطلبات قبل إعادة الإرسال.',
-    )
-  ), []);
-
-  const assignOrderCaptain = useCallback((orderId: string, captainId: string) => (
-    withWebRequestTimeout(
-      webSupabase.actions.assignOrderCaptain(orderId, captainId),
-      'انتهت مهلة تعيين الكابتن بعد 15 ثانية. تحقّق من حالة الطلب قبل إعادة المحاولة.',
-    )
-  ), []);
-
-  return {
-    availableCaptains,
-    isInitialLoading,
-    readError,
-    reload,
-    createOrderWithStops,
-    assignOrderCaptain,
-  };
+  const createOrderWithStops = useCallback((input: CreateOrderWithStopsInput) => withWebRequestTimeout(webSupabase.actions.createOrderWithStops(input), 'انتهت مهلة إنشاء الطلب بعد 15 ثانية. تحقّق من قائمة الطلبات قبل إعادة الإرسال.'), []);
+  const assignOrderCaptain = useCallback((orderId: string, captainId: string) => withWebRequestTimeout(webSupabase.actions.assignOrderCaptain(orderId, captainId), 'انتهت مهلة تعيين الكابتن بعد 15 ثانية. تحقّق من حالة الطلب قبل إعادة المحاولة.'), []);
+  return { availableCaptains, isInitialLoading, readError, reload, createOrderWithStops, assignOrderCaptain };
 }
