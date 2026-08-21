@@ -1,4 +1,5 @@
 /** Design reminder — Corporate Modern Mobile Operations with Arabic RTL routes and operational blue hierarchy. */
+/** Route reminder — keep the mobile finance workspace inside the existing guarded admin experience. */
 import { type ComponentType } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 
@@ -14,6 +15,7 @@ import ActivityLogs from '@/pages/ActivityLogs';
 import CaptainHome from '@/pages/CaptainHome';
 import { CaptainCustody, CaptainHelp, CaptainOrders, CaptainSettings, CaptainWages } from '@/pages/CaptainSections';
 import Captains from '@/pages/Captains';
+import CaptainWageDetail from '@/pages/CaptainWageDetail';
 import CompanyWages from '@/pages/CompanyWages';
 import Custody from '@/pages/Custody';
 import Help from '@/pages/Help';
@@ -64,6 +66,7 @@ function Router() {
         <Route path="/orders" component={() => <AdminRoute component={Orders} />} />
         <Route path="/captains" component={() => <AdminRoute component={Captains} />} />
         <Route path="/logs" component={() => <AdminRoute component={ActivityLogs} />} />
+        <Route path="/wages/captain/:captainId" component={() => <AdminRoute component={CaptainWageDetail} />} />
         <Route path="/wages" component={() => <AdminRoute component={Wages} />} />
         <Route path="/company-wages" component={() => <AdminRoute component={CompanyWages} />} />
         <Route path="/wage-orders" component={() => <AdminRoute component={WageOrders} />} />
