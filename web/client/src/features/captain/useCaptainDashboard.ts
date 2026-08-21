@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useWebAuth } from '@/contexts/WebAuthContext';
-import { webSupabase, type WebCaptainAvailability, type WebOrder, type WebProfile } from '@/data/supabase/webSupabaseContract';
+import { webSupabase, type WebCaptainAvailability, type WebOrder, type WebOrderStop, type WebProfile } from '@/data/supabase/webSupabaseContract';
 import { withWebRequestTimeout } from '@/lib/authRequest';
 
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل حساب الكابتن بعد 15 ثانية. حاول مرة أخرى.';
@@ -18,6 +18,7 @@ export function useCaptainDashboard() {
   const [profile, setProfile] = useState<WebProfile | null>(null);
   const [availability, setAvailability] = useState<WebCaptainAvailability | null>(null);
   const [orders, setOrders] = useState<WebOrder[]>([]);
+  const [currentOrderStops, setCurrentOrderStops] = useState<WebOrderStop[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [readError, setReadError] = useState<string | null>(null);
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
@@ -37,10 +38,14 @@ export function useCaptainDashboard() {
         withWebRequestTimeout(webSupabase.reads.captainStatuses(), LOAD_TIMEOUT_MESSAGE),
         withWebRequestTimeout(webSupabase.reads.captainOrders(userId), LOAD_TIMEOUT_MESSAGE),
       ]);
+      const activeStatuses = new Set<WebOrder['status']>(['assigned', 'received', 'in_delivery']);
+      const nextCurrentOrder = nextOrders.find((order) => activeStatuses.has(order.status));
+      const nextStops = nextCurrentOrder ? await withWebRequestTimeout(webSupabase.reads.orderStops(nextCurrentOrder.id), LOAD_TIMEOUT_MESSAGE) : [];
       if (!mounted.current) return;
       setProfile(nextProfile);
       setAvailability(statuses.find((status) => status.captain_id === nextProfile.id)?.availability ?? 'unavailable');
       setOrders(nextOrders);
+      setCurrentOrderStops(nextStops);
     } catch (error) {
       if (mounted.current) setReadError(getErrorMessage(error, 'تعذر تحميل حساب الكابتن. حاول مرة أخرى.'));
     } finally {
@@ -96,5 +101,5 @@ export function useCaptainDashboard() {
     };
   }, [orders]);
 
-  return { profile, availability, orders, isInitialLoading, readError, updatingAvailability, updatingOrderId, reload, updateAvailability, transitionOrder, ...derived };
+  return { profile, availability, orders, currentOrderStops, isInitialLoading, readError, updatingAvailability, updatingOrderId, reload, updateAvailability, transitionOrder, ...derived };
 }
