@@ -57,7 +57,7 @@ export function ReportCharts({ daily, revenueSplit }: ReportChartsProps) {
             <Tooltip
               cursor={{ fill: '#eaf4ff' }}
               contentStyle={{ border: '1px solid #dbe7f2', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,72,141,0.10)', direction: 'rtl', fontSize: 12 }}
-              formatter={(value: number | string) => [formatFinanceMoney(Number(value)), 'إجمالي الأجور']}
+              formatter={(value) => [formatFinanceMoney(Number(value ?? 0)), 'إجمالي الأجور']}
               labelFormatter={(label) => `اليوم: ${label}`}
             />
             <Bar dataKey="gross" fill="url(#daily-wages-gradient)" maxBarSize={36} name="إجمالي الأجور" radius={[7, 7, 2, 2]} />
@@ -76,7 +76,7 @@ export function ReportCharts({ daily, revenueSplit }: ReportChartsProps) {
           <PieChart>
             <Tooltip
               contentStyle={{ border: '1px solid #dbe7f2', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,72,141,0.10)', direction: 'rtl', fontSize: 12 }}
-              formatter={(value: number | string) => formatFinanceMoney(Number(value))}
+              formatter={(value) => formatFinanceMoney(Number(value ?? 0))}
             />
             <Pie data={revenueSplit} dataKey="value" innerRadius={53} outerRadius={75} paddingAngle={4} stroke="none">
               {revenueSplit.map((entry) => <Cell key={entry.key} fill={entry.color} />)}

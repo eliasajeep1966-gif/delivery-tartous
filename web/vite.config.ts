@@ -223,8 +223,8 @@ const reactDomModule = path.resolve(import.meta.dirname, "node_modules", "react-
 export default defineConfig({
   plugins,
   resolve: {
-    // Keep React and React DOM on one module instance across Windows paths and pnpm links.
-    dedupe: ["react", "react-dom"],
+    // Keep React, React DOM, and React's type helpers on one module instance across Windows paths and pnpm links.
+    dedupe: ["react", "react-dom", "react-is"],
     alias: {
       // Force every Radix package and app import to share web's single React instance.
       react: reactModule,
@@ -238,7 +238,7 @@ export default defineConfig({
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
   optimizeDeps: {
-    include: ["react", "react-dom", "@radix-ui/react-switch", "@radix-ui/react-dropdown-menu"],
+    include: ["react", "react-dom", "react-is", "recharts", "@radix-ui/react-switch", "@radix-ui/react-dropdown-menu"],
   },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
