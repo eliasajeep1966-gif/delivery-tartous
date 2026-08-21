@@ -36,6 +36,7 @@ export function useCompanyProfitHistory() {
   const historyCursor = useRef<string | undefined>(undefined);
   const dayCursor = useRef<{ completedAt?: string; ledgerId?: string }>({});
   const historyRequest = useRef(0);
+  const historyComplete = useRef(false);
   const dayRequest = useRef(0);
   const mounted = useRef(true);
 
@@ -43,6 +44,7 @@ export function useCompanyProfitHistory() {
     const request = ++historyRequest.current;
     if (!append) {
       historyCursor.current = undefined;
+      historyComplete.current = false;
       setHistory({ rows: [], loading: true, error: null, hasMore: true });
     } else {
       setHistory((current) => ({ ...current, loading: true, error: null }));
@@ -55,12 +57,40 @@ export function useCompanyProfitHistory() {
       if (!mounted.current || request !== historyRequest.current) return;
       const rows = result.map(mapCompanyProfitHistoryRow);
       historyCursor.current = rows.at(-1)?.businessDay;
+      historyComplete.current = rows.length < PAGE_SIZE;
       setHistory((current) => ({ rows: append ? [...current.rows, ...rows] : rows, loading: false, error: null, hasMore: rows.length === PAGE_SIZE }));
     } catch (error) {
       if (!mounted.current || request !== historyRequest.current) return;
       setHistory((current) => ({ ...current, loading: false, error: errorMessage(error, 'تعذر تحميل سجل أرباح الشركة.'), hasMore: false }));
     }
   }, []);
+
+  const loadAllHistory = useCallback(async () => {
+    if (historyComplete.current) return;
+    const request = ++historyRequest.current;
+    setHistory((current) => ({ ...current, loading: true, error: null }));
+    const allRows: CompanyProfitHistoryRow[] = [...history.rows];
+    let cursor: string | undefined = historyCursor.current;
+    try {
+      while (true) {
+        const result = await withWebRequestTimeout(webSupabase.reads.companyProfitHistory({
+          p_limit_days: PAGE_SIZE,
+          p_before_day: cursor,
+        }), HISTORY_TIMEOUT);
+        if (!mounted.current || request !== historyRequest.current) return;
+        const rows = result.map(mapCompanyProfitHistoryRow);
+        allRows.push(...rows);
+        cursor = rows.at(-1)?.businessDay;
+        if (rows.length < PAGE_SIZE) break;
+      }
+      historyCursor.current = cursor;
+      historyComplete.current = true;
+      setHistory({ rows: allRows, loading: false, error: null, hasMore: false });
+    } catch (error) {
+      if (!mounted.current || request !== historyRequest.current) return;
+      setHistory((current) => ({ ...current, loading: false, error: errorMessage(error, 'تعذر تحميل سجل الأرباح الكامل.') }));
+    }
+  }, [history.rows]);
 
   const selectDay = useCallback(async (day: string) => {
     const request = ++dayRequest.current;
@@ -111,5 +141,5 @@ export function useCompanyProfitHistory() {
     return () => { mounted.current = false; };
   }, [loadHistory]);
 
-  return { history, dayDetails, loadHistory, selectDay, loadMoreDay };
+  return { history, dayDetails, loadHistory, loadAllHistory, selectDay, loadMoreDay };
 }

@@ -44,6 +44,7 @@ export function useAdminFinanceData(): AdminFinanceData {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [readError, setReadError] = useState<string | null>(null);
   const [payoutInFlightCaptainId, setPayoutInFlightCaptainId] = useState<string | null>(null);
+  const payoutInFlightRef = useRef<string | null>(null);
   const [captainDetailsCache, setCaptainDetailsCache] = useState<Map<string, CaptainDetailsState>>(new Map());
   const totalsRef = useRef<WebWageTotals | null>(null);
   const summariesRef = useRef<WebCaptainWageSummary[]>([]);
@@ -123,10 +124,11 @@ export function useAdminFinanceData(): AdminFinanceData {
   }, [reload]);
 
   const recordPartialPayout = useCallback(async (captainId: string, amount: number, notes?: string): Promise<WebCaptainPayout> => {
-    if (payoutInFlightCaptainId) throw new Error('هناك دفعة قيد التسجيل حالياً.');
+    if (payoutInFlightRef.current) throw new Error('هناك دفعة قيد التسجيل حالياً.');
     const captain = snapshot.captains.find((item) => item.captainId === captainId);
     if (!captain) throw new Error('تعذر العثور على سجل أجر الكابتن.');
     assertPayoutAmount(amount, captain.unpaidTotal);
+    payoutInFlightRef.current = captainId;
     setPayoutInFlightCaptainId(captainId);
     try {
       const payout = await withWebRequestTimeout(webSupabase.actions.createCaptainPartialPayout({ captainId, amount, notes }), PAYOUT_TIMEOUT);
@@ -137,9 +139,10 @@ export function useAdminFinanceData(): AdminFinanceData {
       if (error instanceof WebRequestTimeoutError) void reload({ background: true });
       throw error;
     } finally {
+      payoutInFlightRef.current = null;
       if (mounted.current) setPayoutInFlightCaptainId(null);
     }
-  }, [invalidateCaptainDetails, payoutInFlightCaptainId, reload, snapshot.captains]);
+  }, [invalidateCaptainDetails, reload, snapshot.captains]);
 
   return { snapshot, isInitialLoading, readError, reload, loadCaptainDetails, invalidateCaptainDetails, captainDetailsCache, recordPartialPayout, payoutInFlightCaptainId };
 }
