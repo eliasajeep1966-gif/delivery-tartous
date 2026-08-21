@@ -66,10 +66,11 @@ function orderNumber(log: WebAuditLog, order: WebOrder | undefined): string | nu
 }
 
 function categoryFor(log: WebAuditLog): ActivityLogCategory {
-  if (log.entity_type === 'order' || log.action.startsWith('order_')) return 'orders';
-  if (log.entity_type === 'captain_payout' || log.action.includes('payout')) return 'captains';
+  const entityType = log.entity_type.toLowerCase();
+  if (entityType === 'order' || log.action.startsWith('order_')) return 'orders';
+  if (entityType === 'captain_payout' || log.action.includes('payout')) return 'captains';
   if (log.action.includes('captain_') || log.action.includes('custody')) return 'captains';
-  if (log.action.includes('account') || log.action.includes('user_') || log.action.includes('permission')) return 'users';
+  if (['user', 'profile', 'pending_account', 'user_permission_override'].includes(entityType) || log.action.includes('account') || log.action.includes('user_') || log.action.includes('profile') || log.action.includes('permission')) return 'users';
   return 'system';
 }
 
