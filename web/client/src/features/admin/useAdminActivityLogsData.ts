@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   webSupabase,
+  WEB_LIST_PAGE_SIZE,
   type WebAuditLog,
+  type WebKeysetCursor,
   type WebOrder,
   type WebProfile,
 } from '@/data/supabase/webSupabaseContract';
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
 
-const LOG_LIMIT = 100;
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل سجل الحركات بعد 15 ثانية. حاول مرة أخرى.';
 const DAMASCUS_TIME_ZONE = 'Asia/Damascus';
 
@@ -132,24 +133,34 @@ export function useAdminActivityLogsData() {
   const [profiles, setProfiles] = useState<WebProfile[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [readError, setReadError] = useState<string | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<(WebKeysetCursor | null)[]>([null]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [nextCursor, setNextCursor] = useState<WebKeysetCursor | null>(null);
   const mounted = useRef(true);
   const requestVersion = useRef(0);
 
-  const reload = useCallback(async ({ background = false }: ReloadOptions = {}) => {
+  const loadPage = useCallback(async (cursor: WebKeysetCursor | null, index: number, { background = false }: ReloadOptions = {}) => {
     const version = ++requestVersion.current;
     if (!background) setReadError(null);
-
     try {
-      const [nextAuditLogs, nextOrders, nextProfiles] = await Promise.all([
-        withWebRequestTimeout(webSupabase.reads.auditLogs(LOG_LIMIT), LOAD_TIMEOUT_MESSAGE),
-        withWebRequestTimeout(webSupabase.reads.orders(), LOAD_TIMEOUT_MESSAGE),
-        withWebRequestTimeout(webSupabase.reads.profiles(), LOAD_TIMEOUT_MESSAGE),
+      const auditPage = await withWebRequestTimeout(webSupabase.reads.auditLogsPage({ cursor, limit: WEB_LIST_PAGE_SIZE }), LOAD_TIMEOUT_MESSAGE);
+      const orderIds = Array.from(new Set(auditPage.items.filter((log) => log.entity_type === 'order' && log.entity_id).map((log) => log.entity_id as string)));
+      const profileIds = Array.from(new Set(auditPage.items.flatMap((log) => [
+        log.actor_user_id,
+        log.entity_type === 'order' ? null : log.entity_id,
+        metadataText(log, 'captain_id'),
+      ].filter((id): id is string => Boolean(id)))));
+      const [nextOrders, nextProfiles] = await Promise.all([
+        withWebRequestTimeout(webSupabase.reads.ordersByIds(orderIds), LOAD_TIMEOUT_MESSAGE),
+        withWebRequestTimeout(webSupabase.reads.profilesByIds(profileIds), LOAD_TIMEOUT_MESSAGE),
       ]);
-
       if (!mounted.current || version !== requestVersion.current) return;
-      setAuditLogs(nextAuditLogs);
+      setAuditLogs(auditPage.items);
       setOrders(nextOrders);
       setProfiles(nextProfiles);
+      setNextCursor(auditPage.nextCursor);
+      setPageIndex(index);
+      setCursorHistory((current) => [...current.slice(0, index), cursor]);
     } catch (error) {
       console.error('Admin activity logs data load failed.', error);
       if (!mounted.current || version !== requestVersion.current || background) return;
@@ -159,13 +170,23 @@ export function useAdminActivityLogsData() {
     }
   }, []);
 
+  const reload = useCallback((options: ReloadOptions = {}) => loadPage(cursorHistory[pageIndex] ?? null, pageIndex, options), [cursorHistory, loadPage, pageIndex]);
+  const nextPage = useCallback(async () => {
+    if (!nextCursor) return;
+    await loadPage(nextCursor, pageIndex + 1);
+  }, [loadPage, nextCursor, pageIndex]);
+  const previousPage = useCallback(async () => {
+    if (pageIndex === 0) return;
+    await loadPage(cursorHistory[pageIndex - 1] ?? null, pageIndex - 1);
+  }, [cursorHistory, loadPage, pageIndex]);
+
   useEffect(() => {
     mounted.current = true;
-    void reload();
+    void loadPage(null, 0);
     return () => {
       mounted.current = false;
     };
-  }, [reload]);
+  }, [loadPage]);
 
   const activities = useMemo<AdminActivityLog[]>(() => {
     const ordersById = new Map(orders.map((order) => [order.id, order]));
@@ -188,5 +209,5 @@ export function useAdminActivityLogsData() {
     });
   }, [auditLogs, orders, profiles]);
 
-  return { activities, isInitialLoading, readError, reload };
+  return { activities, isInitialLoading, readError, reload, pageNumber: pageIndex + 1, hasNextPage: nextCursor !== null, hasPreviousPage: pageIndex > 0, nextPage, previousPage };
 }

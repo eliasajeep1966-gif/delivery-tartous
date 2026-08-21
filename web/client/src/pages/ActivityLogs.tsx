@@ -62,7 +62,7 @@ export default function ActivityLogs() {
   const [, setLocation] = useLocation();
   const [category, setCategory] = useState<LogCategory>('all');
   const [query, setQuery] = useState('');
-  const { activities, isInitialLoading, readError, reload } = useAdminActivityLogsData();
+  const { activities, isInitialLoading, readError, reload, pageNumber, hasNextPage, hasPreviousPage, nextPage, previousPage } = useAdminActivityLogsData();
 
   const filteredActivities = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -93,7 +93,7 @@ export default function ActivityLogs() {
           <section className="rounded-2xl border border-[#d3e3f0] bg-white p-4 shadow-[0_2px_8px_rgba(0,72,141,0.05)]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-[18px] font-bold">سجل الحركات الكامل</h2>
+                <h2 className="text-[18px] font-bold">سجل الحركات</h2>
                 <p className="mt-1 text-xs leading-5 text-[#58616b]">كل التغييرات والعمليات في مكان واحد، مع منفّذ الحركة ووقتها.</p>
               </div>
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0060B8]"><Clock3 size={23} /></span>
@@ -134,6 +134,7 @@ export default function ActivityLogs() {
                 </article>;
               }) : <div className="rounded-2xl border border-dashed border-[#c7dae8] bg-white/70 px-4 py-10 text-center"><ClipboardList className="mx-auto text-[#7d9ab0]" size={28} /><p className="mt-2 text-sm font-bold text-[#4f5d6b]">لا توجد حركات مطابقة</p><p className="mt-1 text-xs text-[#75818e]">جرّب تغيير البحث أو نوع السجل.</p></div>}
             </div>}
+            {!isInitialLoading && !readError && (hasPreviousPage || hasNextPage) && <nav className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#d3e3f0] bg-white p-3" aria-label="تنقل سجل الحركات"><button type="button" onClick={() => void previousPage()} disabled={!hasPreviousPage} className="h-10 flex-1 rounded-xl border border-[#c9d9e7] text-xs font-bold text-[#0060B8] disabled:cursor-not-allowed disabled:opacity-45">السابق</button><span className="shrink-0 text-xs font-bold text-[#58616b]">صفحة {pageNumber}</span><button type="button" onClick={() => void nextPage()} disabled={!hasNextPage} className="h-10 flex-1 rounded-xl bg-[#0060B8] text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-45">التالي</button></nav>}
           </section>
         </main>
 

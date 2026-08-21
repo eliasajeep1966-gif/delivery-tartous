@@ -337,6 +337,13 @@ export const webSupabase = {
       return asPage(unwrap(data, error, 'تعذر تحميل الطلبات.'), limit);
     },
 
+    async ordersByIds(orderIds: readonly string[]): Promise<WebOrder[]> {
+      const ids = Array.from(new Set(orderIds.map((id) => id.trim()).filter(Boolean)));
+      if (ids.length === 0) return [];
+      const { data, error } = await getWebSupabaseClient().from('orders').select('*').in('id', ids);
+      return unwrap(data, error, 'تعذر تحميل الطلبات المرتبطة بسجل الحركات.');
+    },
+
     async auditLogs(limit = 6): Promise<WebAuditLog[]> {
       const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
       const { data, error } = await getWebSupabaseClient()
@@ -345,6 +352,15 @@ export const webSupabase = {
         .order('created_at', { ascending: false })
         .limit(safeLimit);
       return unwrap(data, error, 'تعذر تحميل آخر النشاطات.');
+    },
+
+    async auditLogsPage(input: WebListPageInput = {}): Promise<WebListPage<WebAuditLog>> {
+      const limit = normalizePageLimit(input.limit);
+      let query = getWebSupabaseClient().from('audit_logs').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit + 1);
+      const cursorFilter = keysetFilter(input.cursor);
+      if (cursorFilter) query = query.or(cursorFilter);
+      const { data, error } = await query;
+      return asPage(unwrap(data, error, 'تعذر تحميل سجل الحركات.'), limit);
     },
 
     async captainOrders(captainId: string): Promise<WebOrder[]> {
