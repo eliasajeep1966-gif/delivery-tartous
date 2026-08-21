@@ -69,6 +69,7 @@ function Router() {
         <Route path="/wages/captain/:captainId" component={() => <BackOfficeRoute component={CaptainWageDetail} />} />
         <Route path="/wages" component={() => <BackOfficeRoute component={Wages} />} />
         <Route path="/company-wages" component={() => <BackOfficeRoute component={CompanyWages} />} />
+        <Route path="/company-profit-history" component={() => <BackOfficeRoute component={() => <CompanyWages fullHistory />} />} />
         <Route path="/wage-orders" component={() => <BackOfficeRoute component={WageOrders} />} />
         <Route path="/more" component={() => <BackOfficeRoute component={More} />} />
         <Route path="/custody" component={() => <BackOfficeRoute component={Custody} />} />
