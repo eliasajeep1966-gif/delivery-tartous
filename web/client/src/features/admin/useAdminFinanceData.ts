@@ -133,13 +133,17 @@ export function useAdminFinanceData(): AdminFinanceData {
     try {
       const payout = await withWebRequestTimeout(webSupabase.actions.createCaptainPartialPayout({ captainId, amount, notes }), PAYOUT_TIMEOUT);
       invalidateCaptainDetails(captainId);
-      await reload({ background: true });
+      void reload({ background: true }).catch((refreshError) => {
+        console.error('Finance background refresh failed after successful payout.', refreshError);
+      });
       return payout;
     } catch (error) {
       if (error instanceof WebRequestTimeoutError) void reload({ background: true });
       throw error;
     } finally {
-      payoutInFlightRef.current = null;
+      if (payoutInFlightRef.current === captainId) {
+        payoutInFlightRef.current = null;
+      }
       if (mounted.current) setPayoutInFlightCaptainId(null);
     }
   }, [invalidateCaptainDetails, reload, snapshot.captains]);

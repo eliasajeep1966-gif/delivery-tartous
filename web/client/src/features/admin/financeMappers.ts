@@ -3,6 +3,7 @@ import type {
   WebCaptainWageSummary,
   WebCompanyProfitDayDetailRow,
   WebCompanyProfitHistoryRow,
+  WebCompanyProfitPeriodHistoryRow,
   WebWageTotals,
 } from '@/data/supabase/webSupabaseContract';
 
@@ -10,6 +11,7 @@ import type {
   CaptainFinanceCard,
   CompanyProfitDayDetailRow,
   CompanyProfitHistoryRow,
+  CompanyProfitPeriodHistoryRow,
   FinanceLedgerRow,
   FinanceOrderStatus,
   FinanceSnapshot,
@@ -85,6 +87,18 @@ export function mapCaptainFinanceCard(
     paidTotal: finiteNumber(summary.paid_total, 'paid_total'),
     unpaidTotal: finiteNumber(summary.unpaid_total, 'unpaid_total'),
     rows,
+  };
+}
+
+export function mapCompanyProfitPeriodHistoryRow(source: WebCompanyProfitPeriodHistoryRow): CompanyProfitPeriodHistoryRow {
+  return {
+    periodStart: source.period_start,
+    periodEnd: source.period_end,
+    grossTotal: finiteNumber(source.gross_total, 'gross_total'),
+    companyTotal: finiteNumber(source.company_total, 'company_total'),
+    captainNetTotal: finiteNumber(source.captain_net_total, 'captain_net_total'),
+    settlementTotal: finiteNumber(source.settlement_total, 'settlement_total'),
+    orderCount: finiteNumber(source.order_count, 'order_count'),
   };
 }
 

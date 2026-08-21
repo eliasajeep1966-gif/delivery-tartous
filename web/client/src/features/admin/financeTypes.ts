@@ -46,8 +46,18 @@ export type FinanceTotals = {
   unpaidTotal: number;
 };
 
+export type CompanyProfitPeriod = 'daily' | 'weekly' | 'monthly';
 export type CompanyProfitHistoryRow = {
   businessDay: string;
+  grossTotal: number;
+  companyTotal: number;
+  captainNetTotal: number;
+  settlementTotal: number;
+  orderCount: number;
+};
+export type CompanyProfitPeriodHistoryRow = {
+  periodStart: string;
+  periodEnd: string;
   grossTotal: number;
   companyTotal: number;
   captainNetTotal: number;

@@ -992,6 +992,22 @@ export type Database = {
           settlement_total: number
         }[]
       }
+      get_company_profit_period_history: {
+        Args: {
+          p_before_period_start?: string
+          p_limit?: number
+          p_period?: string
+        }
+        Returns: {
+          captain_net_total: number
+          company_total: number
+          gross_total: number
+          order_count: number
+          period_end: string
+          period_start: string
+          settlement_total: number
+        }[]
+      }
       get_wage_totals: {
         Args: never
         Returns: {
