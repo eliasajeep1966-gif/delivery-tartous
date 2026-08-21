@@ -1,5 +1,5 @@
 /** Design reminder — Corporate Modern Mobile Operations: RTL order list, #0060B8 hierarchy, white cards, Cairo typography. */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Clock3,
@@ -15,6 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSearch } from 'wouter';
 
 import { AdminBottomNav } from '@/components/AdminBottomNav';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -197,11 +198,21 @@ function OrderDetailsDialog({
 }
 
 export default function Orders() {
-  const [filter, setFilter] = useState<StatusFilter>('all');
+  const search = useSearch();
+  const requestedFilter = useMemo<StatusFilter>(() => {
+    const status = new URLSearchParams(search).get('status');
+    return filters.includes(status as StatusFilter) ? status as StatusFilter : 'all';
+  }, [search]);
+  const [filter, setFilter] = useState<StatusFilter>(requestedFilter);
   const [query, setQuery] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [assigningOrderId, setAssigningOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFilter(requestedFilter);
+  }, [requestedFilter]);
+
   const {
     orders,
     profiles,

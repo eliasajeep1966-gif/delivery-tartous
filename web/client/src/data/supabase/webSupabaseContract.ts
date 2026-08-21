@@ -14,6 +14,7 @@ export type WebUserPermissionOverride = Tables<'user_permission_overrides'>;
 export type WebOrder = Tables<'orders'>;
 export type WebOrderStop = Tables<'order_stops'>;
 export type WebOrderStatusHistory = Tables<'order_status_history'>;
+export type WebAuditLog = Tables<'audit_logs'>;
 export type WebOrderStatus = Database['public']['Enums']['order_status'];
 export type WebOrderStopType = Database['public']['Enums']['order_stop_type'];
 
@@ -230,6 +231,16 @@ export const webSupabase = {
         .select('*')
         .order('created_at', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل الطلبات.');
+    },
+
+    async auditLogs(limit = 6): Promise<WebAuditLog[]> {
+      const safeLimit = Math.max(1, Math.min(20, Math.floor(limit)));
+      const { data, error } = await getWebSupabaseClient()
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(safeLimit);
+      return unwrap(data, error, 'تعذر تحميل آخر النشاطات.');
     },
 
     async captainOrders(captainId: string): Promise<WebOrder[]> {

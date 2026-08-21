@@ -1,7 +1,7 @@
 /** Design reminder — Captain dashboard derives only the authenticated captain's RLS-visible status and assigned orders. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useWebAuth } from '@/contexts/WebAuthContext';
 
+import { useWebAuth } from '@/contexts/WebAuthContext';
 import { webSupabase, type WebCaptainAvailability, type WebOrder, type WebProfile } from '@/data/supabase/webSupabaseContract';
 import { withWebRequestTimeout } from '@/lib/authRequest';
 
@@ -13,6 +13,8 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function useCaptainDashboard() {
+  const { session } = useWebAuth();
+  const userId = session?.user.id ?? null;
   const [profile, setProfile] = useState<WebProfile | null>(null);
   const [availability, setAvailability] = useState<WebCaptainAvailability | null>(null);
   const [orders, setOrders] = useState<WebOrder[]>([]);
@@ -21,17 +23,19 @@ export function useCaptainDashboard() {
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const mounted = useRef(true);
-  const { session } = useWebAuth();
 
   const reload = useCallback(async () => {
-    if (!session) return;
+    if (!userId) {
+      setIsInitialLoading(false);
+      return;
+    }
 
     setReadError(null);
     try {
       const [nextProfile, statuses, nextOrders] = await Promise.all([
-        withWebRequestTimeout(webSupabase.reads.myProfile(session.user.id), LOAD_TIMEOUT_MESSAGE),
+        withWebRequestTimeout(webSupabase.reads.myProfile(userId), LOAD_TIMEOUT_MESSAGE),
         withWebRequestTimeout(webSupabase.reads.captainStatuses(), LOAD_TIMEOUT_MESSAGE),
-        withWebRequestTimeout(webSupabase.reads.captainOrders(session.user.id), LOAD_TIMEOUT_MESSAGE),
+        withWebRequestTimeout(webSupabase.reads.captainOrders(userId), LOAD_TIMEOUT_MESSAGE),
       ]);
       if (!mounted.current) return;
       setProfile(nextProfile);
@@ -42,7 +46,7 @@ export function useCaptainDashboard() {
     } finally {
       if (mounted.current) setIsInitialLoading(false);
     }
-  }, [session]);
+  }, [userId]);
 
   useEffect(() => {
     mounted.current = true;
