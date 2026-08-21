@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(currentSession);
 
       if (currentSession) {
-        const profileData = await deliverySupabase.reads.myProfile();
+        const profileData = await deliverySupabase.reads.myProfile(currentSession.user.id);
         setProfile(profileData);
 
         const isInactive = profileData.is_active !== true;
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
         if (newSession) {
           try {
-            const profileData = await deliverySupabase.reads.myProfile();
+            const profileData = await deliverySupabase.reads.myProfile(newSession.user.id);
             setProfile(profileData);
 
             const isInactive = profileData.is_active !== true;

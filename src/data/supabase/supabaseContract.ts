@@ -146,8 +146,16 @@ export const deliverySupabase = {
   },
 
   reads: {
-    async myProfile(): Promise<Profile> {
-      const { data, error } = await getSupabaseClient().from('profiles').select('*').single();
+    async myProfile(userId: string): Promise<Profile> {
+      const normalizedUserId = userId.trim();
+      if (!normalizedUserId) throw new Error('Could not determine account identity.');
+
+      const { data, error } = await getSupabaseClient()
+        .from('profiles')
+        .select('*')
+        .eq('id', normalizedUserId)
+        .maybeSingle();
+
       return unwrap(data, error, 'Profile not found.');
     },
 

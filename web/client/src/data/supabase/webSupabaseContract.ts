@@ -187,8 +187,16 @@ export const webSupabase = {
   },
 
   reads: {
-    async myProfile(): Promise<WebProfile> {
-      const { data, error } = await getWebSupabaseClient().from('profiles').select('*').single();
+    async myProfile(userId: string): Promise<WebProfile> {
+      const normalizedUserId = userId.trim();
+      if (!normalizedUserId) throw new Error('تعذر تحديد هوية الحساب.');
+
+      const { data, error } = await getWebSupabaseClient()
+        .from('profiles')
+        .select('*')
+        .eq('id', normalizedUserId)
+        .maybeSingle();
+
       return unwrap(data, error, 'تعذر العثور على ملف الحساب.');
     },
 

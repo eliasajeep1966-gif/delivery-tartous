@@ -68,7 +68,7 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
     }
 
     try {
-      const profile = await withAuthRequestTimeout(webSupabase.reads.myProfile(), PROFILE_TIMEOUT_MESSAGE);
+      const profile = await withAuthRequestTimeout(webSupabase.reads.myProfile(session.user.id), PROFILE_TIMEOUT_MESSAGE);
       if (!mounted.current || version !== requestVersion.current) return;
 
       if (!profile.is_active) {
