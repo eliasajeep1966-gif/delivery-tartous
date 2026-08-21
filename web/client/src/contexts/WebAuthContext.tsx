@@ -131,7 +131,21 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
   }, [clearAuthState]);
 
   const handleAuthEvent = useCallback((event: AuthChangeEvent, session: Session | null) => {
-    if (event === 'INITIAL_SESSION') return;
+    if (event === 'INITIAL_SESSION') {
+      if (!session) {
+        clearAuthState();
+        return;
+      }
+
+      const currentState = stateRef.current;
+      if (isTrustedProfileForSession(currentState, session)) {
+        applyState({ ...currentState, session });
+        return;
+      }
+
+      void loadProfile(session);
+      return;
+    }
 
     if (event === 'SIGNED_OUT' || !session) {
       clearAuthState();
@@ -160,12 +174,16 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     mounted.current = true;
 
-    // Bootstrap is intentionally sourced from getSession only. INITIAL_SESSION is ignored below.
-    void refresh();
+    // Supabase emits INITIAL_SESSION immediately. Use it as the primary bootstrap source
+    // so a stored session is not delayed behind a second getSession request.
     const subscription = webSupabase.auth.onAuthStateChange(handleAuthEvent);
+    const fallbackId = window.setTimeout(() => {
+      if (stateRef.current.status === 'initializing') void refresh();
+    }, 2500);
 
     return () => {
       mounted.current = false;
+      window.clearTimeout(fallbackId);
       subscription.unsubscribe();
     };
   }, [handleAuthEvent, refresh]);
