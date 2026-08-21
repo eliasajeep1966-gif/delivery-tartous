@@ -243,7 +243,7 @@ export const webSupabase = {
     },
 
     async auditLogs(limit = 6): Promise<WebAuditLog[]> {
-      const safeLimit = Math.max(1, Math.min(20, Math.floor(limit)));
+      const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
       const { data, error } = await getWebSupabaseClient()
         .from('audit_logs')
         .select('*')
