@@ -89,16 +89,18 @@ function RoleSelection({
   selectedRole,
   currentRole,
   onSelect,
+  availableRoles = roles,
   disabled = false,
 }: {
   selectedRole: WebAppRole | null;
   currentRole?: WebAppRole;
   onSelect: (role: WebAppRole) => void;
+  availableRoles?: WebAppRole[];
   disabled?: boolean;
 }) {
   return (
     <div className="grid grid-cols-3 gap-2">
-      {roles.map((role) => {
+      {availableRoles.map((role) => {
         const meta = roleMeta[role];
         const Icon = meta.icon;
         const isCurrent = currentRole === role;
@@ -238,6 +240,10 @@ function PermissionOverridesDialog({
 export default function Users() {
   const [, setLocation] = useLocation();
   const { profile: currentProfile, refresh: refreshAuth } = useWebAuth();
+  const isAdmin = currentProfile?.role === 'admin';
+  const isSupervisor = currentProfile?.role === 'supervisor';
+  const canManageCaptains = isAdmin || isSupervisor;
+  const canChangeRoles = isAdmin;
   const {
     profiles,
     captainStatuses,
@@ -313,8 +319,8 @@ export default function Users() {
       return;
     }
 
-    if (!roles.includes(draft.role)) {
-      toast.error('اختر دوراً صحيحاً للحساب.');
+    if (!roles.includes(draft.role) || (isSupervisor && draft.role !== 'captain')) {
+      toast.error('المشرف يستطيع إنشاء حساب كابتن فقط.');
       return;
     }
 
@@ -374,6 +380,11 @@ export default function Users() {
   };
 
   const confirmRoleChange = async () => {
+    if (!canChangeRoles) {
+      toast.error('تغيير الأدوار غير مسموح لهذا الحساب.');
+      return;
+    }
+
     if (!roleTarget || !selectedNewRole || selectedNewRole === roleTarget.role) {
       toast.error('اختر دوراً جديداً مختلفاً عن الدور الحالي.');
       return;
@@ -545,7 +556,7 @@ export default function Users() {
               </div>
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0060B8]"><UserRound size={23} /></span>
             </div>
-            <button type="button" onClick={() => setIsCreateDialogOpen(true)} disabled={isInitialLoading || Boolean(readError)} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0060B8] text-sm font-bold text-white shadow-[0_4px_12px_rgba(0,96,184,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
+                          <button type="button" onClick={() => setIsCreateDialogOpen(true)} disabled={isInitialLoading || Boolean(readError) || !canManageCaptains} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0060B8] text-sm font-bold text-white shadow-[0_4px_12px_rgba(0,96,184,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
               <Plus size={19} />
               إنشاء حساب معلّق
             </button>
@@ -627,8 +638,9 @@ export default function Users() {
                       const captainStatus = user.role === 'captain' ? captainStatusById.get(user.id) : undefined;
                       const isToggling = togglingCaptainId === user.id;
                       const isChangingRole = changingRoleUserId === user.id;
-                      const canConfigureOverrides = currentProfile?.role === 'admin' && user.role === 'supervisor';
-                      const actionCount = 1 + (user.role === 'captain' ? 1 : 0) + (canConfigureOverrides ? 1 : 0);
+                      const canConfigureOverrides = isAdmin && user.role === 'supervisor';
+                      const canChangeRole = canChangeRoles;
+                      const actionCount = Math.max(1, Number(canChangeRole) + Number(user.role === 'captain') + Number(canConfigureOverrides));
                       const actionColumns = `repeat(${actionCount}, minmax(0, 1fr))`;
 
                       return (
@@ -652,13 +664,15 @@ export default function Users() {
                           <p className="mt-3 inline-flex items-center gap-1 text-xs text-[#58616b]" dir="ltr"><Mail size={14} />{user.email}</p>
 
                           <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: actionColumns }}>
-                            <button type="button" onClick={() => openRoleDialog(user)} disabled={isChangingRole} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#a8c8ff] bg-[#eef6ff] text-xs font-bold text-[#0060B8] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
-                              {isChangingRole && <LoaderCircle className="animate-spin" size={15} />}
-                              <UserCog size={16} />
-                              تغيير الدور
-                            </button>
+                            {canChangeRole && (
+                              <button type="button" onClick={() => openRoleDialog(user)} disabled={isChangingRole} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#a8c8ff] bg-[#eef6ff] text-xs font-bold text-[#0060B8] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
+                                {isChangingRole && <LoaderCircle className="animate-spin" size={15} />}
+                                <UserCog size={16} />
+                                تغيير الدور
+                              </button>
+                            )}
 
-                            {user.role === 'captain' && (
+                            {user.role === 'captain' && canManageCaptains && (
                               <button type="button" onClick={() => void toggleCaptain(user)} disabled={isToggling} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 text-xs font-bold text-[#ba1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
                                 {isToggling && <LoaderCircle className="animate-spin" size={15} />}
                                 <Ban size={16} />
@@ -703,7 +717,7 @@ export default function Users() {
 
               <section className="rounded-2xl border border-[#dbe7f2] bg-white p-3.5">
                 <h3 className="mb-3 text-sm font-bold">الدور</h3>
-                <RoleSelection selectedRole={draft.role} onSelect={(role) => updateDraft('role', role)} disabled={isCreatingPending} />
+                <RoleSelection selectedRole={draft.role} availableRoles={isSupervisor ? ['captain'] : roles} onSelect={(role) => updateDraft('role', role)} disabled={isCreatingPending || !canManageCaptains} />
               </section>
 
               {draft.role === 'captain' && (
