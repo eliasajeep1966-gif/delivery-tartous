@@ -217,6 +217,8 @@ function vitePluginDisableHmrClient(): Plugin {
 }
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy(), vitePluginDisableHmrClient()];
+const reactModule = path.resolve(import.meta.dirname, "node_modules", "react");
+const reactDomModule = path.resolve(import.meta.dirname, "node_modules", "react-dom");
 
 export default defineConfig({
   plugins,
@@ -224,6 +226,9 @@ export default defineConfig({
     // Keep React and React DOM on one module instance across Windows paths and pnpm links.
     dedupe: ["react", "react-dom"],
     alias: {
+      // Force every Radix package and app import to share web's single React instance.
+      react: reactModule,
+      "react-dom": reactDomModule,
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
@@ -233,7 +238,7 @@ export default defineConfig({
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
   optimizeDeps: {
-    include: ["react", "react-dom", "@radix-ui/react-switch"],
+    include: ["react", "react-dom", "@radix-ui/react-switch", "@radix-ui/react-dropdown-menu"],
   },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
