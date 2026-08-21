@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { webSupabase, type WebCaptainPayout } from '@/data/supabase/webSupabaseContract';
+import { webSupabase, type WebCaptainWageDetailV2, type WebCaptainPayout, type WebCaptainWageSummary, type WebWageTotals } from '@/data/supabase/webSupabaseContract';
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
 
-import { mapFinanceSnapshot } from './financeMappers';
-import { emptyFinanceSnapshot, type FinanceSnapshot } from './financeTypes';
+import { mapCaptainFinanceCard, mapFinanceRows, mapFinanceSnapshot } from './financeMappers';
+import { emptyFinanceSnapshot, type CaptainDetailsState, type FinanceSnapshot } from './financeTypes';
 
 type ReloadOptions = { background?: boolean };
 
@@ -22,9 +22,7 @@ export function getFinanceErrorMessage(error: unknown, fallback: string): string
 
 function assertPayoutAmount(amount: number, unpaidTotal: number): void {
   if (!Number.isFinite(amount) || amount <= 0) throw new Error('أدخل مبلغ دفعة موجباً وصحيحاً.');
-  if (Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001) {
-    throw new Error('يمكن تسجيل مبلغ الدفعة بمنزلتين عشريتين كحد أقصى.');
-  }
+  if (Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001) throw new Error('يمكن تسجيل مبلغ الدفعة بمنزلتين عشريتين كحد أقصى.');
   if (unpaidTotal <= 0) throw new Error('لا يوجد رصيد مستحق للكابتن.');
   if (amount > unpaidTotal) throw new Error('قيمة الدفعة أكبر من الأجر المستحق المتبقي.');
 }
@@ -34,6 +32,9 @@ export type AdminFinanceData = {
   isInitialLoading: boolean;
   readError: string | null;
   reload: (options?: ReloadOptions) => Promise<void>;
+  loadCaptainDetails: (captainId: string, force?: boolean) => Promise<void>;
+  invalidateCaptainDetails: (captainId: string) => void;
+  captainDetailsCache: Map<string, CaptainDetailsState>;
   recordPartialPayout: (captainId: string, amount: number, notes?: string) => Promise<WebCaptainPayout>;
   payoutInFlightCaptainId: string | null;
 };
@@ -43,43 +44,82 @@ export function useAdminFinanceData(): AdminFinanceData {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [readError, setReadError] = useState<string | null>(null);
   const [payoutInFlightCaptainId, setPayoutInFlightCaptainId] = useState<string | null>(null);
+  const [captainDetailsCache, setCaptainDetailsCache] = useState<Map<string, CaptainDetailsState>>(new Map());
+  const totalsRef = useRef<WebWageTotals | null>(null);
+  const summariesRef = useRef<WebCaptainWageSummary[]>([]);
+  const detailsRef = useRef<Map<string, WebCaptainWageDetailV2[]>>(new Map());
   const mounted = useRef(true);
   const requestVersion = useRef(0);
+  const detailsInFlight = useRef(new Set<string>());
+
+  const rebuildSnapshot = useCallback(() => {
+    if (!totalsRef.current) return;
+    setSnapshot(mapFinanceSnapshot(totalsRef.current, summariesRef.current, detailsRef.current));
+  }, []);
 
   const reload = useCallback(async ({ background = false }: ReloadOptions = {}) => {
     const version = ++requestVersion.current;
     if (!background) setReadError(null);
-
     try {
       const [totals, summaries] = await Promise.all([
         withWebRequestTimeout(webSupabase.reads.wageTotals(), TOTALS_TIMEOUT),
         withWebRequestTimeout(webSupabase.reads.captainWageSummary(), SUMMARY_TIMEOUT),
       ]);
-
-      const detailsEntries = await Promise.all(summaries.map(async (summary) => (
-        [
-          summary.captain_id,
-          await withWebRequestTimeout(webSupabase.reads.captainWageDetailsV2(summary.captain_id), DETAILS_TIMEOUT),
-        ] as const
-      )));
-
       if (!mounted.current || version !== requestVersion.current) return;
-      setSnapshot(mapFinanceSnapshot(totals, summaries, new Map(detailsEntries)));
+      totalsRef.current = totals;
+      summariesRef.current = summaries;
+      rebuildSnapshot();
     } catch (error) {
-      console.error('Finance data load failed.', error);
+      console.error('Finance totals/summary load failed.', error);
       if (!mounted.current || version !== requestVersion.current) return;
       if (!background) setReadError(getFinanceErrorMessage(error, 'تعذر تحميل بيانات الأجور. حاول مرة أخرى.'));
     } finally {
       if (mounted.current && version === requestVersion.current) setIsInitialLoading(false);
     }
-  }, []);
+  }, [rebuildSnapshot]);
+
+  const loadCaptainDetails = useCallback(async (captainId: string, force = false) => {
+    const existing = captainDetailsCache.get(captainId);
+    if (detailsInFlight.current.has(captainId)) return;
+    if (!force && (existing?.status === 'loading' || existing?.status === 'loaded' || existing?.status === 'error')) return;
+    const captain = summariesRef.current.find((summary) => summary.captain_id === captainId);
+    if (!captain) return;
+    detailsInFlight.current.add(captainId);
+    setCaptainDetailsCache((current) => new Map(current).set(captainId, { status: 'loading' }));
+    try {
+      const details = await withWebRequestTimeout(webSupabase.reads.captainWageDetailsV2(captainId), DETAILS_TIMEOUT);
+      if (!mounted.current) return;
+      detailsRef.current.set(captainId, details);
+      setCaptainDetailsCache((current) => new Map(current).set(captainId, {
+        status: 'loaded',
+        rows: mapFinanceRows(captainId, captain.captain_name.trim() || 'كابتن بدون اسم', details),
+      }));
+      rebuildSnapshot();
+    } catch (error) {
+      console.error(`Finance details load failed for captain ${captainId}.`, error);
+      if (mounted.current) setCaptainDetailsCache((current) => new Map(current).set(captainId, {
+        status: 'error',
+        message: getFinanceErrorMessage(error, 'تعذر تحميل تفاصيل أجور هذا الكابتن.'),
+      }));
+    } finally {
+      detailsInFlight.current.delete(captainId);
+    }
+  }, [captainDetailsCache, rebuildSnapshot]);
+
+  const invalidateCaptainDetails = useCallback((captainId: string) => {
+    detailsRef.current.delete(captainId);
+    setCaptainDetailsCache((current) => {
+      const next = new Map(current);
+      next.delete(captainId);
+      return next;
+    });
+    rebuildSnapshot();
+  }, [rebuildSnapshot]);
 
   useEffect(() => {
     mounted.current = true;
     void reload();
-    return () => {
-      mounted.current = false;
-    };
+    return () => { mounted.current = false; };
   }, [reload]);
 
   const recordPartialPayout = useCallback(async (captainId: string, amount: number, notes?: string): Promise<WebCaptainPayout> => {
@@ -87,14 +127,11 @@ export function useAdminFinanceData(): AdminFinanceData {
     const captain = snapshot.captains.find((item) => item.captainId === captainId);
     if (!captain) throw new Error('تعذر العثور على سجل أجر الكابتن.');
     assertPayoutAmount(amount, captain.unpaidTotal);
-
     setPayoutInFlightCaptainId(captainId);
     try {
-      const payout = await withWebRequestTimeout(
-        webSupabase.actions.createCaptainPartialPayout({ captainId, amount, notes }),
-        PAYOUT_TIMEOUT,
-      );
-      void reload({ background: true });
+      const payout = await withWebRequestTimeout(webSupabase.actions.createCaptainPartialPayout({ captainId, amount, notes }), PAYOUT_TIMEOUT);
+      invalidateCaptainDetails(captainId);
+      await reload({ background: true });
       return payout;
     } catch (error) {
       if (error instanceof WebRequestTimeoutError) void reload({ background: true });
@@ -102,14 +139,7 @@ export function useAdminFinanceData(): AdminFinanceData {
     } finally {
       if (mounted.current) setPayoutInFlightCaptainId(null);
     }
-  }, [payoutInFlightCaptainId, reload, snapshot.captains]);
+  }, [invalidateCaptainDetails, payoutInFlightCaptainId, reload, snapshot.captains]);
 
-  return {
-    snapshot,
-    isInitialLoading,
-    readError,
-    reload,
-    recordPartialPayout,
-    payoutInFlightCaptainId,
-  };
+  return { snapshot, isInitialLoading, readError, reload, loadCaptainDetails, invalidateCaptainDetails, captainDetailsCache, recordPartialPayout, payoutInFlightCaptainId };
 }

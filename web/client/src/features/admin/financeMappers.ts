@@ -65,7 +65,7 @@ export function mapFinanceRows(
 
 export function mapCaptainFinanceCard(
   summary: WebCaptainWageSummary,
-  details: WebCaptainWageDetailV2[],
+  details: WebCaptainWageDetailV2[] = [],
 ): CaptainFinanceCard {
   const captainName = summary.captain_name.trim() || 'كابتن بدون اسم';
   const rows = mapFinanceRows(summary.captain_id, captainName, details)
@@ -87,7 +87,7 @@ export function mapCaptainFinanceCard(
 export function mapFinanceSnapshot(
   totals: WebWageTotals,
   summaries: WebCaptainWageSummary[],
-  detailsByCaptainId: Map<string, WebCaptainWageDetailV2[]>,
+  detailsByCaptainId: Map<string, WebCaptainWageDetailV2[]> = new Map(),
 ): FinanceSnapshot {
   const captains = summaries
     .map((summary) => mapCaptainFinanceCard(summary, detailsByCaptainId.get(summary.captain_id) ?? []))

@@ -31,6 +31,12 @@ export type CaptainFinanceCard = {
   rows: FinanceLedgerRow[];
 };
 
+export type CaptainDetailsState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'loaded'; rows: FinanceLedgerRow[] }
+  | { status: 'error'; message: string };
+
 export type FinanceTotals = {
   grossTotal: number;
   captainNetTotal: number;
