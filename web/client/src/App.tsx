@@ -12,6 +12,7 @@ import { WebAuthProvider } from '@/contexts/WebAuthContext';
 import ActivateAccount from '@/pages/ActivateAccount';
 import ActivityLogs from '@/pages/ActivityLogs';
 import CaptainHome from '@/pages/CaptainHome';
+import { CaptainCustody, CaptainHelp, CaptainOrders, CaptainSettings, CaptainWages } from '@/pages/CaptainSections';
 import Captains from '@/pages/Captains';
 import CompanyWages from '@/pages/CompanyWages';
 import Custody from '@/pages/Custody';
@@ -52,6 +53,11 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/activate-account" component={ActivateAccount} />
         <Route path="/activate" component={ActivateAccount} />
+        <Route path="/captain/orders" component={() => <CaptainRoute component={CaptainOrders} />} />
+        <Route path="/captain/wages" component={() => <CaptainRoute component={CaptainWages} />} />
+        <Route path="/captain/custody" component={() => <CaptainRoute component={CaptainCustody} />} />
+        <Route path="/captain/settings" component={() => <CaptainRoute component={CaptainSettings} />} />
+        <Route path="/captain/help" component={() => <CaptainRoute component={CaptainHelp} />} />
         <Route path="/captain" component={() => <CaptainRoute component={CaptainHome} />} />
         <Route path="/" component={() => <AdminRoute component={Home} />} />
         <Route path="/users" component={() => <AdminRoute component={Users} />} />

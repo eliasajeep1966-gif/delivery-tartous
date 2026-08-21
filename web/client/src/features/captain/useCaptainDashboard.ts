@@ -31,12 +31,12 @@ export function useCaptainDashboard() {
       const [nextProfile, statuses, nextOrders] = await Promise.all([
         withWebRequestTimeout(webSupabase.reads.myProfile(session.user.id), LOAD_TIMEOUT_MESSAGE),
         withWebRequestTimeout(webSupabase.reads.captainStatuses(), LOAD_TIMEOUT_MESSAGE),
-        withWebRequestTimeout(webSupabase.reads.orders(), LOAD_TIMEOUT_MESSAGE),
+        withWebRequestTimeout(webSupabase.reads.captainOrders(session.user.id), LOAD_TIMEOUT_MESSAGE),
       ]);
       if (!mounted.current) return;
       setProfile(nextProfile);
       setAvailability(statuses.find((status) => status.captain_id === nextProfile.id)?.availability ?? 'unavailable');
-      setOrders(nextOrders.filter((order) => order.assigned_captain_id === nextProfile.id));
+      setOrders(nextOrders);
     } catch (error) {
       if (mounted.current) setReadError(getErrorMessage(error, 'تعذر تحميل حساب الكابتن. حاول مرة أخرى.'));
     } finally {

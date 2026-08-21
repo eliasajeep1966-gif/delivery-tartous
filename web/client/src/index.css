@@ -103,8 +103,14 @@
   box-shadow: 0 2px 10px rgba(0, 90, 168, 0.06) !important;
 }
 
-#root > main > div[dir="rtl"] > div > main {
+#root > main > div[dir="rtl"] > div:not(.captain-shell) > main {
   padding-top: 5rem !important;
+  padding-bottom: 7.5rem !important;
+  padding-inline: 0.75rem !important;
+}
+
+#root > main > div[dir="rtl"] > div.captain-shell > main {
+  padding-top: 0.25rem !important;
   padding-bottom: 7.5rem !important;
   padding-inline: 0.75rem !important;
 }

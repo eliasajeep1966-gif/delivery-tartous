@@ -232,6 +232,18 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحميل الطلبات.');
     },
 
+    async captainOrders(captainId: string): Promise<WebOrder[]> {
+      const normalizedCaptainId = captainId.trim();
+      if (!normalizedCaptainId) throw new Error('تعذر تحديد هوية الكابتن.');
+
+      const { data, error } = await getWebSupabaseClient()
+        .from('orders')
+        .select('*')
+        .eq('assigned_captain_id', normalizedCaptainId)
+        .order('created_at', { ascending: false });
+      return unwrap(data, error, 'تعذر تحميل سجل طلباتك.');
+    },
+
     async orderStops(orderId: string): Promise<WebOrderStop[]> {
       const { data, error } = await getWebSupabaseClient()
         .from('order_stops')
