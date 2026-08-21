@@ -254,6 +254,16 @@ export default function Users() {
     addPendingAccount,
     removePendingAccount,
     replaceProfile,
+    profilesPageNumber,
+    pendingPageNumber,
+    hasNextProfilesPage,
+    hasPreviousProfilesPage,
+    hasNextPendingPage,
+    hasPreviousPendingPage,
+    nextProfilesPage,
+    previousProfilesPage,
+    nextPendingPage,
+    previousPendingPage,
   } = useAdminUsersData();
 
   const [draft, setDraft] = useState<PendingAccountDraft>(createDraft);
@@ -584,7 +594,7 @@ export default function Users() {
               <section className="mt-6" aria-labelledby="pending-title">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 id="pending-title" className="text-base font-bold">الحسابات المعلّقة</h2>
-                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{pendingAccounts.length} بانتظار التفعيل</span>
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{pendingAccounts.length} في الصفحة {pendingPageNumber}</span>
                 </div>
 
                 {pendingAccounts.length === 0 ? (
@@ -620,12 +630,13 @@ export default function Users() {
                     })}
                   </div>
                 )}
+                {(hasPreviousPendingPage || hasNextPendingPage) && <nav className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-3" aria-label="تنقل الحسابات المعلقة"><button type="button" onClick={() => void previousPendingPage()} disabled={!hasPreviousPendingPage} className="h-10 flex-1 rounded-xl border border-amber-200 bg-white text-xs font-bold text-amber-800 disabled:cursor-not-allowed disabled:opacity-45">السابق</button><span className="text-xs font-bold text-amber-800">صفحة {pendingPageNumber}</span><button type="button" onClick={() => void nextPendingPage()} disabled={!hasNextPendingPage} className="h-10 flex-1 rounded-xl bg-amber-700 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-45">التالي</button></nav>}
               </section>
 
               <section className="mt-6" aria-labelledby="active-users-title">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 id="active-users-title" className="text-base font-bold">الحسابات المفعّلة</h2>
-                  <span className="rounded-full bg-[#dbeeff] px-2.5 py-1 text-xs font-bold text-[#0060B8]">{profiles.length} حسابات</span>
+                  <span className="rounded-full bg-[#dbeeff] px-2.5 py-1 text-xs font-bold text-[#0060B8]">{profiles.length} في الصفحة {profilesPageNumber}</span>
                 </div>
 
                 {profiles.length === 0 ? (
@@ -692,6 +703,7 @@ export default function Users() {
                     })}
                   </div>
                 )}
+                {(hasPreviousProfilesPage || hasNextProfilesPage) && <nav className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#d3e3f0] bg-white p-3" aria-label="تنقل الحسابات المفعلة"><button type="button" onClick={() => void previousProfilesPage()} disabled={!hasPreviousProfilesPage} className="h-10 flex-1 rounded-xl border border-[#c9d9e7] text-xs font-bold text-[#0060B8] disabled:cursor-not-allowed disabled:opacity-45">السابق</button><span className="text-xs font-bold text-[#58616b]">صفحة {profilesPageNumber}</span><button type="button" onClick={() => void nextProfilesPage()} disabled={!hasNextProfilesPage} className="h-10 flex-1 rounded-xl bg-[#0060B8] text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-45">التالي</button></nav>}
               </section>
             </>
           )}

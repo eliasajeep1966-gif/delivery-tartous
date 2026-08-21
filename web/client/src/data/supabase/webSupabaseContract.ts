@@ -66,6 +66,23 @@ export type CreatePendingAccountInput = {
   custodyItemsText?: string;
 };
 
+export const WEB_LIST_PAGE_SIZE = 25;
+
+export type WebKeysetCursor = {
+  createdAt: string;
+  id: string;
+};
+
+export type WebListPage<Row> = {
+  items: Row[];
+  nextCursor: WebKeysetCursor | null;
+};
+
+export type WebListPageInput = {
+  cursor?: WebKeysetCursor | null;
+  limit?: number;
+};
+
 type HasMessage = { message: string } | null;
 
 function unwrap<T>(data: T | null, error: HasMessage, fallbackMessage: string): T {
@@ -82,6 +99,27 @@ function validateEmail(email: string): void {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error('أدخل بريداً إلكترونياً صحيحاً.');
   }
+}
+
+function normalizePageLimit(limit?: number): number {
+  if (limit === undefined) return WEB_LIST_PAGE_SIZE;
+  if (!Number.isInteger(limit) || limit < 1 || limit > WEB_LIST_PAGE_SIZE) {
+    throw new Error(`يجب أن يكون حجم الصفحة بين 1 و${WEB_LIST_PAGE_SIZE}.`);
+  }
+  return limit;
+}
+
+function keysetFilter(cursor?: WebKeysetCursor | null): string | null {
+  if (!cursor) return null;
+  if (!cursor.createdAt || !cursor.id) throw new Error('مؤشر الصفحة غير صالح. أعد تحميل القائمة.');
+  return `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`;
+}
+
+function asPage<Row extends { created_at: string; id: string }>(rows: Row[], limit: number): WebListPage<Row> {
+  const hasNext = rows.length > limit;
+  const items = hasNext ? rows.slice(0, limit) : rows;
+  const last = items[items.length - 1];
+  return { items, nextCursor: hasNext && last ? { createdAt: last.created_at, id: last.id } : null };
 }
 
 function validatePartialPayout(input: CreateCaptainPartialPayoutInput): CreateCaptainPartialPayoutInput {
@@ -215,12 +253,28 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحميل الحسابات المفعّلة.');
     },
 
+    async profilesPage(input: WebListPageInput = {}): Promise<WebListPage<WebProfile>> {
+      const limit = normalizePageLimit(input.limit);
+      let query = getWebSupabaseClient().from('profiles').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit + 1);
+      const cursorFilter = keysetFilter(input.cursor);
+      if (cursorFilter) query = query.or(cursorFilter);
+      const { data, error } = await query;
+      return asPage(unwrap(data, error, 'تعذر تحميل الحسابات المفعّلة.'), limit);
+    },
+
     async captainStatuses(): Promise<WebCaptainStatus[]> {
       const { data, error } = await getWebSupabaseClient()
         .from('captain_status')
         .select('*')
         .order('updated_at', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل حالات الكباتن.');
+    },
+
+    async captainStatusesByCaptainIds(captainIds: readonly string[]): Promise<WebCaptainStatus[]> {
+      const ids = Array.from(new Set(captainIds.filter(Boolean)));
+      if (ids.length === 0) return [];
+      const { data, error } = await getWebSupabaseClient().from('captain_status').select('*').in('captain_id', ids);
+      return unwrap(data, error, 'تعذر تحميل حالات الكباتن المرتبطة.');
     },
 
     async myCustody(): Promise<WebCaptainCustody[]> {
@@ -245,6 +299,16 @@ export const webSupabase = {
         .select('*')
         .order('created_at', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل الطلبات.');
+    },
+
+    async ordersPage(input: WebListPageInput & { status?: WebOrderStatus } = {}): Promise<WebListPage<WebOrder>> {
+      const limit = normalizePageLimit(input.limit);
+      let query = getWebSupabaseClient().from('orders').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit + 1);
+      if (input.status) query = query.eq('status', input.status);
+      const cursorFilter = keysetFilter(input.cursor);
+      if (cursorFilter) query = query.or(cursorFilter);
+      const { data, error } = await query;
+      return asPage(unwrap(data, error, 'تعذر تحميل الطلبات.'), limit);
     },
 
     async auditLogs(limit = 6): Promise<WebAuditLog[]> {
@@ -288,9 +352,14 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحميل تسلسل حالات الطلب.');
     },
 
-    async pendingAccounts(): Promise<WebPendingAccount[]> {
-      const { data, error } = await getWebSupabaseClient().rpc('list_pending_accounts');
-      return unwrap(data, error, 'تعذر تحميل الحسابات المعلّقة.');
+    async pendingAccountsPage(input: WebListPageInput = {}): Promise<WebListPage<WebPendingAccount>> {
+      const limit = normalizePageLimit(input.limit);
+      const { data, error } = await getWebSupabaseClient().rpc('list_pending_accounts', {
+        p_limit: limit + 1,
+        p_cursor_created_at: input.cursor?.createdAt ?? null,
+        p_cursor_id: input.cursor?.id ?? null,
+      });
+      return asPage(unwrap(data, error, 'تعذر تحميل الحسابات المعلّقة.'), limit);
     },
 
     async permissions(): Promise<WebPermission[]> {
