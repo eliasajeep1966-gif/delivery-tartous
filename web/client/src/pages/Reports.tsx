@@ -6,6 +6,7 @@ import { MorePageLayout } from '@/components/MorePageLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatFinanceMoney } from '@/features/admin/financeMappers';
 import { filterFinanceRows, financeDayKey, firstFinancePeriodKey, formatFinanceDay, getFinancePeriodOptions } from '@/features/admin/financePeriod';
+import { ReportCharts } from '@/features/admin/ReportCharts';
 import { useAdminFinanceData } from '@/features/admin/useAdminFinanceData';
 
 export default function Reports() {
@@ -51,6 +52,15 @@ export default function Reports() {
     rows: dayRows,
     gross: dayRows.reduce((sum, row) => sum + row.grossFee, 0),
   })), [rows]);
+  const dailyChart = useMemo(() => daily.slice().reverse().map((group) => ({
+    label: new Intl.DateTimeFormat('ar-SY', { timeZone: 'Asia/Damascus', day: 'numeric', month: 'short' }).format(new Date(`${group.dayKey}T12:00:00Z`)),
+    gross: group.gross,
+    orderCount: group.rows.length,
+  })), [daily]);
+  const revenueSplit = useMemo(() => [
+    { key: 'captains' as const, label: 'حصة الكباتن', value: totals.captain, color: '#1684da' },
+    { key: 'company' as const, label: 'صافي المكتب', value: totals.company, color: '#16a36a' },
+  ], [totals.captain, totals.company]);
   const captainTotals = useMemo(() => snapshot.captains.map((captain) => {
     const captainRows = rows.filter((row) => row.captainId === captain.captainId);
     return { ...captain, captainAmount: captainRows.reduce((sum, row) => sum + row.captainAmount, 0), count: captainRows.length };
@@ -62,6 +72,7 @@ export default function Reports() {
     {isInitialLoading || isCaptainDetailsLoading ? <section className="mt-4 flex min-h-40 items-center justify-center gap-2 rounded-2xl border border-[#dbe7f2] bg-white text-sm font-bold text-[#0060B8]"><LoaderCircle className="animate-spin" size={20} />جارٍ تحميل التقارير...</section> : readError ? <section className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-center"><p className="text-sm text-[#ba1a1a]">{readError}</p><button type="button" onClick={retryReport} className="mx-auto mt-3 flex h-10 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 text-xs font-bold text-[#ba1a1a]"><RefreshCw size={15} />إعادة المحاولة</button></section> : captainDetailsErrors.length ? <section className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-center"><p className="text-sm text-[#ba1a1a]">تعذر تحميل تفاصيل أجور بعض الكباتن؛ لا يمكن عرض تقرير جزئي.</p><button type="button" onClick={retryReport} className="mx-auto mt-3 flex h-10 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 text-xs font-bold text-[#ba1a1a]"><RefreshCw size={15} />إعادة المحاولة</button></section> : snapshot.captains.length === 0 ? <section className="mt-4 rounded-2xl border border-dashed border-[#c7dae8] bg-white/70 px-4 py-10 text-center text-sm text-[#75818e]">لا توجد بيانات أجور للتقارير حالياً.</section> : <>
       <section className="mt-4 rounded-2xl bg-[#0060B8] p-4 text-white shadow-[0_6px_16px_rgba(0,96,184,0.2)]"><span className="text-xs text-[#dceaff]">إجمالي أجور {monthLabel}</span><strong className="mt-1 block text-[25px]">{formatFinanceMoney(totals.gross)}</strong><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-xl bg-white/12 p-2.5"><span className="block text-[10px] text-[#dceaff]">الكباتن</span><strong className="mt-1 block text-sm">{formatFinanceMoney(totals.captain)}</strong></div><div className="rounded-xl bg-white/12 p-2.5"><span className="block text-[10px] text-[#dceaff]">المكتب</span><strong className="mt-1 block text-sm">{formatFinanceMoney(totals.company)}</strong>{totals.settlement > 0 && <span className="mt-1 block text-[10px] text-amber-100">تسوية {formatFinanceMoney(totals.settlement)}</span>}</div></div></section>
       <section className="mt-5 grid grid-cols-2 gap-3"><article className="rounded-2xl border border-[#dbe7f2] bg-white p-3.5 shadow-[0_2px_8px_rgba(0,72,141,0.05)]"><ClipboardList className="text-[#0060B8]" size={20} /><p className="mt-3 text-xs font-bold text-[#58616b]">طلبات الشهر</p><strong className="mt-1 text-xl">{rows.length}</strong></article><article className="rounded-2xl border border-[#dbe7f2] bg-white p-3.5 shadow-[0_2px_8px_rgba(0,72,141,0.05)]"><Building2 className="text-emerald-600" size={20} /><p className="mt-3 text-xs font-bold text-[#58616b]">صافي المكتب</p><strong className="mt-1 text-lg text-emerald-700">{formatFinanceMoney(totals.company)}</strong></article></section>
+      <ReportCharts daily={dailyChart} revenueSplit={revenueSplit} />
       <section className="mt-6"><h2 className="mb-3 text-base font-bold">الحصيلة اليومية</h2><div className="space-y-2">{daily.map((group) => <article key={group.dayKey} className="flex items-center justify-between rounded-2xl border border-[#dbe7f2] bg-white px-3.5 py-3 shadow-[0_2px_8px_rgba(0,72,141,0.04)]"><div><strong className="text-sm">{formatFinanceDay(group.dayKey)}</strong><span className="mt-1 block text-[11px] text-[#66727e]">{group.rows.length} طلبات</span></div><strong className="text-sm text-[#0060B8]">{formatFinanceMoney(group.gross)}</strong></article>)}</div></section>
       <section className="mt-6"><h2 className="mb-3 text-base font-bold">أجور الكباتن</h2><div className="space-y-2">{captainTotals.map((captain) => <article key={captain.captainId} className="flex items-center justify-between rounded-2xl border border-[#dbe7f2] bg-white px-3.5 py-3 shadow-[0_2px_8px_rgba(0,72,141,0.04)]"><span className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#e7edf2] text-xs font-bold text-[#52606d]">{captain.initial}</span><span><strong className="block text-sm">{captain.captainName}</strong><span className="text-[10px] text-[#66727e]">{captain.count} طلبات في الشهر</span></span></span><span className="inline-flex items-center gap-1 text-sm font-bold text-emerald-700"><Truck size={15} />{formatFinanceMoney(captain.captainAmount)}</span></article>)}</div></section>
     </>}
