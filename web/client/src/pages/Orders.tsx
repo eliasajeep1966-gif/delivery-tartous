@@ -29,7 +29,7 @@ import {
   mapLiveOrderStops,
   mapLiveOrderTimeline,
 } from '@/features/admin/orderMappers';
-import { getOrdersErrorMessage, type LiveCaptainOption, useAdminOrdersData } from '@/features/admin/useAdminOrdersData';
+import { getOrdersErrorMessage, type LiveCaptainOption, useAdminOrdersData, useAvailableCaptains } from '@/features/admin/useAdminOrdersData';
 import { orderStatusPresentation, type OrderStatus } from '@/features/admin/types';
 import { WebRequestTimeoutError } from '@/lib/authRequest';
 
@@ -57,6 +57,11 @@ function OrderDetailsDialog({
   isDetailsLoading,
   detailsError,
   availableCaptains,
+  availableCaptainsLoading,
+  availableCaptainsLoaded,
+  availableCaptainsError,
+  onLoadAvailableCaptains,
+  onRetryAvailableCaptains,
   assigningOrderId,
   cancellingOrderId,
   onOpenChange,
@@ -71,6 +76,11 @@ function OrderDetailsDialog({
   isDetailsLoading: boolean;
   detailsError: string | null;
   availableCaptains: LiveCaptainOption[];
+  availableCaptainsLoading: boolean;
+  availableCaptainsLoaded: boolean;
+  availableCaptainsError: string | null;
+  onLoadAvailableCaptains: () => void;
+  onRetryAvailableCaptains: () => void;
   assigningOrderId: string | null;
   cancellingOrderId: string | null;
   onOpenChange: (open: boolean) => void;
@@ -171,7 +181,7 @@ function OrderDetailsDialog({
             </section>
 
             {(canAssign || canCancel) && <div className={`grid gap-2 ${canAssign && canCancel ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {canAssign && <button type="button" onClick={() => setIsAssignDialogOpen(true)} disabled={isAssigning || isCancelling} className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#a8c8ff] bg-[#eef6ff] text-xs font-bold text-[#0060B8] disabled:cursor-not-allowed disabled:opacity-60"><Truck size={16} />تعيين كابتن</button>}
+              {canAssign && <button type="button" onClick={() => { setIsAssignDialogOpen(true); onLoadAvailableCaptains(); }} disabled={isAssigning || isCancelling} className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#a8c8ff] bg-[#eef6ff] text-xs font-bold text-[#0060B8] disabled:cursor-not-allowed disabled:opacity-60"><Truck size={16} />تعيين كابتن</button>}
               {canCancel && <button type="button" onClick={() => setIsCancelDialogOpen(true)} disabled={isAssigning || isCancelling} className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 text-xs font-bold text-[#ba1a1a] disabled:cursor-not-allowed disabled:opacity-60"><XCircle size={16} />إلغاء مع سبب</button>}
             </div>}
           </div>
@@ -182,7 +192,10 @@ function OrderDetailsDialog({
         <DialogContent showCloseButton className="max-w-[calc(100%-1.25rem)] rounded-2xl border-[#cfe1f0] bg-[#f0f7ff] p-0 sm:max-w-[390px]" dir="rtl">
           <DialogHeader className="border-b border-[#dbe7f2] bg-white px-5 pt-5 pb-4 text-right"><DialogTitle className="pr-7 text-right text-[19px]">تعيين كابتن</DialogTitle><DialogDescription className="text-right text-xs">تظهر الكباتن المفعّلة والمتاحة فقط.</DialogDescription></DialogHeader>
           <div className="space-y-3 p-4">
-            {availableCaptains.length === 0 ? <div className="rounded-xl border border-dashed border-[#bfd6eb] bg-white p-4 text-center text-sm text-[#58616b]">لا يوجد كابتن متاح حالياً.</div> : <div className="space-y-2">{availableCaptains.map((captain) => <button key={captain.id} type="button" disabled={isAssigning} onClick={() => setSelectedCaptainId(captain.id)} className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 text-right text-sm font-bold disabled:cursor-not-allowed ${selectedCaptainId === captain.id ? 'border-[#0060B8] bg-[#eaf4ff] text-[#0060B8]' : 'border-[#dbe7f2] bg-white text-[#1c1b1b]'}`}><span>{captain.name}</span><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /></button>)}</div>}
+            {availableCaptainsLoading && <div className="flex items-center justify-center gap-2 rounded-xl border border-[#dbe7f2] bg-white p-4 text-sm font-bold text-[#0060B8]"><LoaderCircle className="animate-spin" size={17} />جارٍ تحميل الكباتن المتاحين...</div>}
+            {!availableCaptainsLoading && availableCaptainsError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm leading-6 text-[#ba1a1a]"><p>{availableCaptainsError}</p><button type="button" onClick={onRetryAvailableCaptains} className="mt-2 flex h-9 items-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-bold text-[#ba1a1a]"><RefreshCw size={14} />إعادة المحاولة</button></div>}
+            {!availableCaptainsLoading && !availableCaptainsError && availableCaptainsLoaded && availableCaptains.length === 0 && <div className="rounded-xl border border-dashed border-[#bfd6eb] bg-white p-4 text-center text-sm text-[#58616b]">لا يوجد كابتن متاح حالياً.</div>}
+            {!availableCaptainsLoading && !availableCaptainsError && <div className="space-y-2">{availableCaptains.map((captain) => <button key={captain.id} type="button" disabled={isAssigning} onClick={() => setSelectedCaptainId(captain.id)} className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 text-right text-sm font-bold disabled:cursor-not-allowed ${selectedCaptainId === captain.id ? 'border-[#0060B8] bg-[#eaf4ff] text-[#0060B8]' : 'border-[#dbe7f2] bg-white text-[#1c1b1b]'}`}><span>{captain.name}</span><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /></button>)}</div>}
             <button type="button" disabled={!selectedCaptainId || isAssigning} onClick={() => void submitAssignment()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0060B8] text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{isAssigning && <LoaderCircle className="animate-spin" size={18} />}<Truck size={18} />{isAssigning ? 'جارٍ التعيين...' : 'تأكيد التعيين'}</button>
           </div>
         </DialogContent>
@@ -215,12 +228,15 @@ export default function Orders() {
     setFilter(requestedFilter);
   }, [requestedFilter]);
 
-  const backendStatusFilter: WebOrderStatus | undefined = filter === 'all' ? undefined : filter === 'delivery_active' ? 'in_delivery' : filter;
+  const backendStatusFilter = useMemo<WebOrderStatus | readonly WebOrderStatus[] | undefined>(() => {
+    if (filter === 'all') return undefined;
+    if (filter === 'delivery_active') return ['received', 'in_delivery'];
+    return filter;
+  }, [filter]);
 
   const {
     orders,
     profiles,
-    availableCaptains,
     isInitialLoading,
     readError,
     details,
@@ -237,6 +253,7 @@ export default function Orders() {
     nextPage,
     previousPage,
   } = useAdminOrdersData(backendStatusFilter);
+  const { availableCaptains, isInitialLoading: availableCaptainsLoading, hasLoaded: availableCaptainsLoaded, readError: availableCaptainsError, reload: reloadAvailableCaptains } = useAvailableCaptains();
 
   const mappedOrders = useMemo(
     () => orders.map((order) => mapLiveOrderListItem(order, profiles)),
@@ -289,6 +306,7 @@ export default function Orders() {
       const assignedOrder = await assignOrderCaptain(orderId, captainId);
       replaceOrder(assignedOrder);
       void loadOrderDetails(orderId);
+      void reloadAvailableCaptains({ force: true });
       toast.success(`تم تعيين الكابتن للطلب #${assignedOrder.order_number}.`);
       return true;
     } catch (error) {
@@ -348,7 +366,7 @@ export default function Orders() {
           </section>
         </main>
         <AdminBottomNav active="orders" />
-        <OrderDetailsDialog order={selectedOrder} profiles={profiles} details={selectedDetails} history={selectedHistory} isDetailsLoading={detailsLoadingOrderId === selectedOrder?.id} detailsError={selectedOrder ? detailsError : null} availableCaptains={availableCaptains} assigningOrderId={assigningOrderId} cancellingOrderId={cancellingOrderId} onOpenChange={(open) => !open && setSelectedOrderId(null)} onRetryDetails={(orderId) => void loadOrderDetails(orderId)} onAssignCaptain={handleAssignCaptain} onCancelOrder={handleCancelOrder} />
+        <OrderDetailsDialog order={selectedOrder} profiles={profiles} details={selectedDetails} history={selectedHistory} isDetailsLoading={detailsLoadingOrderId === selectedOrder?.id} detailsError={selectedOrder ? detailsError : null} availableCaptains={availableCaptains} availableCaptainsLoading={availableCaptainsLoading} availableCaptainsLoaded={availableCaptainsLoaded} availableCaptainsError={availableCaptainsError} onLoadAvailableCaptains={() => void reloadAvailableCaptains()} onRetryAvailableCaptains={() => void reloadAvailableCaptains({ force: true })} assigningOrderId={assigningOrderId} cancellingOrderId={cancellingOrderId} onOpenChange={(open) => !open && setSelectedOrderId(null)} onRetryDetails={(orderId) => void loadOrderDetails(orderId)} onAssignCaptain={handleAssignCaptain} onCancelOrder={handleCancelOrder} />
       </div>
     </div>
   );

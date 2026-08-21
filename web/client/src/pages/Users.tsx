@@ -594,7 +594,7 @@ export default function Users() {
               <section className="mt-6" aria-labelledby="pending-title">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 id="pending-title" className="text-base font-bold">الحسابات المعلّقة</h2>
-                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{pendingAccounts.length} في الصفحة {pendingPageNumber}</span>
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{pendingAccounts.length}/25 في الصفحة {pendingPageNumber}</span>
                 </div>
 
                 {pendingAccounts.length === 0 ? (
@@ -636,7 +636,7 @@ export default function Users() {
               <section className="mt-6" aria-labelledby="active-users-title">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 id="active-users-title" className="text-base font-bold">الحسابات المفعّلة</h2>
-                  <span className="rounded-full bg-[#dbeeff] px-2.5 py-1 text-xs font-bold text-[#0060B8]">{profiles.length} في الصفحة {profilesPageNumber}</span>
+                  <span className="rounded-full bg-[#dbeeff] px-2.5 py-1 text-xs font-bold text-[#0060B8]">{profiles.length}/25 في الصفحة {profilesPageNumber}</span>
                 </div>
 
                 {profiles.length === 0 ? (

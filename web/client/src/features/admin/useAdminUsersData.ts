@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { webSupabase, type WebCaptainStatus, type WebKeysetCursor, type WebPendingAccount, type WebProfile } from '@/data/supabase/webSupabaseContract';
+import { WEB_LIST_PAGE_SIZE, webSupabase, type WebCaptainStatus, type WebKeysetCursor, type WebPendingAccount, type WebProfile } from '@/data/supabase/webSupabaseContract';
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
 
 type ReloadOptions = { background?: boolean };
@@ -51,8 +51,8 @@ export function useAdminUsersData(): AdminUsersData {
     if (!background) setReadError(null);
     try {
       const [profilesResult, pendingResult] = await Promise.all([
-        withWebRequestTimeout(webSupabase.reads.profilesPage({ cursor: profileCursor }), 'انتهت مهلة تحميل الحسابات المفعّلة بعد 15 ثانية. حاول مرة أخرى.'),
-        withWebRequestTimeout(webSupabase.reads.pendingAccountsPage({ cursor: pendingCursor }), 'انتهت مهلة تحميل الحسابات المعلّقة بعد 15 ثانية. حاول مرة أخرى.'),
+        withWebRequestTimeout(webSupabase.reads.profilesPage({ cursor: profileCursor, limit: WEB_LIST_PAGE_SIZE }), 'انتهت مهلة تحميل الحسابات المفعّلة بعد 15 ثانية. حاول مرة أخرى.'),
+        withWebRequestTimeout(webSupabase.reads.pendingAccountsPage({ cursor: pendingCursor, limit: WEB_LIST_PAGE_SIZE }), 'انتهت مهلة تحميل الحسابات المعلّقة بعد 15 ثانية. حاول مرة أخرى.'),
       ]);
       const captainIds = profilesResult.items.filter((profile) => profile.role === 'captain').map((profile) => profile.id);
       const statuses = await withWebRequestTimeout(webSupabase.reads.captainStatusesByCaptainIds(captainIds), 'انتهت مهلة تحميل حالات الكباتن بعد 15 ثانية. حاول مرة أخرى.');

@@ -244,7 +244,11 @@ export const deliverySupabase = {
     },
 
     async pendingAccounts(): Promise<PendingAccountActivation[]> {
-      const { data, error } = await getSupabaseClient().rpc('list_pending_accounts');
+      const { data, error } = await getSupabaseClient().rpc('list_pending_accounts', {
+        p_limit: 100,
+        p_before_created_at: null,
+        p_before_id: null,
+      });
       return unwrap(data, error, 'Could not load pending accounts.');
     },
 

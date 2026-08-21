@@ -1021,8 +1021,8 @@ export type Database = {
       }
       list_pending_accounts: {
         Args: {
-          p_cursor_created_at?: string | null
-          p_cursor_id?: string | null
+          p_before_created_at?: string | null
+          p_before_id?: string | null
           p_limit?: number
         }
         Returns: {

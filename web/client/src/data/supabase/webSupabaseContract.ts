@@ -270,6 +270,23 @@ export const webSupabase = {
       return asPage(unwrap(data, error, 'تعذر تحميل الحسابات المفعّلة.'), limit);
     },
 
+    async profilesByIds(profileIds: readonly string[]): Promise<WebProfile[]> {
+      const ids = Array.from(new Set(profileIds.map((id) => id.trim()).filter(Boolean)));
+      if (ids.length === 0) return [];
+      const { data, error } = await getWebSupabaseClient().from('profiles').select('*').in('id', ids);
+      return unwrap(data, error, 'تعذر تحميل أسماء الكباتن المرتبطين بالطلبات.');
+    },
+
+    async availableCaptainProfiles(): Promise<WebProfile[]> {
+      const { data, error } = await getWebSupabaseClient()
+        .from('profiles')
+        .select('*')
+        .eq('role', 'captain')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      return unwrap(data, error, 'تعذر تحميل الكباتن المفعّلين.');
+    },
+
     async captainStatuses(): Promise<WebCaptainStatus[]> {
       const { data, error } = await getWebSupabaseClient()
         .from('captain_status')
@@ -309,10 +326,11 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحميل الطلبات.');
     },
 
-    async ordersPage(input: WebListPageInput & { status?: WebOrderStatus } = {}): Promise<WebListPage<WebOrder>> {
+    async ordersPage(input: WebListPageInput & { status?: WebOrderStatus; statuses?: readonly WebOrderStatus[] } = {}): Promise<WebListPage<WebOrder>> {
       const limit = normalizePageLimit(input.limit);
       let query = getWebSupabaseClient().from('orders').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit + 1);
       if (input.status) query = query.eq('status', input.status);
+      else if (input.statuses?.length) query = query.in('status', input.statuses);
       const cursorFilter = keysetFilter(input.cursor);
       if (cursorFilter) query = query.or(cursorFilter);
       const { data, error } = await query;
@@ -364,8 +382,8 @@ export const webSupabase = {
       const limit = normalizePageLimit(input.limit);
       const { data, error } = await getWebSupabaseClient().rpc('list_pending_accounts', {
         p_limit: limit + 1,
-        p_cursor_created_at: input.cursor?.createdAt ?? null,
-        p_cursor_id: input.cursor?.id ?? null,
+        p_before_created_at: input.cursor?.createdAt ?? null,
+        p_before_id: input.cursor?.id ?? null,
       });
       return asPage(unwrap(data, error, 'تعذر تحميل الحسابات المعلّقة.'), limit);
     },
