@@ -38,6 +38,10 @@ export default function ActivateAccount() {
       setLocation('/', { replace: true });
       return;
     }
+    if (status === 'authenticated' && profile?.role === 'supervisor') {
+      setLocation('/', { replace: true });
+      return;
+    }
     if (status === 'authenticated' && profile?.role === 'captain') {
       setLocation('/captain', { replace: true });
     }

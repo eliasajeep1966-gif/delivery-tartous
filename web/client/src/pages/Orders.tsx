@@ -33,9 +33,10 @@ import { getOrdersErrorMessage, type LiveCaptainOption, useAdminOrdersData } fro
 import { orderStatusPresentation, type OrderStatus } from '@/features/admin/types';
 import { WebRequestTimeoutError } from '@/lib/authRequest';
 
-type StatusFilter = 'all' | OrderStatus;
+type StatusFilter = 'all' | OrderStatus | 'delivery_active';
+type VisibleStatusFilter = 'all' | OrderStatus;
 
-const filters: StatusFilter[] = ['all', 'pending', 'assigned', 'received', 'in_delivery', 'completed', 'cancelled', 'false_order'];
+const filters: VisibleStatusFilter[] = ['all', 'pending', 'assigned', 'received', 'in_delivery', 'completed', 'cancelled', 'false_order'];
 const cancellableStatuses: WebOrderStatus[] = ['pending'];
 
 function formatMoney(amount: number): string {
@@ -201,7 +202,8 @@ export default function Orders() {
   const search = useSearch();
   const requestedFilter = useMemo<StatusFilter>(() => {
     const status = new URLSearchParams(search).get('status');
-    return filters.includes(status as StatusFilter) ? status as StatusFilter : 'all';
+    if (status === 'delivery_active') return status;
+    return filters.includes(status as VisibleStatusFilter) ? status as VisibleStatusFilter : 'all';
   }, [search]);
   const [filter, setFilter] = useState<StatusFilter>(requestedFilter);
   const [query, setQuery] = useState('');
@@ -237,9 +239,14 @@ export default function Orders() {
   const selectedOrder = mappedOrders.find((order) => order.id === selectedOrderId) ?? null;
   const visibleOrders = useMemo(() => {
     const normalized = query.trim().toLowerCase();
+    const matchesStatus = (status: OrderStatus) => (
+      filter === 'all'
+      || (filter === 'delivery_active' ? status === 'received' || status === 'in_delivery' : status === filter)
+    );
+
     return mappedOrders.filter((order) => (
-      (filter === 'all' || order.status === filter) &&
-      (!normalized || `${order.orderNumber} ${order.customerName} ${order.customerPhone} ${order.pickupAddress} ${order.deliveryAddress}`.toLowerCase().includes(normalized))
+      matchesStatus(order.status as OrderStatus)
+      && (!normalized || `${order.orderNumber} ${order.customerName} ${order.customerPhone} ${order.pickupAddress} ${order.deliveryAddress}`.toLowerCase().includes(normalized))
     ));
   }, [filter, mappedOrders, query]);
 

@@ -7,6 +7,7 @@ import { getWebSupabaseClient } from './webSupabaseClient';
 export type WebAppRole = Database['public']['Enums']['app_role'];
 export type WebProfile = Tables<'profiles'>;
 export type WebCaptainStatus = Tables<'captain_status'>;
+export type WebCaptainCustody = Tables<'captain_custody'>;
 export type WebCaptainAvailability = Database['public']['Enums']['captain_availability'];
 export type WebPendingAccount = Tables<'pending_account_activations'>;
 export type WebPermission = Tables<'permissions'>;
@@ -217,12 +218,20 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحميل حالات الكباتن.');
     },
 
-    async myCustody(): Promise<Tables<'captain_custody'>[]> {
+    async myCustody(): Promise<WebCaptainCustody[]> {
       const { data, error } = await getWebSupabaseClient()
         .from('captain_custody')
         .select('*')
         .order('assigned_at', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل الأمانات.');
+    },
+
+    async captainCustody(): Promise<WebCaptainCustody[]> {
+      const { data, error } = await getWebSupabaseClient()
+        .from('captain_custody')
+        .select('*')
+        .order('assigned_at', { ascending: false });
+      return unwrap(data, error, 'تعذر تحميل أمانات الكباتن.');
     },
 
     async orders(): Promise<WebOrder[]> {
@@ -234,7 +243,7 @@ export const webSupabase = {
     },
 
     async auditLogs(limit = 6): Promise<WebAuditLog[]> {
-      const safeLimit = Math.max(1, Math.min(20, Math.floor(limit)));
+      const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
       const { data, error } = await getWebSupabaseClient()
         .from('audit_logs')
         .select('*')
@@ -404,6 +413,31 @@ export const webSupabase = {
         p_is_active: isActive,
       });
       return unwrap(data, error, 'تعذر تحديث حالة الكابتن.');
+    },
+
+    async assignCaptainCustody(captainId: string, itemName: string, itemDetails?: string): Promise<WebCaptainCustody> {
+      const normalizedCaptainId = captainId.trim();
+      const normalizedItemName = itemName.trim();
+      if (!normalizedCaptainId) throw new Error('تعذر تحديد الكابتن للأمانة.');
+      if (!normalizedItemName) throw new Error('أدخل اسم الأمانة.');
+
+      const { data, error } = await getWebSupabaseClient().rpc('assign_captain_custody', {
+        p_captain_id: normalizedCaptainId,
+        p_item_name: normalizedItemName,
+        p_item_details: itemDetails?.trim() || undefined,
+      });
+      return unwrap(data, error, 'تعذر إضافة أمانة الكابتن.');
+    },
+
+    async returnCaptainCustody(custodyId: string, returnNotes?: string): Promise<WebCaptainCustody> {
+      const normalizedCustodyId = custodyId.trim();
+      if (!normalizedCustodyId) throw new Error('تعذر تحديد الأمانة المراد إرجاعها.');
+
+      const { data, error } = await getWebSupabaseClient().rpc('return_captain_custody', {
+        p_custody_id: normalizedCustodyId,
+        p_return_notes: returnNotes?.trim() || undefined,
+      });
+      return unwrap(data, error, 'تعذر تسجيل إرجاع الأمانة.');
     },
 
     async setUserPermissionOverride(

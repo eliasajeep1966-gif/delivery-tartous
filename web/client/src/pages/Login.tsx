@@ -38,12 +38,17 @@ export default function Login() {
       return;
     }
 
+    if (status === 'authenticated' && profile?.role === 'supervisor') {
+      setLocation('/', { replace: true });
+      return;
+    }
+
     if (status === 'authenticated' && profile?.role === 'captain') {
       setLocation('/captain', { replace: true });
       return;
     }
 
-    if (status === 'authenticated' && profile) {
+    if (status === 'authenticated' && profile && profile.role !== 'admin' && profile.role !== 'supervisor' && profile.role !== 'captain') {
       toast.error('هذا الحساب لا يملك واجهة مفعّلة على الويب حالياً.');
       void signOut().catch(() => undefined);
       return;
