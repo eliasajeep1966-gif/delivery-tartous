@@ -23,6 +23,7 @@ export function useCaptainDashboard() {
   const [readError, setReadError] = useState<string | null>(null);
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
   const mounted = useRef(true);
 
   const reload = useCallback(async () => {
@@ -76,18 +77,25 @@ export function useCaptainDashboard() {
 
   const transitionOrder = useCallback(async (orderId: string, nextStatus: Extract<WebOrder['status'], 'received' | 'in_delivery' | 'completed' | 'false_order'>): Promise<boolean> => {
     if (updatingOrderId) return false;
+    setTransitionError(null);
     setUpdatingOrderId(orderId);
     try {
       const updatedOrder = await withWebRequestTimeout(webSupabase.actions.transitionAssignedOrder(orderId, nextStatus), ACTION_TIMEOUT_MESSAGE);
       if (mounted.current) setOrders((current) => current.map((order) => order.id === updatedOrder.id ? updatedOrder : order));
       return true;
     } catch (error) {
-      if (mounted.current) setReadError(getErrorMessage(error, 'تعذر تحديث مرحلة الطلب.'));
+      if (mounted.current) {
+        const message = getErrorMessage(error, 'تعذر تحديث مرحلة الطلب.');
+        setTransitionError(message);
+        if (nextStatus !== 'false_order') setReadError(message);
+      }
       return false;
     } finally {
       if (mounted.current) setUpdatingOrderId(null);
     }
   }, [updatingOrderId]);
+
+  const clearTransitionError = useCallback(() => setTransitionError(null), []);
 
   const derived = useMemo(() => {
     const activeStatuses = new Set<WebOrder['status']>(['assigned', 'received', 'in_delivery']);
@@ -101,5 +109,5 @@ export function useCaptainDashboard() {
     };
   }, [orders]);
 
-  return { profile, availability, orders, currentOrderStops, isInitialLoading, readError, updatingAvailability, updatingOrderId, reload, updateAvailability, transitionOrder, ...derived };
+  return { profile, availability, orders, currentOrderStops, isInitialLoading, readError, transitionError, clearTransitionError, updatingAvailability, updatingOrderId, reload, updateAvailability, transitionOrder, ...derived };
 }
