@@ -46,6 +46,35 @@ export type FinanceTotals = {
   unpaidTotal: number;
 };
 
+export type CompanyProfitHistoryRow = {
+  businessDay: string;
+  grossTotal: number;
+  companyTotal: number;
+  captainNetTotal: number;
+  settlementTotal: number;
+  orderCount: number;
+};
+
+export type CompanyProfitDayDetailRow = {
+  financialLedgerId: string;
+  completedAt: string;
+  orderId: string;
+  orderNumber: number;
+  captainId: string;
+  captainName: string;
+  grossFee: number;
+  captainAmount: number;
+  companyAmount: number;
+  settlementAmount: number;
+  status: FinanceOrderStatus;
+};
+
+export type CompanyProfitDayDetailsState =
+  | { status: 'idle' }
+  | { status: 'loading'; day: string }
+  | { status: 'loaded'; day: string; rows: CompanyProfitDayDetailRow[]; hasMore: boolean; nextBeforeCompletedAt: string | null; nextBeforeLedgerId: string | null }
+  | { status: 'error'; day: string; message: string };
+
 export type FinanceSnapshot = {
   totals: FinanceTotals;
   captains: CaptainFinanceCard[];

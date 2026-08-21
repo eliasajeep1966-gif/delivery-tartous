@@ -1,11 +1,15 @@
 import type {
   WebCaptainWageDetailV2,
   WebCaptainWageSummary,
+  WebCompanyProfitDayDetailRow,
+  WebCompanyProfitHistoryRow,
   WebWageTotals,
 } from '@/data/supabase/webSupabaseContract';
 
 import type {
   CaptainFinanceCard,
+  CompanyProfitDayDetailRow,
+  CompanyProfitHistoryRow,
   FinanceLedgerRow,
   FinanceOrderStatus,
   FinanceSnapshot,
@@ -81,6 +85,33 @@ export function mapCaptainFinanceCard(
     paidTotal: finiteNumber(summary.paid_total, 'paid_total'),
     unpaidTotal: finiteNumber(summary.unpaid_total, 'unpaid_total'),
     rows,
+  };
+}
+
+export function mapCompanyProfitHistoryRow(source: WebCompanyProfitHistoryRow): CompanyProfitHistoryRow {
+  return {
+    businessDay: source.business_day,
+    grossTotal: finiteNumber(source.gross_total, 'gross_total'),
+    companyTotal: finiteNumber(source.company_total, 'company_total'),
+    captainNetTotal: finiteNumber(source.captain_net_total, 'captain_net_total'),
+    settlementTotal: finiteNumber(source.settlement_total, 'settlement_total'),
+    orderCount: finiteNumber(source.order_count, 'order_count'),
+  };
+}
+
+export function mapCompanyProfitDayDetailRow(source: WebCompanyProfitDayDetailRow): CompanyProfitDayDetailRow {
+  return {
+    financialLedgerId: source.financial_ledger_id,
+    completedAt: source.completed_at,
+    orderId: source.order_id,
+    orderNumber: finiteNumber(source.order_number, 'order_number'),
+    captainId: source.captain_id,
+    captainName: source.captain_name.trim() || 'كابتن بدون اسم',
+    grossFee: finiteNumber(source.gross_fee, 'gross_fee'),
+    captainAmount: finiteNumber(source.captain_amount, 'captain_amount'),
+    companyAmount: finiteNumber(source.company_amount, 'company_amount'),
+    settlementAmount: finiteNumber(source.settlement_amount, 'settlement_amount'),
+    status: financeStatus(source.source_status),
   };
 }
 

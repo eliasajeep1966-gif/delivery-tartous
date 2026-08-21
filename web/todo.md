@@ -90,3 +90,6 @@
 - [x] إضافة زر «طلب كاذب» بعد مرحلة تم الاستلام فقط، وإخفاؤه بعد بدء التوصيل.
 - [x] التحقق من أن انتقال false_order مدعوم فعلياً في عقد الباك اند قبل ربط الزر.
 - [x] تصحيح زر «طلب كاذب» ليظهر في حالتي received وin_delivery ويختفي عند completed أو false_order.
+- [x] تنفيذ Finance Web عبر get_company_profit_history وget_company_profit_day_details دون N+1 أو تغيير التصميم.
+- [x] جعل CaptainWageDetail يجلب orderStops عند فتح طلب محدد فقط مع cache، ثم تشغيل الفحوصات وعرض diff دون commit أو push.
+- [ ] رفع نسخة Finance Web المختبرة إلى main حتى يتم اختبار history وتفاصيل اليوم وفتح نقاط الطلب عند الطلب.
