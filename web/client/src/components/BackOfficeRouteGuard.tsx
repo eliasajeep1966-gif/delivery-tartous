@@ -18,7 +18,7 @@ export function BackOfficeRouteGuard({ children }: PropsWithChildren) {
   const [, setLocation] = useLocation();
   const { status, profile, session, errorMessage, signOut } = useWebAuth();
   const isBackOfficeRole = profile?.role === 'admin' || profile?.role === 'supervisor';
-  const isRejected = status === 'profile-error' || (status === 'authenticated' && !isBackOfficeRole);
+  const isRejected = (status === 'account-disabled' || status === 'profile-unavailable' || status === 'profile-missing' || status === 'auth-invalid') || (status === 'authenticated' && !isBackOfficeRole);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
