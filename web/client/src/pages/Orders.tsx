@@ -215,6 +215,8 @@ export default function Orders() {
     setFilter(requestedFilter);
   }, [requestedFilter]);
 
+  const backendStatusFilter: WebOrderStatus | undefined = filter === 'all' ? undefined : filter === 'delivery_active' ? 'in_delivery' : filter;
+
   const {
     orders,
     profiles,
@@ -234,7 +236,7 @@ export default function Orders() {
     hasPreviousPage,
     nextPage,
     previousPage,
-  } = useAdminOrdersData(filter === 'all' ? undefined : filter);
+  } = useAdminOrdersData(backendStatusFilter);
 
   const mappedOrders = useMemo(
     () => orders.map((order) => mapLiveOrderListItem(order, profiles)),
