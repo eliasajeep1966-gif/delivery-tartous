@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
@@ -33,6 +33,7 @@ function userName(profile: Profile) {
 
 export function NativeUsersPanel({ role, profiles, captainStatuses, onClose, onRefresh }: NativeUsersPanelProps) {
   const [roleTarget, setRoleTarget] = useState<Profile | null>(null);
+  const [query, setQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<AppRole | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [permissionTarget, setPermissionTarget] = useState<Profile | null>(null);
@@ -47,6 +48,10 @@ export function NativeUsersPanel({ role, profiles, captainStatuses, onClose, onR
     () => new Map(captainStatuses.map((status) => [status.captain_id, status])),
     [captainStatuses]
   );
+  const visibleProfiles = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return profiles.filter((profile) => !normalized || `${userName(profile)} ${profile.email} ${roleLabels[profile.role]}`.toLowerCase().includes(normalized));
+  }, [profiles, query]);
 
   const changeRole = async () => {
     if (role !== 'admin' || !roleTarget || !selectedRole || selectedRole === roleTarget.role || updatingUserId) return;
@@ -124,7 +129,9 @@ export function NativeUsersPanel({ role, profiles, captainStatuses, onClose, onR
         <View><Text style={styles.headerTitle}>إدارة المستخدمين</Text><Text style={styles.headerSubtitle}>الحسابات والأدوار والصلاحيات</Text></View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {profiles.map((profile) => {
+        <View style={[styles.introCard, deliveryShadows.sm]}><View style={styles.introHeading}><View><Text style={styles.introTitle}>إدارة المستخدمين</Text><Text style={styles.introText}>الحسابات المفعّلة والأدوار وصلاحيات المشرفين.</Text></View><View style={styles.introIcon}><Text style={styles.introIconText}>◉</Text></View></View><View style={styles.searchShell}><Text style={styles.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder="ابحث باسم المستخدم أو البريد" placeholderTextColor="#8A98A6" style={styles.searchInput} textAlign="right" /></View></View>
+        <View style={styles.listHeading}><Text style={styles.listTitle}>المستخدمون المعروضون</Text><Text style={styles.count}>{visibleProfiles.length} حسابات</Text></View>
+        {visibleProfiles.map((profile) => {
           const captainStatus = profile.role === 'captain' ? captainStatusById.get(profile.id) : undefined;
           const isUpdating = updatingUserId === profile.id;
           return (
@@ -143,7 +150,7 @@ export function NativeUsersPanel({ role, profiles, captainStatuses, onClose, onR
             </View>
           );
         })}
-        {profiles.length === 0 ? <View style={styles.empty}><Text style={styles.emptyText}>لا توجد حسابات ضمن نطاق صلاحياتك.</Text></View> : null}
+        {visibleProfiles.length === 0 ? <View style={styles.empty}><Text style={styles.emptyText}>لا توجد حسابات مطابقة للبحث.</Text></View> : null}
       </ScrollView>
 
       <Modal animationType="slide" transparent visible={roleTarget !== null} onRequestClose={() => setRoleTarget(null)}>
@@ -165,7 +172,19 @@ const styles = StyleSheet.create({
   backButton: { borderColor: '#FFFFFF66', borderRadius: deliveryRadius.md, borderWidth: 1, paddingHorizontal: deliverySpacing.md, paddingVertical: deliverySpacing.sm },
   backButtonText: { color: deliveryColors.surface, fontSize: 13, fontWeight: '800' },
   scrollContent: { gap: deliverySpacing.md, padding: deliverySpacing.lg, paddingBottom: deliverySpacing.xxxl },
-  userCard: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, padding: deliverySpacing.lg },
+  introCard: { backgroundColor: '#FFFFFF', borderColor: '#D3E3F0', borderRadius: 16, borderWidth: 1, padding: 14 },
+  introHeading: { alignItems: 'flex-start', flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  introTitle: { color: '#1C1B1B', fontSize: 18, fontWeight: '800', textAlign: 'right' },
+  introText: { color: '#58616B', fontSize: 12, lineHeight: 18, marginTop: 4, textAlign: 'right' },
+  introIcon: { alignItems: 'center', backgroundColor: '#EAF4FF', borderRadius: 14, height: 44, justifyContent: 'center', width: 44 },
+  introIconText: { color: '#0060B8', fontSize: 20, fontWeight: '800' },
+  searchShell: { alignItems: 'center', backgroundColor: '#FBFDFF', borderColor: '#C9D9E7', borderRadius: 12, borderWidth: 1, flexDirection: 'row-reverse', height: 44, marginTop: 14 },
+  searchIcon: { color: '#75818E', fontSize: 22, paddingHorizontal: 10 },
+  searchInput: { color: '#1C2934', flex: 1, fontSize: 13, height: '100%', paddingLeft: 10 },
+  listHeading: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  listTitle: { color: '#1C1B1B', fontSize: 16, fontWeight: '800' },
+  count: { backgroundColor: '#DBEEFF', borderRadius: 99, color: '#0060B8', fontSize: 11, fontWeight: '800', overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
+  userCard: { backgroundColor: '#FFFFFF', borderColor: '#DBE7F2', borderRadius: 16, borderWidth: 1, padding: 14 },
   userHeader: { alignItems: 'center', flexDirection: 'row-reverse', gap: deliverySpacing.sm },
   avatar: { alignItems: 'center', backgroundColor: deliveryColors.primarySoft, borderRadius: 999, height: 40, justifyContent: 'center', width: 40 },
   avatarText: { color: deliveryColors.primary, fontSize: 17, fontWeight: '800' },
