@@ -38,8 +38,19 @@ export type WageTotals = RpcRow<'get_wage_totals'>;
 export type CaptainWageSummary = RpcRow<'get_captain_wage_summary'>;
 export type CaptainWageDetail = RpcRow<'get_captain_wage_details'>;
 export type CaptainWageDetailV2 = RpcRow<'get_captain_wage_details_v2'>;
+export type CaptainWagePeriodSummary = RpcRow<'get_captain_wage_period_summary'>;
 export type CompanyProfitHistoryDay = RpcRow<'get_company_profit_history'>;
 export type CompanyProfitDayDetail = RpcRow<'get_company_profit_day_details'>;
+
+export type CaptainWagePeriod = 'daily' | 'weekly' | 'monthly';
+
+export type CaptainWagePeriodSummaryInput = {
+  period: CaptainWagePeriod;
+  captainId?: string;
+  limit?: number;
+  beforePeriodStart?: string;
+  beforeCaptainId?: string;
+};
 
 export type CompanyProfitHistoryInput = {
   startDate?: string;
@@ -301,6 +312,17 @@ export const deliverySupabase = {
         p_captain_id: captainId,
       });
       return unwrap(data, error, 'Could not load captain wage details.');
+    },
+
+    async captainWagePeriodSummary(input: CaptainWagePeriodSummaryInput): Promise<CaptainWagePeriodSummary[]> {
+      const { data, error } = await getSupabaseClient().rpc('get_captain_wage_period_summary', {
+        p_period: input.period,
+        p_captain_id: input.captainId,
+        p_limit: input.limit ?? 100,
+        p_before_period_start: input.beforePeriodStart,
+        p_before_captain_id: input.beforeCaptainId,
+      });
+      return unwrap(data, error, 'Could not load captain wage period summary.');
     },
 
     async companyProfitHistory(

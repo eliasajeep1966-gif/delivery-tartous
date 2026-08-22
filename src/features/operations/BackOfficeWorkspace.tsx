@@ -6,6 +6,7 @@ import { NativeUsersPanel } from './NativeUsersPanel';
 import { NativeActivityLogsPanel } from './NativeActivityLogsPanel';
 import { NativeCustodyPanel } from './NativeCustodyPanel';
 import { NativeOrdersPanel } from './NativeOrdersPanel';
+import { NativeWagesPanel } from './NativeWagesPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -276,36 +277,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
     </ScrollView>
   );
 
-  const renderSalaries = () => (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <SectionTitle title="الأجور" />
-      {wageTotals ? (
-        <View style={styles.financeGrid}>
-          <FinanceMetric label="إجمالي الرسوم" value={formatMoney(wageTotals.gross_total)} />
-          <FinanceMetric label="حصة الكباتن" value={formatMoney(wageTotals.captain_net_total)} />
-          <FinanceMetric label="حصة المكتب" value={formatMoney(wageTotals.company_total)} />
-          <FinanceMetric label="غير مدفوع" value={formatMoney(wageTotals.unpaid_total)} />
-        </View>
-      ) : <EmptyNotice text="لا تتوفر ملخصات أجور حالياً." />}
-      <SectionTitle title="كشف الكباتن" />
-      {wageSummaries.map((summary) => (
-        <View key={summary.captain_id} style={[styles.wageRow, deliveryShadows.sm]}>
-          <Text style={styles.wageName}>{summary.captain_name}</Text>
-          <Text style={styles.wageMeta}>{summary.order_count} طلبات · مستحق: {formatMoney(summary.unpaid_total)}</Text>
-          <Text style={styles.wageAmount}>{formatMoney(summary.captain_net_total)}</Text>
-        </View>
-      ))}
-      <SectionTitle title="أرباح الشركة خلال آخر 7 أيام" />
-      {profitHistory.length === 0 ? <EmptyNotice text="لا توجد سجلات أرباح للشركة ضمن الفترة الحالية." /> : null}
-      {profitHistory.map((day) => (
-        <View key={day.business_day} style={[styles.companyProfitRow, deliveryShadows.sm]}>
-          <Text style={styles.companyProfitDay}>{new Date(`${day.business_day}T00:00:00`).toLocaleDateString('ar-SY')}</Text>
-          <Text style={styles.companyProfitMeta}>{day.order_count} طلبات · إجمالي: {formatMoney(day.gross_total)}</Text>
-          <Text style={styles.companyProfitAmount}>صافي الشركة: {formatMoney(day.company_total)}</Text>
-        </View>
-      ))}
-    </ScrollView>
-  );
+  const renderSalaries = () => <NativeWagesPanel onRefreshDashboard={reload} />;
 
   const renderMore = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
