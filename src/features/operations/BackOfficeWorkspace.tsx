@@ -5,6 +5,7 @@ import { RoleWorkspace } from '@/components/layout/RoleWorkspace';
 import { NativeUsersPanel } from './NativeUsersPanel';
 import { NativeActivityLogsPanel } from './NativeActivityLogsPanel';
 import { NativeCustodyPanel } from './NativeCustodyPanel';
+import { NativeOrdersPanel } from './NativeOrdersPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -236,12 +237,12 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   );
 
   const renderOrders = () => (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <SectionTitle title="الطلبات" />
-      <Text style={styles.helperText}>يعرض التطبيق كل الطلبات التي تسمح بها صلاحيات الحساب الحالي.</Text>
-      {orders.length === 0 ? <EmptyNotice text="لا توجد طلبات ضمن نطاق حسابك." /> : null}
-      {orders.map((order) => <OrderRow key={order.id} order={order} detail />)}
-    </ScrollView>
+    <NativeOrdersPanel
+      availableCaptainIds={availableCaptainIds}
+      captains={captains}
+      onReload={reload}
+      orders={orders}
+    />
   );
 
   const renderCaptains = () => (
