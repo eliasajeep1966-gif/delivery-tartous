@@ -11,6 +11,7 @@ import { NativeCompanyWagesPanel } from './NativeCompanyWagesPanel';
 import { NativeReportsPanel } from './NativeReportsPanel';
 import { NativeOfficeSettingsPanel } from './NativeOfficeSettingsPanel';
 import { NativeInfoPanel } from './NativeInfoPanel';
+import { NativeWageOrdersPanel } from './NativeWageOrdersPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -71,6 +72,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const [isOfficeSettingsOpen, setIsOfficeSettingsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isCorrectionsOpen, setIsCorrectionsOpen] = useState(false);
+  const [isWageOrdersOpen, setIsWageOrdersOpen] = useState(false);
 
   const {
     availableCaptainIds,
@@ -286,7 +288,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
     </ScrollView>
   );
 
-  const renderSalaries = () => <><NativeWagesPanel onRefreshDashboard={reload} /><Pressable accessibilityRole="button" onPress={() => setIsCompanyWagesOpen(true)} style={styles.companyWagesShortcut}><Text style={styles.companyWagesTitle}>واجهة أجور الشركة</Text><Text style={styles.companyWagesText}>سجل كامل بالتاريخ والأرباح وصافي الشركة</Text></Pressable></>;
+  const renderSalaries = () => <><NativeWagesPanel onRefreshDashboard={reload} /><Pressable accessibilityRole="button" onPress={() => setIsCompanyWagesOpen(true)} style={styles.companyWagesShortcut}><Text style={styles.companyWagesTitle}>واجهة أجور الشركة</Text><Text style={styles.companyWagesText}>سجل كامل بالتاريخ والأرباح وصافي الشركة</Text></Pressable><Pressable accessibilityRole="button" onPress={() => setIsWageOrdersOpen(true)} style={styles.companyWagesShortcut}><Text style={styles.companyWagesTitle}>كشف طلبات الأجور</Text><Text style={styles.companyWagesText}>ابحث في الطلبات وحصص الكابتن والشركة</Text></Pressable></>;
 
   const renderMore = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -385,6 +387,9 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       </Modal>
       <Modal animationType="slide" visible={isCorrectionsOpen} onRequestClose={() => setIsCorrectionsOpen(false)}>
         <NativeInfoPanel title="التصحيحات الإدارية" subtitle="إجراءات إدارية" onClose={() => setIsCorrectionsOpen(false)} sections={[{ title: 'حالة الواجهة', body: 'هذه المساحة موجودة في نسخة الويب كإجراءات إدارية قيد التجهيز، ولا تنفذ أي تعديل خلفي غير معتمد.' }, { title: 'مبدأ الأمان', body: 'تظل كل العمليات الحساسة مرتبطة بعقد Supabase والصلاحيات الخلفية.' }]} />
+      </Modal>
+      <Modal animationType="slide" visible={isWageOrdersOpen} onRequestClose={() => setIsWageOrdersOpen(false)}>
+        <NativeWageOrdersPanel captains={captains} onClose={() => setIsWageOrdersOpen(false)} />
       </Modal>
       <Modal animationType="slide" transparent visible={isCreateOrderOpen} onRequestClose={() => setIsCreateOrderOpen(false)}>
         <View style={styles.modalBackdrop}>
