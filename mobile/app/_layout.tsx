@@ -1,6 +1,6 @@
 import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRootNavigationState, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { I18nManager, Platform, StyleSheet, View } from "react-native";
@@ -34,15 +34,17 @@ export const unstable_settings = { anchor: "(tabs)" };
 function AuthAwareNavigator() {
   const { status, issue, profile, retryProfile, resetToLogin, homePathForRole } = useDeliveryAuth();
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
   const segments = useSegments();
   const currentSegment = segments[0];
   const isOnLogin = currentSegment === "login";
 
   useEffect(() => {
+    if (!rootNavigationState?.key || status === "initializing") return;
     const redirect = authRouteRedirect(status, currentSegment, Boolean(profile));
     if (redirect === "/login") router.replace(redirect);
     if (redirect === "/(tabs)" && profile) router.replace(homePathForRole(profile.role));
-  }, [currentSegment, homePathForRole, profile, router, status]);
+  }, [currentSegment, homePathForRole, profile, rootNavigationState?.key, router, status]);
 
   const profileIssueOnLogin = isOnLogin && (status === "profile-unavailable" || status === "profile-missing");
   const isRecoverableState = (status === "profile-unavailable" || status === "profile-missing" || status === "account-disabled" || status === "auth-invalid") && !profileIssueOnLogin;
