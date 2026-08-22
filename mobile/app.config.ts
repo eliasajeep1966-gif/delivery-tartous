@@ -38,6 +38,9 @@ const env = {
   androidPackage: bundleId,
 };
 
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? "";
+const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
+
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
@@ -46,6 +49,10 @@ const config: ExpoConfig = {
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
+  extra: {
+    supabaseUrl,
+    supabasePublishableKey,
+  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,

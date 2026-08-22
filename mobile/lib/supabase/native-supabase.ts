@@ -2,6 +2,7 @@ import "react-native-url-polyfill/auto";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -48,9 +49,14 @@ const authStorage = {
 
 let cachedClient: SupabaseClient | null = null;
 
+function configurationValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function getConfiguration() {
-  const url = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-  const publishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const extra = Constants.expoConfig?.extra;
+  const url = configurationValue(process.env.EXPO_PUBLIC_SUPABASE_URL) || configurationValue(extra?.supabaseUrl);
+  const publishableKey = configurationValue(process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY) || configurationValue(extra?.supabasePublishableKey);
 
   if (!url || !publishableKey) {
     throw new SupabaseConfigurationError(
