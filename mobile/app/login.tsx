@@ -53,8 +53,8 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   form: { marginTop: 12 },
-  statusText: { color: "#78350F", fontSize: 14, fontWeight: "700", lineHeight: 21, textAlign: "center", writingDirection: "rtl" },
+  statusText: { color: "#78350F", fontFamily: "Cairo_700Bold", fontSize: 14, lineHeight: 21, textAlign: "center", writingDirection: "rtl" },
   retryButton: { alignItems: "center", alignSelf: "center", backgroundColor: "#0060B8", borderRadius: 12, flexDirection: "row-reverse", gap: 6, height: 40, justifyContent: "center", marginTop: 12, paddingHorizontal: 16 },
-  retryText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
+  retryText: { color: "#FFFFFF", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
   pressed: { opacity: 0.76, transform: [{ scale: 0.98 }] },
 });

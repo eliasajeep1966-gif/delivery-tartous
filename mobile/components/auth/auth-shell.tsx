@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   heading: { alignItems: "center" },
   logoFrame: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "rgba(255,255,255,0.80)", borderRadius: 26, borderWidth: 1, height: 112, justifyContent: "center", overflow: "hidden", padding: 6, shadowColor: "#0060B8", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 13, elevation: 3, width: 112 },
   logo: { height: "100%", width: "100%" },
-  brand: { color: "#075BA6", fontSize: 25, fontWeight: "700", marginTop: 16, textAlign: "center", writingDirection: "rtl" },
-  title: { color: "#1C2934", fontSize: 21, fontWeight: "700", lineHeight: 30, marginTop: 20, textAlign: "center", writingDirection: "rtl" },
-  subtitle: { color: "#62717E", fontSize: 14, lineHeight: 22, marginTop: 6, textAlign: "center", writingDirection: "rtl" },
+  brand: { color: "#075BA6", fontFamily: "Cairo_700Bold", fontSize: 25, marginTop: 16, textAlign: "center", writingDirection: "rtl" },
+  title: { color: "#1C2934", fontFamily: "Cairo_700Bold", fontSize: 21, lineHeight: 30, marginTop: 20, textAlign: "center", writingDirection: "rtl" },
+  subtitle: { color: "#62717E", fontFamily: "Cairo_400Regular", fontSize: 14, lineHeight: 22, marginTop: 6, textAlign: "center", writingDirection: "rtl" },
 });
