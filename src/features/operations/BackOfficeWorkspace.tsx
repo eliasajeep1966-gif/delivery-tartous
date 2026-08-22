@@ -23,6 +23,7 @@ import { useAdminOperationsDashboard } from './useAdminOperationsDashboard';
 
 type BackOfficeRole = 'admin' | 'supervisor';
 type BackOfficeTab = 'home' | 'orders' | 'captains' | 'salaries' | 'more';
+type CaptainFilter = 'all' | 'available' | 'unavailable' | 'active' | 'inactive';
 
 const orderStatusLabels = {
   pending: 'قيد الانتظار',
@@ -75,6 +76,8 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const [isCorrectionsOpen, setIsCorrectionsOpen] = useState(false);
   const [isWageOrdersOpen, setIsWageOrdersOpen] = useState(false);
   const [selectedCaptainId, setSelectedCaptainId] = useState<string | null>(null);
+  const [captainFilter, setCaptainFilter] = useState<CaptainFilter>('all');
+  const [captainQuery, setCaptainQuery] = useState('');
 
   const {
     availableCaptainIds,
@@ -178,6 +181,14 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
     () => captains.filter((captain) => captain.is_active && availableCaptainIds.has(captain.id)),
     [availableCaptainIds, captains]
   );
+  const visibleCaptains = useMemo(() => {
+    const normalized = captainQuery.trim().toLowerCase();
+    return captains.filter((captain) => {
+      const available = availableCaptainIds.has(captain.id);
+      const matchesFilter = captainFilter === 'all' || (captainFilter === 'available' && available) || (captainFilter === 'unavailable' && !available) || (captainFilter === 'active' && captain.is_active) || (captainFilter === 'inactive' && !captain.is_active);
+      return matchesFilter && (!normalized || `${captain.full_name ?? ''} ${captain.email}`.toLowerCase().includes(normalized));
+    });
+  }, [availableCaptainIds, captainFilter, captainQuery, captains]);
 
   const resetOrderDraft = () => {
     setAssignedCaptainId(null);
@@ -263,32 +274,11 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
 
   const renderCaptains = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <SectionTitle title="الكباتن" />
-      {captains.length === 0 ? <EmptyNotice text="لا توجد حسابات كباتن ضمن نطاق حسابك." /> : null}
-      {captains.map((captain) => {
-        const available = availableCaptainIds.has(captain.id);
-        return (
-          <Pressable key={captain.id} accessibilityRole="button" onPress={() => setSelectedCaptainId(captain.id)} style={[styles.captainCard, deliveryShadows.sm]}>
-            <View style={styles.captainHeader}>
-              <View style={[styles.availabilityDot, { backgroundColor: available ? deliveryColors.success : deliveryColors.muted }]} />
-              <View style={styles.captainHeadingText}>
-                <Text style={styles.captainName}>{displayName(captain.full_name, captain.email)}</Text>
-                <Text style={styles.captainMeta}>{available ? 'متاح الآن' : 'غير متاح'} · {captain.is_active ? 'الحساب مفعّل' : 'الحساب معطل'}</Text>
-              </View>
-            </View>
-            {role === 'admin' ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={updatingCaptainId === captain.id}
-                onPress={() => void toggleCaptain(captain.id, captain.is_active)}
-                style={[styles.captainAction, updatingCaptainId === captain.id && styles.disabled]}
-              >
-                <Text style={styles.captainActionText}>{updatingCaptainId === captain.id ? 'جارٍ الحفظ...' : captain.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}</Text>
-              </Pressable>
-            ) : null}
-          </Pressable>
-        );
-      })}
+      <View style={[styles.captainsIntro, deliveryShadows.sm]}><View><Text style={styles.captainsIntroTitle}>إدارة الكباتن</Text><Text style={styles.captainsIntroText}>تابع التوفر والتفعيل والأمانات والطلبات.</Text></View><View style={styles.captainsIntroIcon}><Text style={styles.captainsIntroIconText}>◈</Text></View><View style={styles.captainSearch}><Text style={styles.searchGlyph}>⌕</Text><TextInput value={captainQuery} onChangeText={setCaptainQuery} placeholder="ابحث باسم الكابتن" placeholderTextColor="#8A98A6" style={styles.captainSearchInput} textAlign="right" /></View></View>
+      <ScrollView horizontal contentContainerStyle={styles.captainFilterRow} showsHorizontalScrollIndicator={false}>{([['all', 'الكل'], ['available', 'متاح'], ['unavailable', 'غير متاح'], ['active', 'مفعل'], ['inactive', 'معطل']] as const).map(([key, label]) => <Pressable key={key} onPress={() => setCaptainFilter(key)} style={[styles.captainFilter, captainFilter === key && styles.captainFilterActive]}><Text style={[styles.captainFilterText, captainFilter === key && styles.captainFilterTextActive]}>{label}</Text></Pressable>)}</ScrollView>
+      <View style={styles.listHeading}><Text style={styles.homeSectionTitle}>الكباتن المعروضون</Text><Text style={styles.count}>{visibleCaptains.length} كباتن</Text></View>
+      {visibleCaptains.length === 0 ? <EmptyNotice text="لا توجد كباتن مطابقة للفلتر." /> : null}
+      {visibleCaptains.map((captain) => { const available = availableCaptainIds.has(captain.id); const completed = orders.filter((order) => order.assigned_captain_id === captain.id && order.status === 'completed').length; return <Pressable key={captain.id} accessibilityRole="button" onPress={() => setSelectedCaptainId(captain.id)} style={[styles.captainCard, deliveryShadows.sm]}><View style={styles.captainHeader}><View style={styles.captainAvatar}><Text style={styles.captainAvatarText}>{displayName(captain.full_name, captain.email).slice(0, 1)}</Text></View><View style={styles.captainHeadingText}><Text style={styles.captainName}>{displayName(captain.full_name, captain.email)}</Text><View style={styles.captainBadges}><Text style={[styles.captainBadge, available ? styles.captainBadgeAvailable : styles.captainBadgeUnavailable]}>{available ? 'متاح' : 'غير متاح'}</Text><Text style={[styles.captainBadge, captain.is_active ? styles.captainBadgeActive : styles.captainBadgeInactive]}>{captain.is_active ? 'مفعل' : 'معطل'}</Text></View></View><View style={styles.completedBlock}><Text style={styles.completedNumber}>{completed}</Text><Text style={styles.completedLabel}>مكتمل</Text></View></View><View style={styles.captainFooter}><Text style={styles.captainFooterText}>{orders.find((order) => order.assigned_captain_id === captain.id && ['assigned', 'received', 'in_delivery'].includes(order.status)) ? 'لديه طلب حالي' : 'لا يوجد طلب حالي'}</Text><Text style={styles.captainFooterText}>اضغط للتفاصيل</Text></View>{role === 'admin' ? <Pressable accessibilityRole="button" disabled={updatingCaptainId === captain.id} onPress={(event) => { event.stopPropagation(); void toggleCaptain(captain.id, captain.is_active); }} style={[styles.captainAction, updatingCaptainId === captain.id && styles.disabled]}><Text style={styles.captainActionText}>{updatingCaptainId === captain.id ? 'جارٍ الحفظ...' : captain.is_active ? 'تعطيل الكابتن' : 'تفعيل الكابتن'}</Text></Pressable> : null}</Pressable>; })}
     </ScrollView>
   );
 
@@ -512,14 +502,40 @@ const styles = StyleSheet.create({
   statusBadge: { backgroundColor: deliveryColors.primarySoft, borderRadius: 999, color: deliveryColors.primary, fontSize: 11, fontWeight: '700', overflow: 'hidden', paddingHorizontal: deliverySpacing.sm, paddingVertical: 4 },
   orderAddress: { color: deliveryColors.muted, fontSize: 13, textAlign: 'right' },
   orderFee: { color: deliveryColors.primary, fontSize: 16, fontWeight: '800', marginTop: deliverySpacing.xs, textAlign: 'right' },
-  captainCard: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, gap: deliverySpacing.md, padding: deliverySpacing.lg },
-  captainHeader: { alignItems: 'center', flexDirection: 'row-reverse', gap: deliverySpacing.md },
-  availabilityDot: { borderRadius: 999, height: 12, width: 12 },
+  captainsIntro: { backgroundColor: '#FFFFFF', borderColor: '#D3E3F0', borderRadius: 16, borderWidth: 1, padding: 14 },
+  captainsIntroTitle: { color: '#1C1B1B', fontSize: 18, fontWeight: '800', textAlign: 'right' },
+  captainsIntroText: { color: '#58616B', fontSize: 12, marginTop: 4, textAlign: 'right' },
+  captainsIntroIcon: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#EAF4FF', borderRadius: 14, height: 44, justifyContent: 'center', marginTop: -42, width: 44 },
+  captainsIntroIconText: { color: '#0060B8', fontSize: 20, fontWeight: '800' },
+  captainSearch: { alignItems: 'center', backgroundColor: '#FBFDFF', borderColor: '#C9D9E7', borderRadius: 12, borderWidth: 1, flexDirection: 'row-reverse', height: 44, marginTop: 14 },
+  searchGlyph: { color: '#75818E', fontSize: 22, paddingHorizontal: 10 },
+  captainSearchInput: { color: '#1C2934', flex: 1, fontSize: 13, height: '100%', paddingLeft: 10 },
+  captainFilterRow: { gap: 8, paddingHorizontal: 2 },
+  captainFilter: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D4E2EC', borderRadius: 99, borderWidth: 1, justifyContent: 'center', minHeight: 32, paddingHorizontal: 12 },
+  captainFilterActive: { backgroundColor: '#0060B8', borderColor: '#0060B8' },
+  captainFilterText: { color: '#58616B', fontSize: 11, fontWeight: '800' },
+  captainFilterTextActive: { color: '#FFFFFF' },
+  listHeading: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 3 },
+  count: { backgroundColor: '#DBEEFF', borderRadius: 99, color: '#0060B8', fontSize: 11, fontWeight: '800', overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
+  captainCard: { backgroundColor: '#FFFFFF', borderColor: '#DBE7F2', borderRadius: 16, borderWidth: 1, overflow: 'hidden', padding: 14 },
+  captainHeader: { alignItems: 'center', flexDirection: 'row-reverse', gap: 10 },
+  captainAvatar: { alignItems: 'center', backgroundColor: '#E7EDF2', borderRadius: 22, height: 44, justifyContent: 'center', width: 44 },
+  captainAvatarText: { color: '#52606D', fontSize: 16, fontWeight: '800' },
   captainHeadingText: { flex: 1 },
-  captainName: { color: deliveryColors.text, fontSize: 15, fontWeight: '800', textAlign: 'right' },
-  captainMeta: { color: deliveryColors.muted, fontSize: 12, marginTop: 3, textAlign: 'right' },
-  captainAction: { alignItems: 'center', backgroundColor: deliveryColors.primarySoft, borderRadius: deliveryRadius.md, justifyContent: 'center', minHeight: 40 },
-  captainActionText: { color: deliveryColors.primary, fontSize: 13, fontWeight: '800' },
+  captainName: { color: '#1C1B1B', fontSize: 15, fontWeight: '800', textAlign: 'right' },
+  captainBadges: { flexDirection: 'row-reverse', gap: 6, marginTop: 5 },
+  captainBadge: { borderRadius: 5, fontSize: 10, fontWeight: '800', overflow: 'hidden', paddingHorizontal: 7, paddingVertical: 3 },
+  captainBadgeAvailable: { backgroundColor: '#ECFDF5', color: '#15803D' },
+  captainBadgeUnavailable: { backgroundColor: '#F1F5F9', color: '#475569' },
+  captainBadgeActive: { backgroundColor: '#EAF4FF', color: '#0060B8' },
+  captainBadgeInactive: { backgroundColor: '#FEF2F2', color: '#B91C1C' },
+  completedBlock: { alignItems: 'flex-end' },
+  completedNumber: { color: '#1C1B1B', fontSize: 14, fontWeight: '800' },
+  completedLabel: { color: '#66727E', fontSize: 10, marginTop: 2 },
+  captainFooter: { flexDirection: 'row-reverse', justifyContent: 'space-between', borderTopColor: '#EEF3F7', borderTopWidth: 1, marginTop: 12, paddingTop: 10 },
+  captainFooterText: { color: '#66727E', fontSize: 11 },
+  captainAction: { alignItems: 'center', backgroundColor: '#EAF4FF', borderColor: '#A7D8FF', borderRadius: 10, borderWidth: 1, justifyContent: 'center', marginTop: 10, minHeight: 38 },
+  captainActionText: { color: '#00569F', fontSize: 12, fontWeight: '800' },
   financeGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: deliverySpacing.md },
   financeMetric: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, flexBasis: '47%', flexGrow: 1, minHeight: 100, justifyContent: 'center', padding: deliverySpacing.md },
   financeMetricValue: { color: deliveryColors.primary, fontSize: 15, fontWeight: '800', textAlign: 'center' },
