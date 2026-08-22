@@ -260,19 +260,21 @@ export const webSupabase = {
     },
 
     async profiles(): Promise<WebProfile[]> {
-      const { data, error } = await getWebSupabaseClient()
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await getWebSupabaseClient().rpc('list_visible_profiles', {
+        p_limit: 100,
+        p_before_created_at: null,
+        p_before_id: null,
+      });
       return unwrap(data, error, 'تعذر تحميل الحسابات المفعّلة.');
     },
 
     async profilesPage(input: WebListPageInput = {}): Promise<WebListPage<WebProfile>> {
       const limit = normalizePageLimit(input.limit);
-      let query = getWebSupabaseClient().from('profiles').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit + 1);
-      const cursorFilter = keysetFilter(input.cursor);
-      if (cursorFilter) query = query.or(cursorFilter);
-      const { data, error } = await query;
+      const { data, error } = await getWebSupabaseClient().rpc('list_visible_profiles', {
+        p_limit: limit + 1,
+        p_before_created_at: input.cursor?.createdAt ?? null,
+        p_before_id: input.cursor?.id ?? null,
+      });
       return asPage(unwrap(data, error, 'تعذر تحميل الحسابات المفعّلة.'), limit);
     },
 

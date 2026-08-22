@@ -923,6 +923,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      list_visible_profiles: {
+        Args: {
+          p_before_created_at?: string | null
+          p_before_id?: string | null
+          p_limit?: number
+        }
+        Returns: {
+          account_activated_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }[]
+      }
       get_backoffice_home_summary: {
         Args: Record<PropertyKey, never>
         Returns: {
