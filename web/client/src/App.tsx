@@ -1,8 +1,10 @@
 /** Design reminder — Corporate Modern Mobile Operations with Arabic RTL routes and operational blue hierarchy. */
 /** Route reminder — keep the mobile finance workspace inside the existing guarded admin experience. */
-import { type ComponentType } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 
+import { lazy, Suspense, type ComponentType } from 'react';
+
+import { AdminRouteGuard } from '@/components/AdminRouteGuard';
 import { BackOfficeRouteGuard } from '@/components/BackOfficeRouteGuard';
 import { CaptainRouteGuard } from '@/components/CaptainRouteGuard';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -29,6 +31,8 @@ import Reports from '@/pages/Reports';
 import Users from '@/pages/Users';
 import WageOrders from '@/pages/WageOrders';
 import Wages from '@/pages/Wages';
+
+const AdminCorrections = lazy(() => import('@/pages/AdminCorrections'));
 
 function BackOfficeRoute({ component: Component }: { component: ComponentType }) {
   return (
@@ -61,6 +65,16 @@ function Router() {
         <Route path="/captain/settings" component={() => <CaptainRoute component={CaptainSettings} />} />
         <Route path="/captain/help" component={() => <CaptainRoute component={CaptainHelp} />} />
         <Route path="/captain" component={() => <CaptainRoute component={CaptainHome} />} />
+        <Route
+          path="/admin/corrections"
+          component={() => (
+            <AdminRouteGuard>
+              <Suspense fallback={<div className="grid min-h-[100dvh] place-items-center bg-[#eaf5ff] text-sm text-[#58616b]">جارٍ تحميل الصفحة...</div>}>
+                <AdminCorrections />
+              </Suspense>
+            </AdminRouteGuard>
+          )}
+        />
         <Route path="/" component={() => <BackOfficeRoute component={Home} />} />
         <Route path="/users" component={() => <BackOfficeRoute component={Users} />} />
         <Route path="/orders" component={() => <BackOfficeRoute component={Orders} />} />
