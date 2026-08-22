@@ -1,5 +1,6 @@
 import type {
   WebCaptainWageDetailV2,
+  WebCaptainWagePeriodSummaryRow,
   WebCaptainWageSummary,
   WebCompanyProfitDayDetailRow,
   WebCompanyProfitHistoryRow,
@@ -9,6 +10,7 @@ import type {
 
 import type {
   CaptainFinanceCard,
+  CaptainWagePeriodRow,
   CompanyProfitDayDetailRow,
   CompanyProfitHistoryRow,
   CompanyProfitPeriodHistoryRow,
@@ -67,6 +69,23 @@ export function mapFinanceRows(
     latestPayoutId: nullableString(detail.latest_payout_id),
     latestPaidAt: nullableString(detail.latest_paid_at),
   }));
+}
+
+export function mapCaptainWagePeriodRow(source: WebCaptainWagePeriodSummaryRow): CaptainWagePeriodRow {
+  const captainName = source.captain_name?.trim() || 'كابتن بدون اسم';
+  return {
+    periodStart: source.period_start,
+    periodEnd: source.period_end,
+    captainId: source.captain_id,
+    captainName,
+    initial: captainName.slice(0, 1),
+    orderCount: finiteNumber(source.order_count, 'order_count'),
+    grossTotal: finiteNumber(source.gross_total, 'gross_total'),
+    captainNetTotal: finiteNumber(source.captain_net_total, 'captain_net_total'),
+    paidTotal: finiteNumber(source.paid_total, 'paid_total'),
+    unpaidTotal: finiteNumber(source.unpaid_total, 'unpaid_total'),
+    settlementTotal: finiteNumber(source.settlement_total, 'settlement_total'),
+  };
 }
 
 export function mapCaptainFinanceCard(

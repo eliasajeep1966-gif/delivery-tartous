@@ -1026,6 +1026,27 @@ export type Database = {
           settlement_total: number
         }[]
       }
+      get_captain_wage_period_summary: {
+        Args: {
+          p_before_captain_id?: string
+          p_before_period_start?: string
+          p_captain_id?: string
+          p_limit?: number
+          p_period?: string
+        }
+        Returns: {
+          captain_id: string
+          captain_name: string
+          captain_net_total: number
+          gross_total: number
+          order_count: number
+          paid_total: number
+          period_end: string
+          period_start: string
+          settlement_total: number
+          unpaid_total: number
+        }[]
+      }
       get_wage_totals: {
         Args: never
         Returns: {

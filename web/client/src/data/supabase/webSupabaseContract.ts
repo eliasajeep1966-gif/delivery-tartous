@@ -26,6 +26,9 @@ type WebRpcRow<Name extends WebRpcName> = WebRpcReturn<Name> extends Array<infer
 export type WebWageTotals = WebRpcRow<'get_wage_totals'>;
 export type WebCaptainWageSummary = WebRpcRow<'get_captain_wage_summary'>;
 export type WebCaptainWageDetailV2 = WebRpcRow<'get_captain_wage_details_v2'>;
+export type WebCaptainWagePeriodSummaryRow = WebRpcRow<'get_captain_wage_period_summary'>;
+export type CaptainWagePeriod = 'daily' | 'weekly' | 'monthly';
+export type CaptainWagePeriodSummaryInput = Database['public']['Functions']['get_captain_wage_period_summary']['Args'];
 export type WebBackofficeHomeSummary = WebRpcRow<'get_backoffice_home_summary'>;
 export type WebCaptainHomeMetrics = WebRpcRow<'get_captain_home_metrics'>;
 export type WebCompanyProfitHistoryRow = WebRpcRow<'get_company_profit_history'>;
@@ -457,6 +460,11 @@ export const webSupabase = {
         p_captain_id: captainId,
       });
       return unwrap(data, error, 'تعذر تحميل تفاصيل أجر الكابتن.');
+    },
+
+    async captainWagePeriodSummary(input: CaptainWagePeriodSummaryInput = {}): Promise<WebCaptainWagePeriodSummaryRow[]> {
+      const { data, error } = await getWebSupabaseClient().rpc('get_captain_wage_period_summary', input);
+      return unwrap(data, error, 'تعذر تحميل ملخص أجور الكباتن للفترة.');
     },
 
     async companyProfitHistory(input: CompanyProfitHistoryInput = {}): Promise<WebCompanyProfitHistoryRow[]> {

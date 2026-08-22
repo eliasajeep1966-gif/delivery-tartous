@@ -19,6 +19,20 @@ export type FinanceLedgerRow = {
   latestPaidAt: string | null;
 };
 
+export type CaptainWagePeriodRow = {
+  periodStart: string;
+  periodEnd: string;
+  captainId: string;
+  captainName: string;
+  initial: string;
+  orderCount: number;
+  grossTotal: number;
+  captainNetTotal: number;
+  paidTotal: number;
+  unpaidTotal: number;
+  settlementTotal: number;
+};
+
 export type CaptainFinanceCard = {
   captainId: string;
   captainName: string;
