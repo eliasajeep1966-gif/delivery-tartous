@@ -8,6 +8,7 @@ import { NativeCustodyPanel } from './NativeCustodyPanel';
 import { NativeOrdersPanel } from './NativeOrdersPanel';
 import { NativeWagesPanel } from './NativeWagesPanel';
 import { NativeCompanyWagesPanel } from './NativeCompanyWagesPanel';
+import { NativeReportsPanel } from './NativeReportsPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -64,6 +65,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const [isActivityLogsOpen, setIsActivityLogsOpen] = useState(false);
   const [isCustodyOpen, setIsCustodyOpen] = useState(false);
   const [isCompanyWagesOpen, setIsCompanyWagesOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
 
   const {
     availableCaptainIds,
@@ -287,6 +289,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       <Pressable accessibilityRole="button" onPress={() => setIsUsersOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>إدارة المستخدمين</Text><Text style={styles.usersShortcutText}>الأدوار، تفعيل الكباتن، وتخصيص صلاحيات المشرفين</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => setIsActivityLogsOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>سجل الحركات</Text><Text style={styles.usersShortcutText}>تابع العمليات المسجلة ومن قام بتنفيذها</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => setIsCustodyOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>إدارة الأمانات</Text><Text style={styles.usersShortcutText}>سجّل أمانات الكباتن وتابع إعادتها</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => setIsReportsOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>التقارير</Text><Text style={styles.usersShortcutText}>ملخص المكتب الشهري والأجور وحصة الكباتن</Text></Pressable>
       {role === 'admin' ? (
         <View style={[styles.accountForm, deliveryShadows.sm]}>
           <Text style={styles.formTitle}>إنشاء حساب معلق</Text>
@@ -362,6 +365,9 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       </Modal>
       <Modal animationType="slide" visible={isCompanyWagesOpen} onRequestClose={() => setIsCompanyWagesOpen(false)}>
         <NativeCompanyWagesPanel onClose={() => setIsCompanyWagesOpen(false)} />
+      </Modal>
+      <Modal animationType="slide" visible={isReportsOpen} onRequestClose={() => setIsReportsOpen(false)}>
+        <NativeReportsPanel onClose={() => setIsReportsOpen(false)} />
       </Modal>
       <Modal animationType="slide" transparent visible={isCreateOrderOpen} onRequestClose={() => setIsCreateOrderOpen(false)}>
         <View style={styles.modalBackdrop}>
