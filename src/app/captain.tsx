@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 
 import { AvailabilityCard } from '@/components/captain/AvailabilityCard';
@@ -11,6 +11,7 @@ import { mapOrderRowToDeliveryOrder } from '@/data/supabase/mappers';
 import { ProtectedRoleGate } from '@/features/auth/ProtectedRoleGate';
 import { useAuth } from '@/features/auth/useAuth';
 import { useCaptainOperationsDashboard } from '@/features/operations/useCaptainOperationsDashboard';
+import { NativeInfoPanel } from '@/features/operations/NativeInfoPanel';
 
 type CaptainTab = 'home' | 'my_orders' | 'earnings' | 'more';
 
@@ -31,6 +32,8 @@ function formatCurrency(value: number) {
 export default function CaptainScreen() {
   const { profile, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<CaptainTab>('home');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const {
     availability,
     captainEarnings,
@@ -170,6 +173,8 @@ export default function CaptainScreen() {
         <Text style={styles.profileName}>{profile?.full_name || profile?.email || 'الكابتن'}</Text>
         <Text style={styles.profileRole}>كابتن دليفري طرطوس</Text>
       </View>
+      <Pressable accessibilityRole="button" onPress={() => setIsSettingsOpen(true)} style={styles.moreLink}><Text style={styles.moreLinkTitle}>إعدادات الحساب</Text><Text style={styles.moreLinkText}>خيارات الحساب وكلمة المرور</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => setIsHelpOpen(true)} style={styles.moreLink}><Text style={styles.moreLinkTitle}>المساعدة والدعم</Text><Text style={styles.moreLinkText}>إرشادات العمل مع الطلبات</Text></Pressable>
       <SectionTitle title="الأمانات المستلمة" />
       {custody.length === 0 ? <EmptyNotice text="لا توجد أمانات مسجلة على حسابك." /> : null}
       {custody.map((item) => (
@@ -207,6 +212,12 @@ export default function CaptainScreen() {
       >
         {content}
       </RoleWorkspace>
+      <Modal animationType="slide" visible={isSettingsOpen} onRequestClose={() => setIsSettingsOpen(false)}>
+        <NativeInfoPanel title="إعدادات الكابتن" subtitle="الحساب والخصوصية" onClose={() => setIsSettingsOpen(false)} sections={[{ title: 'بيانات الحساب', body: 'واجهة الويب الحالية تعرض إعدادات الحساب كواجهة تحضيرية. لا توجد عملية خلفية معتمدة لتعديل الملف الشخصي أو كلمة المرور ضمن العقد الحالي.' }, { title: 'حالة التوفر', body: 'تُعدّل من الصفحة الرئيسية للكابتن وتُحفظ مباشرة عبر النظام.' }]} />
+      </Modal>
+      <Modal animationType="slide" visible={isHelpOpen} onRequestClose={() => setIsHelpOpen(false)}>
+        <NativeInfoPanel title="مساعدة الكابتن" subtitle="إرشادات التشغيل" onClose={() => setIsHelpOpen(false)} sections={[{ title: 'الطلب الحالي', body: 'استلم الطلب ثم ابدأ التوصيل وأكمل المرحلة عند التسليم. تجنب تكرار النقر أثناء الحفظ.' }, { title: 'الطلب الكاذب', body: 'يتاح بعد الاستلام أو أثناء التوصيل فقط، وينهي الطلب بعد التأكيد.' }, { title: 'الأجور والأمانات', body: 'راجع سجل أجورك والأمانات المسجلة من التبويبات المتاحة في التطبيق.' }]} />
+      </Modal>
     </ProtectedRoleGate>
   );
 }
@@ -388,6 +399,9 @@ const styles = StyleSheet.create({
   custodyDetails: { color: deliveryColors.muted, fontSize: 12, marginTop: deliverySpacing.xs, textAlign: 'right' },
   custodyState: { color: deliveryColors.warning, fontSize: 12, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
   custodyReturned: { color: deliveryColors.success },
+  moreLink: { backgroundColor: deliveryColors.surface, borderColor: '#DCE7F0', borderRadius: deliveryRadius.lg, borderWidth: 1, padding: deliverySpacing.lg },
+  moreLinkTitle: { color: deliveryColors.text, fontSize: 15, fontWeight: '800', textAlign: 'right' },
+  moreLinkText: { color: deliveryColors.muted, fontSize: 12, marginTop: 4, textAlign: 'right' },
   signOutButton: {
     alignItems: 'center',
     backgroundColor: deliveryColors.surface,
