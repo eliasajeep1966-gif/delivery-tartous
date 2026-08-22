@@ -11,6 +11,7 @@ import { orderStatusPresentation, type OrderStatus } from '@/features/admin/type
 import { useCaptainDashboard } from '@/features/captain/useCaptainDashboard';
 import { webSupabase, type WebCaptainWageDetailV2 } from '@/data/supabase/webSupabaseContract';
 import { withWebRequestTimeout } from '@/lib/authRequest';
+import { SupportCenter } from '@/pages/Help';
 
 const money = (value: number) => `${new Intl.NumberFormat('en-US').format(value)} ل.س`;
 const date = (value: string | null | undefined) => value ? new Intl.DateTimeFormat('ar-SY', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'غير مسجل';
@@ -133,7 +134,7 @@ export function CaptainSettings({ onUpdateProfile, onChangePassword }: CaptainSe
 export function CaptainHelp() {
   const { signOut } = useWebAuth();
   const [signingOut, setSigningOut] = useState(false);
-  return <PageShell active="home" onSignOut={() => void signOut()} signingOut={signingOut}><BackTitle title="المساعدة" subtitle="دليل استخدام واجهة الكابتن" /><section className="space-y-3 rounded-2xl border border-[#dcecf4] bg-white p-4 text-[11px] leading-6 text-[#56768b] shadow-[0_2px_8px_rgba(0,96,184,0.05)]"><h2 className="text-[14px] font-extrabold text-[#18547e]">كيف أتعامل مع الطلب؟</h2><p>فعّل حالة التوفر من الرئيسية، ثم استخدم زر المرحلة داخل بطاقة الطلب: تم الاستلام، بدء التوصيل، ثم تأكيد التسليم.</p><h2 className="text-[14px] font-extrabold text-[#18547e]">الأمانات والأجور</h2><p>تعرض الأمانات المسجلة باسمك وسجل الأجور القادم من العقد الخلفي حسب هويتك وصلاحيات حسابك.</p></section></PageShell>;
+  return <PageShell active="home" onSignOut={() => void signOut()} signingOut={signingOut}><BackTitle title="المساعدة والدعم" subtitle="دليل الاستخدام وقنوات التواصل" /><SupportCenter /></PageShell>;
 }
 
 function Loading() { return <section className="flex min-h-40 items-center justify-center gap-2 rounded-2xl border border-[#dcecf4] bg-white text-sm font-bold text-[#086fc4]"><LoaderCircle className="animate-spin" size={19} />جارٍ التحميل...</section>; }
