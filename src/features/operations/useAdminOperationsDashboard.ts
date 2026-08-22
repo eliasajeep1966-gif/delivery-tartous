@@ -12,6 +12,7 @@ import {
 
 type DashboardData = {
   orders: Order[];
+  profiles: Profile[];
   captains: Profile[];
   captainStatuses: CaptainStatus[];
   wageTotals: WageTotals | null;
@@ -21,6 +22,7 @@ type DashboardData = {
 
 const initialData: DashboardData = {
   orders: [],
+  profiles: [],
   captains: [],
   captainStatuses: [],
   wageTotals: null,
@@ -53,6 +55,7 @@ export function useAdminOperationsDashboard() {
 
       setData({
         orders,
+        profiles,
         captains: profiles.filter((profile) => profile.role === 'captain'),
         captainStatuses,
         wageTotals,

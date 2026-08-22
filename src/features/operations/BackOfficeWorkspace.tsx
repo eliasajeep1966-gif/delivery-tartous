@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { RoleWorkspace } from '@/components/layout/RoleWorkspace';
+import { NativeUsersPanel } from './NativeUsersPanel';
+import { NativeActivityLogsPanel } from './NativeActivityLogsPanel';
+import { NativeCustodyPanel } from './NativeCustodyPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -54,14 +57,19 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const [deliveryPhone, setDeliveryPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [feeText, setFeeText] = useState('');
+  const [isUsersOpen, setIsUsersOpen] = useState(false);
+  const [isActivityLogsOpen, setIsActivityLogsOpen] = useState(false);
+  const [isCustodyOpen, setIsCustodyOpen] = useState(false);
 
   const {
     availableCaptainIds,
+    captainStatuses,
     captains,
     error,
     isLoading,
     metrics,
     orders,
+    profiles,
     profitHistory,
     reload,
     wageSummaries,
@@ -301,6 +309,9 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const renderMore = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <SectionTitle title="الحسابات وإعدادات التشغيل" />
+      <Pressable accessibilityRole="button" onPress={() => setIsUsersOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>إدارة المستخدمين</Text><Text style={styles.usersShortcutText}>الأدوار، تفعيل الكباتن، وتخصيص صلاحيات المشرفين</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => setIsActivityLogsOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>سجل الحركات</Text><Text style={styles.usersShortcutText}>تابع العمليات المسجلة ومن قام بتنفيذها</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => setIsCustodyOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>إدارة الأمانات</Text><Text style={styles.usersShortcutText}>سجّل أمانات الكباتن وتابع إعادتها</Text></Pressable>
       {role === 'admin' ? (
         <View style={[styles.accountForm, deliveryShadows.sm]}>
           <Text style={styles.formTitle}>إنشاء حساب معلق</Text>
@@ -365,6 +376,15 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       >
         {content}
       </RoleWorkspace>
+      <Modal animationType="slide" visible={isUsersOpen} onRequestClose={() => setIsUsersOpen(false)}>
+        <NativeUsersPanel role={role} profiles={profiles} captainStatuses={captainStatuses} onClose={() => setIsUsersOpen(false)} onRefresh={reload} />
+      </Modal>
+      <Modal animationType="slide" visible={isActivityLogsOpen} onRequestClose={() => setIsActivityLogsOpen(false)}>
+        <NativeActivityLogsPanel profiles={profiles} onClose={() => setIsActivityLogsOpen(false)} />
+      </Modal>
+      <Modal animationType="slide" visible={isCustodyOpen} onRequestClose={() => setIsCustodyOpen(false)}>
+        <NativeCustodyPanel captains={captains} onClose={() => setIsCustodyOpen(false)} />
+      </Modal>
       <Modal animationType="slide" transparent visible={isCreateOrderOpen} onRequestClose={() => setIsCreateOrderOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
@@ -465,6 +485,9 @@ const styles = StyleSheet.create({
   companyProfitDay: { color: deliveryColors.text, fontSize: 14, fontWeight: '800', textAlign: 'right' },
   companyProfitMeta: { color: deliveryColors.muted, fontSize: 12, marginTop: 4, textAlign: 'right' },
   companyProfitAmount: { color: deliveryColors.success, fontSize: 14, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
+  usersShortcut: { backgroundColor: deliveryColors.primarySoft, borderColor: '#CFE4F2', borderRadius: deliveryRadius.lg, borderWidth: 1, padding: deliverySpacing.lg },
+  usersShortcutTitle: { color: deliveryColors.primaryDark, fontSize: 16, fontWeight: '800', textAlign: 'right' },
+  usersShortcutText: { color: '#4F718A', fontSize: 12, marginTop: 5, textAlign: 'right' },
   accountForm: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, gap: deliverySpacing.md, padding: deliverySpacing.lg },
   formTitle: { color: deliveryColors.text, fontSize: 16, fontWeight: '800', textAlign: 'right' },
   input: { backgroundColor: '#F8FAFC', borderColor: '#DCE7F0', borderRadius: deliveryRadius.md, borderWidth: 1, color: deliveryColors.text, fontSize: 14, minHeight: 48, paddingHorizontal: deliverySpacing.md },

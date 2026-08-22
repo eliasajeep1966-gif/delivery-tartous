@@ -13,6 +13,7 @@ export type OrderStatus = Database['public']['Enums']['order_status'];
 export type CaptainAvailability = Database['public']['Enums']['captain_availability'];
 
 export type Profile = Tables<'profiles'>;
+export type AuditLog = Tables<'audit_logs'>;
 export type Order = Tables<'orders'>;
 /** RPC إنشاء الطلب يضمن المعرّف ورقم الطلب؛ التفاصيل الكاملة تُقرأ من جدول الطلبات بعد الإنشاء. */
 export type CreatedOrder = Pick<Order, 'id' | 'order_number'>;
@@ -186,6 +187,17 @@ export const deliverySupabase = {
       return unwrap(data, error, 'Could not load user profiles.');
     },
 
+    async auditLogs(limit = 100): Promise<AuditLog[]> {
+      const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
+      const { data, error } = await getSupabaseClient()
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(safeLimit);
+      return unwrap(data, error, 'Could not load activity logs.');
+    },
+
     async captainStatuses(): Promise<CaptainStatus[]> {
       const { data, error } = await getSupabaseClient()
         .from('captain_status')
@@ -227,6 +239,14 @@ export const deliverySupabase = {
         .select('*')
         .order('assigned_at', { ascending: false });
       return unwrap(data, error, 'Could not load custody records.');
+    },
+
+    async captainCustodies(): Promise<CaptainCustody[]> {
+      const { data, error } = await getSupabaseClient()
+        .from('captain_custody')
+        .select('*')
+        .order('assigned_at', { ascending: false });
+      return unwrap(data, error, 'Could not load captain custody records.');
     },
 
     async permissions(): Promise<Permission[]> {
