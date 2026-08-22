@@ -15,8 +15,8 @@
 - [x] إصلاح تدفق تفعيل الحساب Native وربطه المؤكد بـ Edge Function وتسجيل الدخول اللاحق.
 - [ ] استعادة خادم التطوير بعد توقفه والتحقق من Metro.
 - [x] إنشاء commit وpush شاملين لكل مشروع Native الحالي إلى GitHub للتجربة المحلية.
-- [ ] التحقق من remote والـcommit المنشور فعلياً لتأكيد أن المستخدم يستطيع سحب نسخة Native.
-- [ ] نسخ مشروع Native الكامل إلى `mobile/` في مستودع GitHub الصحيح ثم رفعه إلى main.
+- [x] التحقق من remote والـcommit المنشور فعلياً لتأكيد أن المستخدم يستطيع سحب نسخة Native.
+- [x] نسخ مشروع Native الكامل إلى `mobile/` في مستودع GitHub الصحيح ثم رفعه إلى main.
 - [ ] نقل Home حسب Admin/Supervisor/Captain.
 - [ ] نقل Orders وOrder Detail وPagination.
 - [ ] نقل Users وإدارة الحسابات حسب الصلاحيات.
