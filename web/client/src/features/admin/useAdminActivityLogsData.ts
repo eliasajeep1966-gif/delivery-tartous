@@ -145,8 +145,9 @@ export function useAdminActivityLogsData() {
     if (!background) setReadError(null);
     try {
       const auditPage = await withWebRequestTimeout(webSupabase.reads.auditLogsPage({ cursor, limit: WEB_LIST_PAGE_SIZE }), LOAD_TIMEOUT_MESSAGE);
-      const orderIds = Array.from(new Set(auditPage.items.filter((log) => log.entity_type === 'order' && log.entity_id).map((log) => log.entity_id as string)));
-      const profileIds = Array.from(new Set(auditPage.items.flatMap((log) => [
+      const orderedAuditLogs = [...auditPage.items].sort((first, second) => second.created_at.localeCompare(first.created_at) || second.id.localeCompare(first.id));
+      const orderIds = Array.from(new Set(orderedAuditLogs.filter((log) => log.entity_type === 'order' && log.entity_id).map((log) => log.entity_id as string)));
+      const profileIds = Array.from(new Set(orderedAuditLogs.flatMap((log) => [
         log.actor_user_id,
         log.entity_type === 'order' ? null : log.entity_id,
         metadataText(log, 'captain_id'),
@@ -156,7 +157,7 @@ export function useAdminActivityLogsData() {
         withWebRequestTimeout(webSupabase.reads.profilesByIds(profileIds), LOAD_TIMEOUT_MESSAGE),
       ]);
       if (!mounted.current || version !== requestVersion.current) return;
-      setAuditLogs(auditPage.items);
+      setAuditLogs(orderedAuditLogs);
       setOrders(nextOrders);
       setProfiles(nextProfiles);
       setNextCursor(auditPage.nextCursor);

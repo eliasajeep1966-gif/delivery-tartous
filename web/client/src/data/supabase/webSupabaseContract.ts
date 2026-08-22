@@ -291,7 +291,8 @@ export const webSupabase = {
         .select('*')
         .eq('role', 'captain')
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل الكباتن المفعّلين.');
     },
 
@@ -299,7 +300,8 @@ export const webSupabase = {
       const { data, error } = await getWebSupabaseClient()
         .from('captain_status')
         .select('*')
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .order('captain_id', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل حالات الكباتن.');
     },
 
@@ -314,7 +316,8 @@ export const webSupabase = {
       const { data, error } = await getWebSupabaseClient()
         .from('captain_custody')
         .select('*')
-        .order('assigned_at', { ascending: false });
+        .order('assigned_at', { ascending: false })
+        .order('id', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل الأمانات.');
     },
 
@@ -322,7 +325,8 @@ export const webSupabase = {
       const { data, error } = await getWebSupabaseClient()
         .from('captain_custody')
         .select('*')
-        .order('assigned_at', { ascending: false });
+        .order('assigned_at', { ascending: false })
+        .order('id', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل أمانات الكباتن.');
     },
 
@@ -330,7 +334,8 @@ export const webSupabase = {
       const { data, error } = await getWebSupabaseClient()
         .from('orders')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل الطلبات.');
     },
 
@@ -358,6 +363,7 @@ export const webSupabase = {
         .from('audit_logs')
         .select('*')
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .limit(safeLimit);
       return unwrap(data, error, 'تعذر تحميل آخر النشاطات.');
     },
@@ -393,7 +399,8 @@ export const webSupabase = {
         .from('orders')
         .select('*')
         .eq('assigned_captain_id', normalizedCaptainId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
       return unwrap(data, error, 'تعذر تحميل سجل طلباتك.');
     },
 

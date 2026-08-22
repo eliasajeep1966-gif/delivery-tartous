@@ -75,13 +75,14 @@ export function useAdminOrdersData(status?: WebOrderStatus | readonly WebOrderSt
     try {
       const statusValues = statusFilterKey ? statusFilterKey.split('|') as WebOrderStatus[] : undefined;
       const ordersPage = await withWebRequestTimeout(webSupabase.reads.ordersPage({ cursor, status: statusValues?.length === 1 ? statusValues[0] : undefined, statuses: statusValues && statusValues.length > 1 ? statusValues : undefined }), LOAD_TIMEOUT_MESSAGE);
-      const captainIds = Array.from(new Set(ordersPage.items.map((order) => order.assigned_captain_id).filter((captainId): captainId is string => Boolean(captainId))));
+      const orderedOrders = [...ordersPage.items].sort((first, second) => second.created_at.localeCompare(first.created_at) || second.id.localeCompare(first.id));
+      const captainIds = Array.from(new Set(orderedOrders.map((order) => order.assigned_captain_id).filter((captainId): captainId is string => Boolean(captainId))));
       const [nextProfiles, nextCaptainStatuses] = await Promise.all([
         withWebRequestTimeout(webSupabase.reads.profilesByIds(captainIds), 'انتهت مهلة تحميل أسماء الكباتن بعد 15 ثانية. حاول مرة أخرى.'),
         withWebRequestTimeout(webSupabase.reads.captainStatusesByCaptainIds(captainIds), 'انتهت مهلة تحميل حالات الكباتن بعد 15 ثانية. حاول مرة أخرى.'),
       ]);
       if (!mounted.current || version !== listRequestVersion.current) return;
-      setOrders(ordersPage.items);
+      setOrders(orderedOrders);
       setProfiles(nextProfiles);
       setCaptainStatuses(nextCaptainStatuses);
       setNextCursor(ordersPage.nextCursor);

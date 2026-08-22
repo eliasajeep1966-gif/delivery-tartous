@@ -88,13 +88,18 @@ export function mapCaptainWagePeriodRow(source: WebCaptainWagePeriodSummaryRow):
   };
 }
 
+export function compareFinanceLedgerRows(first: FinanceLedgerRow, second: FinanceLedgerRow): number {
+  return second.completedAt.localeCompare(first.completedAt)
+    || second.financialLedgerId.localeCompare(first.financialLedgerId);
+}
+
 export function mapCaptainFinanceCard(
   summary: WebCaptainWageSummary,
   details: WebCaptainWageDetailV2[] = [],
 ): CaptainFinanceCard {
   const captainName = summary.captain_name.trim() || 'كابتن بدون اسم';
   const rows = mapFinanceRows(summary.captain_id, captainName, details)
-    .sort((first, second) => second.completedAt.localeCompare(first.completedAt));
+    .sort(compareFinanceLedgerRows);
 
   return {
     captainId: summary.captain_id,
@@ -161,7 +166,7 @@ export function mapFinanceSnapshot(
     totals: mapFinanceTotals(totals),
     captains,
     allRows: captains.flatMap((captain) => captain.rows)
-      .sort((first, second) => second.completedAt.localeCompare(first.completedAt)),
+      .sort(compareFinanceLedgerRows),
   };
 }
 

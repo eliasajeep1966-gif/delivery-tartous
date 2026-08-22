@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 import { AdminBottomNav } from '@/components/AdminBottomNav';
 import { WagePeriodControls } from '@/components/WagePeriodControls';
-import { formatFinanceMoney } from '@/features/admin/financeMappers';
+import { compareFinanceLedgerRows, formatFinanceMoney } from '@/features/admin/financeMappers';
 import { filterFinanceRows, firstFinancePeriodKey, getFinancePeriodOptions, type FinancePeriod } from '@/features/admin/financePeriod';
 import type { FinanceLedgerRow } from '@/features/admin/financeTypes';
 import { getFinanceErrorMessage, useAdminFinanceData } from '@/features/admin/useAdminFinanceData';
@@ -75,7 +75,7 @@ export default function CaptainWageDetail() {
   }, [periodKey, periodOptions, periodSummary?.periodStart]);
 
   const rows = useMemo(
-    () => [...filterFinanceRows(captainRows, period, periodKey)].sort((first, second) => new Date(second.completedAt).getTime() - new Date(first.completedAt).getTime()),
+    () => [...filterFinanceRows(captainRows, period, periodKey)].sort(compareFinanceLedgerRows),
     [captainRows, period, periodKey],
   );
   const periodLabel = periodOptions.find((option) => option.key === periodKey)?.label ?? '';

@@ -58,7 +58,8 @@ export function useCompanyProfitHistory() {
         p_before_period_start: append ? periodCursor.current : undefined,
       }), HISTORY_TIMEOUT);
       if (!mounted.current || requestVersion !== periodRequestVersion.current) return;
-      const rows = result.map(mapCompanyProfitPeriodHistoryRow);
+      const rows = result.map(mapCompanyProfitPeriodHistoryRow)
+        .sort((first, second) => second.periodStart.localeCompare(first.periodStart));
       periodCursor.current = rows.at(-1)?.periodStart;
       setHistory((current) => ({
         period,
@@ -84,7 +85,9 @@ export function useCompanyProfitHistory() {
         p_limit: DAY_PAGE_SIZE,
       }), DAY_DETAILS_TIMEOUT);
       if (!mounted.current || requestVersion !== dayRequestVersion.current || periodRef.current !== 'daily') return;
-      const rows = result.map(mapCompanyProfitDayDetailRow);
+      const rows = result.map(mapCompanyProfitDayDetailRow)
+        .sort((first, second) => second.completedAt.localeCompare(first.completedAt)
+          || second.financialLedgerId.localeCompare(first.financialLedgerId));
       const last = rows.at(-1);
       dayCursor.current = last ? { completedAt: last.completedAt, ledgerId: last.financialLedgerId } : {};
       setDayDetails({ day, rows, loading: false, error: null, hasMore: rows.length === DAY_PAGE_SIZE });
@@ -107,7 +110,9 @@ export function useCompanyProfitHistory() {
         p_before_ledger_id: dayCursor.current.ledgerId,
       }), DAY_DETAILS_TIMEOUT);
       if (!mounted.current || requestVersion !== dayRequestVersion.current || periodRef.current !== 'daily') return;
-      const rows = result.map(mapCompanyProfitDayDetailRow);
+      const rows = result.map(mapCompanyProfitDayDetailRow)
+        .sort((first, second) => second.completedAt.localeCompare(first.completedAt)
+          || second.financialLedgerId.localeCompare(first.financialLedgerId));
       const last = rows.at(-1);
       dayCursor.current = last ? { completedAt: last.completedAt, ledgerId: last.financialLedgerId } : dayCursor.current;
       setDayDetails((current) => ({ ...current, rows: [...current.rows, ...rows], loading: false, error: null, hasMore: rows.length === DAY_PAGE_SIZE }));

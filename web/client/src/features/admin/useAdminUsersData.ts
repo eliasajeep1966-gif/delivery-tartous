@@ -54,12 +54,14 @@ export function useAdminUsersData(): AdminUsersData {
         withWebRequestTimeout(webSupabase.reads.profilesPage({ cursor: profileCursor, limit: WEB_LIST_PAGE_SIZE }), 'انتهت مهلة تحميل الحسابات المفعّلة بعد 15 ثانية. حاول مرة أخرى.'),
         withWebRequestTimeout(webSupabase.reads.pendingAccountsPage({ cursor: pendingCursor, limit: WEB_LIST_PAGE_SIZE }), 'انتهت مهلة تحميل الحسابات المعلّقة بعد 15 ثانية. حاول مرة أخرى.'),
       ]);
-      const captainIds = profilesResult.items.filter((profile) => profile.role === 'captain').map((profile) => profile.id);
+      const orderedProfiles = [...profilesResult.items].sort((first, second) => second.created_at.localeCompare(first.created_at) || second.id.localeCompare(first.id));
+      const orderedPendingAccounts = [...pendingResult.items].sort((first, second) => second.created_at.localeCompare(first.created_at) || second.id.localeCompare(first.id));
+      const captainIds = orderedProfiles.filter((profile) => profile.role === 'captain').map((profile) => profile.id);
       const statuses = await withWebRequestTimeout(webSupabase.reads.captainStatusesByCaptainIds(captainIds), 'انتهت مهلة تحميل حالات الكباتن بعد 15 ثانية. حاول مرة أخرى.');
       if (!mounted.current || version !== requestVersion.current) return;
-      setProfiles(profilesResult.items);
+      setProfiles(orderedProfiles);
       setCaptainStatuses(statuses);
-      setPendingAccounts(pendingResult.items);
+      setPendingAccounts(orderedPendingAccounts);
       setProfilesPage((current) => ({ cursors: [...current.cursors.slice(0, profileIndex), profileCursor], index: profileIndex, nextCursor: profilesResult.nextCursor }));
       setPendingPage((current) => ({ cursors: [...current.cursors.slice(0, pendingIndex), pendingCursor], index: pendingIndex, nextCursor: pendingResult.nextCursor }));
     } catch (error) {
