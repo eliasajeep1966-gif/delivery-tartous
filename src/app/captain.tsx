@@ -14,6 +14,7 @@ import { useCaptainOperationsDashboard } from '@/features/operations/useCaptainO
 import { NativeInfoPanel } from '@/features/operations/NativeInfoPanel';
 
 type CaptainTab = 'home' | 'my_orders' | 'earnings' | 'more';
+type EarningsPeriod = 'daily' | 'weekly' | 'monthly';
 
 const statusLabels = {
   pending: 'قيد الانتظار',
@@ -29,11 +30,30 @@ function formatCurrency(value: number) {
   return `${value.toLocaleString('ar-SY')} ل.س`;
 }
 
+function earningsPeriodKey(value: string, period: EarningsPeriod) {
+  const date = new Date(value);
+  if (period === 'daily') return value.slice(0, 10);
+  if (period === 'monthly') return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+  const copy = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const weekday = copy.getUTCDay() || 7;
+  copy.setUTCDate(copy.getUTCDate() - weekday + 1);
+  return copy.toISOString().slice(0, 10);
+}
+
+function earningsPeriodLabel(key: string, period: EarningsPeriod) {
+  const date = new Date(`${key}T12:00:00`);
+  if (period === 'monthly') return new Intl.DateTimeFormat('ar-SY', { month: 'long', year: 'numeric' }).format(date);
+  if (period === 'weekly') return `أسبوع ${date.toLocaleDateString('ar-SY')}`;
+  return date.toLocaleDateString('ar-SY');
+}
+
 export default function CaptainScreen() {
   const { profile, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<CaptainTab>('home');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [earningsPeriod, setEarningsPeriod] = useState<EarningsPeriod>('daily');
+  const [selectedEarningsPeriod, setSelectedEarningsPeriod] = useState('');
   const {
     availability,
     captainEarnings,
@@ -58,6 +78,19 @@ export default function CaptainScreen() {
   const activeOrders = useMemo(
     () => orders.filter((order) => ['assigned', 'received', 'in_delivery'].includes(order.status)),
     [orders]
+  );
+  const earningsPeriodOptions = useMemo(
+    () => Array.from(new Set(wageDetails.map((entry) => earningsPeriodKey(entry.completed_at, earningsPeriod)))).sort((first, second) => second.localeCompare(first)),
+    [earningsPeriod, wageDetails]
+  );
+  const activeEarningsPeriod = earningsPeriodOptions.includes(selectedEarningsPeriod) ? selectedEarningsPeriod : earningsPeriodOptions[0] ?? '';
+  const visibleWageDetails = useMemo(
+    () => wageDetails.filter((entry) => earningsPeriodKey(entry.completed_at, earningsPeriod) === activeEarningsPeriod),
+    [activeEarningsPeriod, earningsPeriod, wageDetails]
+  );
+  const visibleEarningsTotals = useMemo(
+    () => visibleWageDetails.reduce((totals, entry) => ({ earned: totals.earned + Number(entry.captain_amount), paid: totals.paid + Number(entry.paid_amount), unpaid: totals.unpaid + Number(entry.unpaid_amount) }), { earned: 0, paid: 0, unpaid: 0 }),
+    [visibleWageDetails]
   );
 
   const nextOrderAction = async (nextStatus: 'received' | 'in_delivery' | 'completed') => {
@@ -156,8 +189,11 @@ export default function CaptainScreen() {
         <Text style={styles.earningsHint}>تعتمد القيم على كشف الأجور الفعلي وليس على رسوم الطلبات الإجمالية.</Text>
       </View>
       <SectionTitle title="سجل الأجور" />
-      {wageDetails.length === 0 ? <EmptyNotice text="لا توجد سجلات أجور بعد." /> : null}
-      {wageDetails.map((entry) => (
+      <View style={styles.periodRow}>{(['daily', 'weekly', 'monthly'] as EarningsPeriod[]).map((period) => <Pressable key={period} onPress={() => { setEarningsPeriod(period); setSelectedEarningsPeriod(''); }} style={[styles.periodButton, earningsPeriod === period && styles.periodButtonActive]}><Text style={[styles.periodButtonText, earningsPeriod === period && styles.periodButtonTextActive]}>{period === 'daily' ? 'يومي' : period === 'weekly' ? 'أسبوعي' : 'شهري'}</Text></Pressable>)}</View>
+      {earningsPeriodOptions.length > 1 ? <ScrollView horizontal contentContainerStyle={styles.periodOptions}>{earningsPeriodOptions.map((periodKey) => <Pressable key={periodKey} onPress={() => setSelectedEarningsPeriod(periodKey)} style={[styles.periodOption, activeEarningsPeriod === periodKey && styles.periodOptionActive]}><Text style={[styles.periodOptionText, activeEarningsPeriod === periodKey && styles.periodOptionTextActive]}>{earningsPeriodLabel(periodKey, earningsPeriod)}</Text></Pressable>)}</ScrollView> : null}
+      {activeEarningsPeriod ? <View style={styles.periodTotals}><Text style={styles.periodTotalsText}>أرباح الفترة: {formatCurrency(visibleEarningsTotals.earned)}</Text><Text style={styles.periodTotalsText}>المدفوع: {formatCurrency(visibleEarningsTotals.paid)}</Text><Text style={styles.periodTotalsText}>المتبقي: {formatCurrency(visibleEarningsTotals.unpaid)}</Text></View> : null}
+      {visibleWageDetails.length === 0 ? <EmptyNotice text="لا توجد سجلات أجور ضمن الفترة المختارة." /> : null}
+      {visibleWageDetails.map((entry) => (
         <View key={entry.financial_ledger_id} style={[styles.wageRow, deliveryShadows.sm]}>
           <Text style={styles.wageOrderNumber}>طلب #{entry.order_number}</Text>
           <Text style={styles.wageMeta}>الأجر: {formatCurrency(Number(entry.captain_amount))} · المدفوع: {formatCurrency(Number(entry.paid_amount))}</Text>
@@ -366,6 +402,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: deliverySpacing.sm,
   },
+  periodRow: { flexDirection: 'row-reverse', gap: deliverySpacing.sm },
+  periodButton: { alignItems: 'center', backgroundColor: deliveryColors.surface, borderColor: '#DCE7F0', borderRadius: deliveryRadius.md, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 40 },
+  periodButtonActive: { backgroundColor: deliveryColors.primary, borderColor: deliveryColors.primary },
+  periodButtonText: { color: deliveryColors.muted, fontSize: 12, fontWeight: '800' },
+  periodButtonTextActive: { color: deliveryColors.surface },
+  periodOptions: { gap: deliverySpacing.sm },
+  periodOption: { backgroundColor: deliveryColors.surface, borderColor: '#DCE7F0', borderRadius: 999, borderWidth: 1, paddingHorizontal: deliverySpacing.md, paddingVertical: 8 },
+  periodOptionActive: { backgroundColor: deliveryColors.primarySoft, borderColor: deliveryColors.primary },
+  periodOptionText: { color: deliveryColors.muted, fontSize: 11, fontWeight: '800' },
+  periodOptionTextActive: { color: deliveryColors.primary },
+  periodTotals: { backgroundColor: deliveryColors.primarySoft, borderRadius: deliveryRadius.lg, gap: 4, padding: deliverySpacing.md },
+  periodTotalsText: { color: deliveryColors.primary, fontSize: 12, fontWeight: '800', textAlign: 'right' },
   earningsHint: {
     color: deliveryColors.muted,
     fontSize: 12,
