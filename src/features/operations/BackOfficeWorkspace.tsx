@@ -7,6 +7,7 @@ import { NativeActivityLogsPanel } from './NativeActivityLogsPanel';
 import { NativeCustodyPanel } from './NativeCustodyPanel';
 import { NativeOrdersPanel } from './NativeOrdersPanel';
 import { NativeWagesPanel } from './NativeWagesPanel';
+import { NativeCompanyWagesPanel } from './NativeCompanyWagesPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -62,6 +63,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const [isUsersOpen, setIsUsersOpen] = useState(false);
   const [isActivityLogsOpen, setIsActivityLogsOpen] = useState(false);
   const [isCustodyOpen, setIsCustodyOpen] = useState(false);
+  const [isCompanyWagesOpen, setIsCompanyWagesOpen] = useState(false);
 
   const {
     availableCaptainIds,
@@ -277,7 +279,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
     </ScrollView>
   );
 
-  const renderSalaries = () => <NativeWagesPanel onRefreshDashboard={reload} />;
+  const renderSalaries = () => <><NativeWagesPanel onRefreshDashboard={reload} /><Pressable accessibilityRole="button" onPress={() => setIsCompanyWagesOpen(true)} style={styles.companyWagesShortcut}><Text style={styles.companyWagesTitle}>واجهة أجور الشركة</Text><Text style={styles.companyWagesText}>سجل كامل بالتاريخ والأرباح وصافي الشركة</Text></Pressable></>;
 
   const renderMore = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -357,6 +359,9 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       </Modal>
       <Modal animationType="slide" visible={isCustodyOpen} onRequestClose={() => setIsCustodyOpen(false)}>
         <NativeCustodyPanel captains={captains} onClose={() => setIsCustodyOpen(false)} />
+      </Modal>
+      <Modal animationType="slide" visible={isCompanyWagesOpen} onRequestClose={() => setIsCompanyWagesOpen(false)}>
+        <NativeCompanyWagesPanel onClose={() => setIsCompanyWagesOpen(false)} />
       </Modal>
       <Modal animationType="slide" transparent visible={isCreateOrderOpen} onRequestClose={() => setIsCreateOrderOpen(false)}>
         <View style={styles.modalBackdrop}>
@@ -458,6 +463,9 @@ const styles = StyleSheet.create({
   companyProfitDay: { color: deliveryColors.text, fontSize: 14, fontWeight: '800', textAlign: 'right' },
   companyProfitMeta: { color: deliveryColors.muted, fontSize: 12, marginTop: 4, textAlign: 'right' },
   companyProfitAmount: { color: deliveryColors.success, fontSize: 14, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
+  companyWagesShortcut: { backgroundColor: '#F3E8FF', borderColor: '#E9D5FF', borderRadius: deliveryRadius.lg, borderWidth: 1, margin: deliverySpacing.lg, padding: deliverySpacing.lg },
+  companyWagesTitle: { color: '#6B21A8', fontSize: 16, fontWeight: '800', textAlign: 'right' },
+  companyWagesText: { color: '#7E22CE', fontSize: 12, marginTop: 5, textAlign: 'right' },
   usersShortcut: { backgroundColor: deliveryColors.primarySoft, borderColor: '#CFE4F2', borderRadius: deliveryRadius.lg, borderWidth: 1, padding: deliverySpacing.lg },
   usersShortcutTitle: { color: deliveryColors.primaryDark, fontSize: 16, fontWeight: '800', textAlign: 'right' },
   usersShortcutText: { color: '#4F718A', fontSize: 12, marginTop: 5, textAlign: 'right' },
