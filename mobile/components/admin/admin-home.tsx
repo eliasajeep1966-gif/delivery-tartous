@@ -1,4 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { type Href, useRouter } from "expo-router";
 import { type ComponentProps } from "react";
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 
@@ -19,6 +20,7 @@ const statusStyle: Record<AdminOrderStatus, { label: string; color: string; back
 };
 
 export function AdminHome() {
+  const router = useRouter();
   const { profile, signOut } = useDeliveryAuth();
   const home = useAdminHome(profile?.role === "admin");
   const snapshot = home.data;
@@ -35,6 +37,7 @@ export function AdminHome() {
   }
 
   const announce = (title: string, message: string) => Alert.alert(title, message);
+  const openOrders = () => router.push("/orders" as Href);
 
   return (
     <ScreenContainer className="bg-[#F3FBFF]" containerClassName="bg-[#F3FBFF]">
@@ -57,7 +60,7 @@ export function AdminHome() {
       <FlatList
         data={snapshot?.activities ?? []}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ActivityRow item={item} onPress={() => announce("الطلبات", "سيتم فتح قائمة الطلبات بعد نقل شاشة Orders Native.")} />}
+        renderItem={({ item }) => <ActivityRow item={item} onPress={openOrders} />}
         refreshControl={<RefreshControl refreshing={home.isRefetching} onRefresh={() => void home.refetch()} tintColor="#0060B8" />}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
@@ -78,7 +81,7 @@ export function AdminHome() {
             ) : null}
 
             <View style={styles.metricGrid}>
-              {home.isPending || !snapshot ? <MetricSkeletons /> : snapshot.metrics.map((metric) => <MetricCard key={metric.id} metric={metric} onPress={() => announce("الطلبات", "سيتم فتح قائمة الطلبات المفلترة بعد نقل شاشة Orders Native.")} />)}
+              {home.isPending || !snapshot ? <MetricSkeletons /> : snapshot.metrics.map((metric) => <MetricCard key={metric.id} metric={metric} onPress={openOrders} />)}
             </View>
 
             <Pressable onPress={() => announce("إنشاء طلب جديد", snapshot?.availableCaptains.length ? "سيتم نقل نموذج إنشاء الطلب وربط تعيين الكابتن في وحدة الطلبات التالية." : "لا يوجد كابتن متاح حالياً.")} style={({ pressed }) => [styles.createCard, pressed && styles.pressed]}>
@@ -89,7 +92,7 @@ export function AdminHome() {
               <View style={styles.createPlus}><MaterialIcons name="add-circle-outline" size={24} color="#FFFFFF" /></View>
             </Pressable>
 
-            <SectionHeading title="آخر النشاطات" action="عرض الطلبات" onPress={() => announce("الطلبات", "سيتم فتح قائمة الطلبات بعد نقل شاشة Orders Native.")} />
+            <SectionHeading title="آخر النشاطات" action="عرض الطلبات" onPress={openOrders} />
           </>
         }
         ListEmptyComponent={

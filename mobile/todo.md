@@ -19,7 +19,8 @@
 - [x] نسخ مشروع Native الكامل إلى `mobile/` في مستودع GitHub الصحيح ثم رفعه إلى main.
 - [ ] نقل Home حسب Admin/Supervisor/Captain.
 - [x] نقل Home الإدارية: ملخص اليوم والنشاطات والكباتن المتاحين باستخدام RPCs الحالية.
-- [ ] نقل Orders وOrder Detail وPagination.
+- [x] نقل Orders وOrder Detail وPagination.
+- [x] نقل قائمة Orders الإدارية مع filters وcursor pagination وفتح التفاصيل وفق مرجع الويب.
 - [ ] نقل Users وإدارة الحسابات حسب الصلاحيات.
 - [ ] نقل Captains والتوفر.
 - [ ] نقل Wages وكشوفات الكباتن والدفعات.

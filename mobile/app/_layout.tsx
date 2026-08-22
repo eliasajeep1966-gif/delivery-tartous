@@ -52,6 +52,7 @@ function AuthAwareNavigator() {
       <Stack initialRouteName="login" screenOptions={{ headerShown: false, animation: "slide_from_left" }}>
         <Stack.Screen name="login" />
         <Stack.Screen name="activate-account" />
+        <Stack.Screen name="orders" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="navigation-test" />
         <Stack.Screen name="oauth/callback" />
