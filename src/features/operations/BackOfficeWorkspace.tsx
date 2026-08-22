@@ -234,19 +234,21 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   };
 
   const renderHome = () => (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
       {error ? <ErrorNotice message={error} /> : null}
       <WelcomeCard role={role} />
-      {role === 'admin' ? <Pressable accessibilityRole="button" onPress={openCreateOrder} style={styles.createOrderButton}><Text style={styles.createOrderTitle}>إنشاء طلب جديد</Text><Text style={styles.createOrderSubtitle}>أضف الطلب وعيّن كابتناً متاحاً مباشرة</Text></Pressable> : null}
-      <View style={styles.metricsGrid}>
-        <Metric label="طلبات نشطة" value={metrics.activeOrders} tone="primary" />
-        <Metric label="قيد التوصيل" value={metrics.inDelivery} tone="warning" />
-        <Metric label="مكتملة اليوم" value={metrics.completedToday} tone="success" />
-        <Metric label="كباتن متاحون" value={metrics.availableCaptains} tone="primary" />
+      <View style={styles.homeMetrics}>
+        <HomeMetric label="طلبات نشطة" value={metrics.activeOrders} tone="light" onPress={() => setActiveTab('orders')} />
+        <HomeMetric label="قيد التوصيل" value={metrics.inDelivery} tone="highlight" onPress={() => setActiveTab('orders')} />
+        <HomeMetric label="مكتملة اليوم" value={metrics.completedToday} tone="light" onPress={() => setActiveTab('orders')} />
+        <HomeMetric label="طلبات كاذبة" value={orders.filter((order) => order.status === 'false_order').length} tone="light" onPress={() => setActiveTab('orders')} />
       </View>
-      <SectionTitle title="آخر الطلبات" />
-      {recentOrders.length === 0 ? <EmptyNotice text="لا توجد طلبات مسجلة حتى الآن." /> : null}
-      {recentOrders.map((order) => <OrderRow key={order.id} order={order} />)}
+      {role === 'admin' ? <Pressable accessibilityRole="button" onPress={openCreateOrder} style={styles.createOrderButton}><View><Text style={styles.createOrderTitle}>إنشاء طلب جديد</Text><Text style={styles.createOrderSubtitle}>{availableCaptains.length ? 'أضف طلباً وعيّن كابتناً متاحاً' : 'لا يوجد كابتن متاح حالياً'}</Text></View><View style={styles.createOrderIcon}><Text style={styles.createOrderIconText}>+</Text></View></Pressable> : null}
+      <View style={styles.sectionHeading}><Text style={styles.homeSectionTitle}>آخر النشاطات</Text><Pressable onPress={() => setActiveTab('orders')}><Text style={styles.showAll}>عرض الطلبات</Text></Pressable></View>
+      {recentOrders.length === 0 ? <EmptyNotice text="لا توجد نشاطات إدارية حديثة." /> : null}
+      {recentOrders.map((order) => <Pressable key={order.id} onPress={() => setActiveTab('orders')} style={[styles.activityRow, deliveryShadows.sm]}><View style={[styles.activityStrip, { backgroundColor: order.status === 'completed' ? deliveryColors.success : order.status === 'false_order' ? deliveryColors.danger : deliveryColors.primary }]} /><View style={styles.activityBody}><View style={styles.activityHeading}><Text style={styles.activityTitle}>طلب #{order.order_number}</Text><Text style={styles.activityStatus}>{orderStatusLabels[order.status]}</Text></View><Text numberOfLines={1} style={styles.activitySubtitle}>من {order.pickup_address} إلى {order.delivery_address}</Text><Text style={styles.activityTime}>{new Date(order.updated_at).toLocaleDateString('ar-SY')}</Text></View><Text style={styles.activityArrow}>‹</Text></Pressable>)}
+      <View style={styles.sectionHeading}><Text style={styles.homeSectionTitle}>الكباتن المتاحون الآن</Text><Pressable onPress={() => setActiveTab('captains')}><Text style={styles.showAll}>عرض الكل</Text></Pressable></View>
+      <ScrollView horizontal contentContainerStyle={styles.availableCaptains} showsHorizontalScrollIndicator={false}>{availableCaptains.length ? availableCaptains.map((captain) => <Pressable key={captain.id} onPress={() => setActiveTab('captains')} style={styles.availableCaptain}><View style={styles.avatar}><Text style={styles.avatarText}>{displayName(captain.full_name, captain.email).slice(0, 1)}</Text><View style={styles.onlineDot} /></View><Text numberOfLines={1} style={styles.availableCaptainName}>{displayName(captain.full_name, captain.email)}</Text><Text style={styles.availableCaptainState}>متاح</Text></Pressable>) : <Text style={styles.noCaptain}>لا يوجد كابتن متاح حالياً.</Text>}</ScrollView>
     </ScrollView>
   );
 
@@ -435,9 +437,8 @@ function WelcomeCard({ role }: { role: BackOfficeRole }) {
   return <View style={[styles.welcomeCard, deliveryShadows.sm]}><Text style={styles.welcomeTitle}>مرحباً، {role === 'admin' ? 'المدير' : 'المشرف'}</Text><Text style={styles.welcomeSubtitle}>هذه نظرة تشغيلية مباشرة على حركة الطلبات والكباتن.</Text></View>;
 }
 
-function Metric({ label, value, tone }: { label: string; value: number; tone: 'primary' | 'success' | 'warning' }) {
-  const color = tone === 'success' ? deliveryColors.success : tone === 'warning' ? deliveryColors.warning : deliveryColors.primary;
-  return <View style={styles.metric}><Text style={[styles.metricValue, { color }]}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
+function HomeMetric({ label, value, tone, onPress }: { label: string; value: number; tone: 'light' | 'highlight'; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={[styles.homeMetric, tone === 'highlight' && styles.homeMetricHighlight]}><View style={styles.metricTop}><Text style={[styles.metricValue, tone === 'highlight' && styles.metricValueHighlight]}>{value}</Text><Text style={[styles.metricGlyph, tone === 'highlight' && styles.metricGlyphHighlight]}>{tone === 'highlight' ? '◈' : '◌'}</Text></View><Text style={[styles.metricLabel, tone === 'highlight' && styles.metricLabelHighlight]}>{label}</Text></Pressable>;
 }
 
 function FinanceMetric({ label, value }: { label: string; value: string }) {
@@ -462,10 +463,41 @@ function EmptyNotice({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   scrollContent: { gap: deliverySpacing.md, padding: deliverySpacing.lg, paddingBottom: deliverySpacing.xxxl },
+  homeScroll: { gap: deliverySpacing.md, padding: 12, paddingBottom: deliverySpacing.xxxl },
+  homeMetrics: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 10 },
+  homeMetric: { backgroundColor: deliveryColors.surface, borderColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, flexBasis: '47%', flexGrow: 1, minHeight: 104, padding: 14, shadowColor: '#0060B8', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 5 },
+  homeMetricHighlight: { backgroundColor: deliveryColors.primary, borderColor: deliveryColors.primary, shadowOpacity: 0.22, shadowRadius: 9 },
+  metricTop: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  metricGlyph: { color: '#1478BF', fontSize: 18 },
+  metricGlyphHighlight: { color: '#FFFFFF' },
+  metricValueHighlight: { color: '#FFFFFF' },
+  metricLabelHighlight: { color: '#FFFFFF' },
+  sectionHeading: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 5 },
+  homeSectionTitle: { color: '#18547E', fontSize: 13, fontWeight: '800' },
+  showAll: { color: '#0877C2', fontSize: 10, fontWeight: '800' },
+  activityRow: { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, flexDirection: 'row-reverse', minHeight: 86, overflow: 'hidden' },
+  activityStrip: { height: '100%', width: 4 },
+  activityBody: { flex: 1, gap: 5, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10 },
+  activityHeading: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  activityTitle: { color: '#154F79', fontSize: 12, fontWeight: '800' },
+  activityStatus: { backgroundColor: deliveryColors.primarySoft, borderRadius: 5, color: deliveryColors.primary, fontSize: 9, fontWeight: '800', overflow: 'hidden', paddingHorizontal: 6, paddingVertical: 2 },
+  activitySubtitle: { color: '#38586F', fontSize: 12, fontWeight: '700', textAlign: 'right' },
+  activityTime: { color: '#7590A2', fontSize: 9, textAlign: 'right' },
+  activityArrow: { alignSelf: 'center', color: '#88A0B0', fontSize: 27, marginLeft: 10 },
+  availableCaptains: { gap: 12, paddingVertical: 2 },
+  availableCaptain: { alignItems: 'center', maxWidth: 68, minWidth: 58 },
+  avatar: { alignItems: 'center', backgroundColor: deliveryColors.surface, borderRadius: 24, height: 46, justifyContent: 'center', shadowColor: '#0060B8', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5, width: 46 },
+  avatarText: { color: '#477188', fontSize: 16, fontWeight: '800' },
+  onlineDot: { backgroundColor: deliveryColors.success, borderColor: '#D9EFF9', borderRadius: 7, borderWidth: 2, bottom: 0, height: 14, position: 'absolute', right: 0, width: 14 },
+  availableCaptainName: { color: '#335872', fontSize: 10, fontWeight: '800', marginTop: 4, textAlign: 'center' },
+  availableCaptainState: { color: '#55788E', fontSize: 9, marginTop: 1 },
+  noCaptain: { color: '#638096', fontSize: 12, paddingVertical: 10 },
   welcomeCard: { backgroundColor: '#EAF4FC', borderRadius: deliveryRadius.lg, padding: deliverySpacing.lg },
-  createOrderButton: { backgroundColor: deliveryColors.primary, borderRadius: deliveryRadius.lg, minHeight: 88, padding: deliverySpacing.lg },
+  createOrderButton: { alignItems: 'center', backgroundColor: deliveryColors.primary, borderRadius: 12, flexDirection: 'row-reverse', justifyContent: 'space-between', minHeight: 94, padding: 14, shadowColor: '#0060B8', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.23, shadowRadius: 10 },
   createOrderTitle: { color: deliveryColors.surface, fontSize: 17, fontWeight: '800', textAlign: 'right' },
-  createOrderSubtitle: { color: '#D7EEFF', fontSize: 12, marginTop: 5, textAlign: 'right' },
+  createOrderSubtitle: { color: '#D7EEFF', fontSize: 11, marginTop: 5, textAlign: 'right' },
+  createOrderIcon: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 22, height: 42, justifyContent: 'center', width: 42 },
+  createOrderIconText: { color: '#FFFFFF', fontSize: 28, fontWeight: '300', lineHeight: 31 },
   welcomeTitle: { color: deliveryColors.primaryDark, fontSize: 17, fontWeight: '800', textAlign: 'right' },
   welcomeSubtitle: { color: '#4F718A', fontSize: 12, marginTop: 5, textAlign: 'right' },
   metricsGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: deliverySpacing.md },
