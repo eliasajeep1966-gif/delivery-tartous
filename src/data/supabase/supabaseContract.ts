@@ -14,6 +14,8 @@ export type CaptainAvailability = Database['public']['Enums']['captain_availabil
 
 export type Profile = Tables<'profiles'>;
 export type Order = Tables<'orders'>;
+/** RPC إنشاء الطلب يضمن المعرّف ورقم الطلب؛ التفاصيل الكاملة تُقرأ من جدول الطلبات بعد الإنشاء. */
+export type CreatedOrder = Pick<Order, 'id' | 'order_number'>;
 export type OrderStop = Tables<'order_stops'>;
 export type OrderStopType = Database['public']['Enums']['order_stop_type'];
 export type CaptainStatus = Tables<'captain_status'>;
@@ -307,7 +309,7 @@ export const deliverySupabase = {
   },
 
   actions: {
-    async createOrder(input: CreateOrderInput): Promise<Order> {
+    async createOrder(input: CreateOrderInput): Promise<CreatedOrder> {
       const { data, error } = await getSupabaseClient().rpc('create_order', {
         p_customer_name: input.customerName,
         p_customer_phone: input.customerPhone,
@@ -318,7 +320,7 @@ export const deliverySupabase = {
       return unwrap(data, error, 'Order creation did not return an order.');
     },
 
-    async createOrderWithStops(input: CreateOrderWithStopsInput): Promise<Order> {
+    async createOrderWithStops(input: CreateOrderWithStopsInput): Promise<CreatedOrder> {
       const stops: Json = input.stops.map((stop) => ({
         stop_type: stop.stopType,
         sequence: stop.sequence,
