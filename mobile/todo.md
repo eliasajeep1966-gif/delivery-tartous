@@ -18,6 +18,7 @@
 - [x] التحقق من remote والـcommit المنشور فعلياً لتأكيد أن المستخدم يستطيع سحب نسخة Native.
 - [x] نسخ مشروع Native الكامل إلى `mobile/` في مستودع GitHub الصحيح ثم رفعه إلى main.
 - [ ] نقل Home حسب Admin/Supervisor/Captain.
+- [x] نقل Home الإدارية: ملخص اليوم والنشاطات والكباتن المتاحين باستخدام RPCs الحالية.
 - [ ] نقل Orders وOrder Detail وPagination.
 - [ ] نقل Users وإدارة الحسابات حسب الصلاحيات.
 - [ ] نقل Captains والتوفر.
