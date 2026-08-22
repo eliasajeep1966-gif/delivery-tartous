@@ -58,7 +58,8 @@ export default function Home() {
           note: undefined,
         })),
       ];
-      const createdOrder = await createOrderWithStops({ stops, fee: flow.totalFee });
+      const idempotencyKey = crypto.randomUUID();
+      const createdOrder = await createOrderWithStops({ stops, fee: flow.totalFee, idempotencyKey });
       try {
         const assignedOrder = await assignOrderCaptain(createdOrder.id, flow.assignedCaptainId);
         setIsCreateOrderOpen(false);

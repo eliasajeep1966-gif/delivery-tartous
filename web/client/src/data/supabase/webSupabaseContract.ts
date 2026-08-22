@@ -59,6 +59,7 @@ export type WebOrderStopInput = {
 export type CreateOrderWithStopsInput = {
   stops: WebOrderStopInput[];
   fee: number;
+  idempotencyKey?: string;
 };
 
 export type ActivatePendingAccountInput = {
@@ -496,6 +497,7 @@ export const webSupabase = {
       const { data, error } = await getWebSupabaseClient().rpc('create_order_with_stops', {
         p_stops: stops,
         p_fee: input.fee,
+        p_idempotency_key: input.idempotencyKey,
       });
       return unwrap(data, error, 'تعذر إنشاء الطلب متعدد النقاط.');
     },

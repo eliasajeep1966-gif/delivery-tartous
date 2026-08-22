@@ -226,6 +226,7 @@ export type Database = {
           captain_id: string
           company_amount: number
           created_at: string
+          financial_treatment: string
           gross_fee: number
           id: string
           order_id: string
@@ -237,6 +238,7 @@ export type Database = {
           captain_id: string
           company_amount: number
           created_at?: string
+          financial_treatment?: string
           gross_fee: number
           id?: string
           order_id: string
@@ -248,6 +250,7 @@ export type Database = {
           captain_id?: string
           company_amount?: number
           created_at?: string
+          financial_treatment?: string
           gross_fee?: number
           id?: string
           order_id?: string
@@ -375,6 +378,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -395,6 +400,8 @@ export type Database = {
           false_order_at?: string | null
           fee: number
           id?: string
+          idempotency_key?: string | null
+          order_kind?: string
           order_number?: never
           pickup_address: string
           received_at?: string | null
@@ -415,6 +422,8 @@ export type Database = {
           false_order_at?: string | null
           fee?: number
           id?: string
+          idempotency_key?: string | null
+          order_kind?: string
           order_number?: never
           pickup_address?: string
           received_at?: string | null
@@ -679,6 +688,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -708,6 +719,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -836,7 +849,7 @@ export type Database = {
         }
       }
       create_order_with_stops: {
-        Args: { p_fee: number; p_stops: Json }
+        Args: { p_fee: number; p_idempotency_key?: string; p_stops: Json }
         Returns: {
           assigned_at: string | null
           assigned_captain_id: string | null
@@ -851,6 +864,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -1199,6 +1214,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null

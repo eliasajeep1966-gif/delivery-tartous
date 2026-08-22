@@ -80,6 +80,7 @@ export type OrderStopInput = {
 export type CreateOrderWithStopsInput = {
   stops: OrderStopInput[];
   fee: number;
+  idempotencyKey?: string;
 };
 
 export type CreatePendingAccountInput = {
@@ -329,6 +330,7 @@ export const deliverySupabase = {
       const { data, error } = await getSupabaseClient().rpc('create_order_with_stops', {
         p_stops: stops,
         p_fee: input.fee,
+        p_idempotency_key: input.idempotencyKey,
       });
       return unwrap(data, error, 'Multi-stop order creation did not return an order.');
     },
