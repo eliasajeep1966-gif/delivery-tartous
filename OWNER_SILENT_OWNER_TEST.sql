@@ -7,7 +7,7 @@ begin;
 set local role postgres;
 create temporary table owner_identity(owner_user_id uuid primary key);
 insert into owner_identity select private.owner_user_id();
-set local role authenticated;
+grant select on owner_identity to authenticated;
 
 -- The Owner identity must be internal, singleton, and mapped to an Auth user.
 select
@@ -57,6 +57,7 @@ set local role postgres;
 create temporary table owner_test_actor(user_id uuid primary key);
 insert into owner_test_actor
 select id from public.profiles where role = 'supervisor'::public.app_role limit 1;
+grant select on owner_test_actor to authenticated;
 update public.profiles
 set role = 'admin'::public.app_role
 where id = (select user_id from owner_test_actor);
