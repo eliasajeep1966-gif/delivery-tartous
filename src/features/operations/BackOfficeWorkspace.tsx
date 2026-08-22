@@ -12,6 +12,7 @@ import { NativeReportsPanel } from './NativeReportsPanel';
 import { NativeOfficeSettingsPanel } from './NativeOfficeSettingsPanel';
 import { NativeInfoPanel } from './NativeInfoPanel';
 import { NativeWageOrdersPanel } from './NativeWageOrdersPanel';
+import { NativeCaptainDetailPanel } from './NativeCaptainDetailPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -73,6 +74,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isCorrectionsOpen, setIsCorrectionsOpen] = useState(false);
   const [isWageOrdersOpen, setIsWageOrdersOpen] = useState(false);
+  const [selectedCaptainId, setSelectedCaptainId] = useState<string | null>(null);
 
   const {
     availableCaptainIds,
@@ -264,7 +266,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       {captains.map((captain) => {
         const available = availableCaptainIds.has(captain.id);
         return (
-          <View key={captain.id} style={[styles.captainCard, deliveryShadows.sm]}>
+          <Pressable key={captain.id} accessibilityRole="button" onPress={() => setSelectedCaptainId(captain.id)} style={[styles.captainCard, deliveryShadows.sm]}>
             <View style={styles.captainHeader}>
               <View style={[styles.availabilityDot, { backgroundColor: available ? deliveryColors.success : deliveryColors.muted }]} />
               <View style={styles.captainHeadingText}>
@@ -282,7 +284,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
                 <Text style={styles.captainActionText}>{updatingCaptainId === captain.id ? 'جارٍ الحفظ...' : captain.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}</Text>
               </Pressable>
             ) : null}
-          </View>
+          </Pressable>
         );
       })}
     </ScrollView>
@@ -390,6 +392,13 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       </Modal>
       <Modal animationType="slide" visible={isWageOrdersOpen} onRequestClose={() => setIsWageOrdersOpen(false)}>
         <NativeWageOrdersPanel captains={captains} onClose={() => setIsWageOrdersOpen(false)} />
+      </Modal>
+      <Modal animationType="slide" visible={selectedCaptainId !== null} onRequestClose={() => setSelectedCaptainId(null)}>
+        {(() => {
+          const captain = captains.find((item) => item.id === selectedCaptainId);
+          if (!captain) return null;
+          return <NativeCaptainDetailPanel captain={captain} status={captainStatuses.find((item) => item.captain_id === captain.id)} orders={orders.filter((order) => order.assigned_captain_id === captain.id)} wage={wageSummaries.find((item) => item.captain_id === captain.id)} canToggle={role === 'admin'} isSaving={updatingCaptainId === captain.id} onToggle={() => toggleCaptain(captain.id, captain.is_active)} onClose={() => setSelectedCaptainId(null)} />;
+        })()}
       </Modal>
       <Modal animationType="slide" transparent visible={isCreateOrderOpen} onRequestClose={() => setIsCreateOrderOpen(false)}>
         <View style={styles.modalBackdrop}>
