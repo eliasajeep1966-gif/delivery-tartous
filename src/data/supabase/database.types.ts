@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_correction_cases: {
+        Row: {
+          captain_id: string | null
+          correction_type: string
+          created_at: string
+          created_by: string
+          executed_at: string | null
+          executed_by: string | null
+          id: string
+          idempotency_key: string
+          note: string
+          order_id: string | null
+          payout_id: string | null
+          reason_code: string
+          status: string
+        }
+        Insert: {
+          captain_id?: string | null
+          correction_type: string
+          created_at?: string
+          created_by: string
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          idempotency_key: string
+          note: string
+          order_id?: string | null
+          payout_id?: string | null
+          reason_code: string
+          status?: string
+        }
+        Update: {
+          captain_id?: string | null
+          correction_type?: string
+          created_at?: string
+          created_by?: string
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          idempotency_key?: string
+          note?: string
+          order_id?: string | null
+          payout_id?: string | null
+          reason_code?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_correction_cases_captain_id_fkey"
+            columns: ["captain_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_correction_cases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_correction_cases_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_correction_cases_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_correction_cases_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "captain_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -220,12 +304,107 @@ export type Database = {
           },
         ]
       }
+      financial_adjustments: {
+        Row: {
+          adjustment_kind: string
+          captain_delta: number
+          captain_id: string
+          company_delta: number
+          correction_case_id: string
+          created_at: string
+          created_by: string
+          financial_ledger_id: string | null
+          gross_delta: number
+          id: string
+          order_id: string | null
+          payout_id: string | null
+          reversal_scope: string
+          settlement_delta: number
+        }
+        Insert: {
+          adjustment_kind?: string
+          captain_delta?: number
+          captain_id: string
+          company_delta?: number
+          correction_case_id: string
+          created_at?: string
+          created_by: string
+          financial_ledger_id?: string | null
+          gross_delta?: number
+          id?: string
+          order_id?: string | null
+          payout_id?: string | null
+          reversal_scope?: string
+          settlement_delta?: number
+        }
+        Update: {
+          adjustment_kind?: string
+          captain_delta?: number
+          captain_id?: string
+          company_delta?: number
+          correction_case_id?: string
+          created_at?: string
+          created_by?: string
+          financial_ledger_id?: string | null
+          gross_delta?: number
+          id?: string
+          order_id?: string | null
+          payout_id?: string | null
+          reversal_scope?: string
+          settlement_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_adjustments_captain_id_fkey"
+            columns: ["captain_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_adjustments_correction_case_fkey"
+            columns: ["correction_case_id"]
+            isOneToOne: false
+            referencedRelation: "admin_correction_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_adjustments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_adjustments_financial_ledger_id_fkey"
+            columns: ["financial_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "financial_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_adjustments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_adjustments_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "captain_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_ledger: {
         Row: {
           captain_amount: number
           captain_id: string
           company_amount: number
           created_at: string
+          financial_treatment: string
           gross_fee: number
           id: string
           order_id: string
@@ -237,6 +416,7 @@ export type Database = {
           captain_id: string
           company_amount: number
           created_at?: string
+          financial_treatment?: string
           gross_fee: number
           id?: string
           order_id: string
@@ -248,6 +428,7 @@ export type Database = {
           captain_id?: string
           company_amount?: number
           created_at?: string
+          financial_treatment?: string
           gross_fee?: number
           id?: string
           order_id?: string
@@ -375,6 +556,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -395,6 +578,8 @@ export type Database = {
           false_order_at?: string | null
           fee: number
           id?: string
+          idempotency_key?: string | null
+          order_kind?: string
           order_number?: never
           pickup_address: string
           received_at?: string | null
@@ -415,6 +600,8 @@ export type Database = {
           false_order_at?: string | null
           fee?: number
           id?: string
+          idempotency_key?: string | null
+          order_kind?: string
           order_number?: never
           pickup_address?: string
           received_at?: string | null
@@ -434,6 +621,78 @@ export type Database = {
             columns: ["created_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payout_reversal_items: {
+        Row: {
+          captain_id: string
+          correction_case_id: string
+          created_at: string
+          created_by: string
+          financial_ledger_id: string
+          id: string
+          original_paid_amount: number
+          payout_id: string
+          reversed_paid_amount: number
+        }
+        Insert: {
+          captain_id: string
+          correction_case_id: string
+          created_at?: string
+          created_by: string
+          financial_ledger_id: string
+          id?: string
+          original_paid_amount: number
+          payout_id: string
+          reversed_paid_amount: number
+        }
+        Update: {
+          captain_id?: string
+          correction_case_id?: string
+          created_at?: string
+          created_by?: string
+          financial_ledger_id?: string
+          id?: string
+          original_paid_amount?: number
+          payout_id?: string
+          reversed_paid_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_reversal_items_captain_fkey"
+            columns: ["captain_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_reversal_items_case_fkey"
+            columns: ["correction_case_id"]
+            isOneToOne: false
+            referencedRelation: "admin_correction_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_reversal_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_reversal_items_ledger_fkey"
+            columns: ["financial_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "financial_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_reversal_items_payout_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "captain_payouts"
             referencedColumns: ["id"]
           },
         ]
@@ -638,6 +897,67 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_confirm_completed_order: {
+        Args: {
+          p_idempotency_key: string
+          p_note: string
+          p_order_id: string
+          p_reason_code: string
+        }
+        Returns: {
+          captain_amount: number
+          company_amount: number
+          correction_case_id: string
+          financial_ledger_id: string
+          gross_fee: number
+          new_status: Database["public"]["Enums"]["order_status"]
+          order_id: string
+          order_number: number
+          previous_status: Database["public"]["Enums"]["order_status"]
+          settlement_amount: number
+        }[]
+      }
+      admin_reconcile_order_finance_preview: {
+        Args: { p_order_id: string }
+        Returns: {
+          allocation_mismatch: boolean
+          allocation_negative: boolean
+          assigned_captain_id: string
+          captain_id_mismatch: boolean
+          ledger_captain_amount: number
+          ledger_company_amount: number
+          ledger_count: number
+          ledger_gross_fee: number
+          ledger_missing_captain: boolean
+          ledger_settlement_amount: number
+          order_fee_mismatch: boolean
+          order_id: string
+          order_missing_captain: boolean
+          order_number: number
+          order_status: Database["public"]["Enums"]["order_status"]
+          paid_amount: number
+          payable_balance: number
+        }[]
+      }
+      admin_reverse_completed_order: {
+        Args: {
+          p_idempotency_key: string
+          p_note: string
+          p_order_id: string
+          p_reason_code: string
+        }
+        Returns: {
+          adjustment_id: string
+          captain_debt_amount: number
+          correction_case_id: string
+          financial_ledger_id: string
+          new_status: Database["public"]["Enums"]["order_status"]
+          order_id: string
+          order_number: number
+          previous_status: Database["public"]["Enums"]["order_status"]
+          reversed_paid_amount: number
+        }[]
+      }
       assign_captain_custody: {
         Args: {
           p_captain_id: string
@@ -679,6 +999,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -708,6 +1030,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -822,6 +1146,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -836,7 +1162,7 @@ export type Database = {
         }
       }
       create_order_with_stops: {
-        Args: { p_fee: number; p_stops: Json }
+        Args: { p_fee: number; p_idempotency_key?: string; p_stops: Json }
         Returns: {
           assigned_at: string | null
           assigned_captain_id: string | null
@@ -851,6 +1177,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -909,7 +1237,7 @@ export type Database = {
         }
       }
       get_backoffice_home_summary: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           assigned_count: number
           cancelled_today_count: number
@@ -919,7 +1247,7 @@ export type Database = {
         }[]
       }
       get_captain_home_metrics: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           availability: Database["public"]["Enums"]["captain_availability"]
           completed_count: number
@@ -959,6 +1287,27 @@ export type Database = {
           settlement_amount: number
           source_status: Database["public"]["Enums"]["order_status"]
           unpaid_amount: number
+        }[]
+      }
+      get_captain_wage_period_summary: {
+        Args: {
+          p_before_captain_id?: string
+          p_before_period_start?: string
+          p_captain_id?: string
+          p_limit?: number
+          p_period?: string
+        }
+        Returns: {
+          captain_id: string
+          captain_name: string
+          captain_net_total: number
+          gross_total: number
+          order_count: number
+          paid_total: number
+          period_end: string
+          period_start: string
+          settlement_total: number
+          unpaid_total: number
         }[]
       }
       get_captain_wage_summary: {
@@ -1037,26 +1386,70 @@ export type Database = {
           unpaid_total: number
         }[]
       }
-      list_pending_accounts: {
+      list_pending_accounts:
+        | {
+            Args: never
+            Returns: {
+              activated_at: string | null
+              auth_user_id: string | null
+              cancelled_at: string | null
+              created_at: string
+              created_by_user_id: string
+              email: string
+              full_name: string | null
+              id: string
+              role: Database["public"]["Enums"]["app_role"]
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "pending_account_activations"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: {
+              p_before_created_at?: string
+              p_before_id?: string
+              p_limit?: number
+            }
+            Returns: {
+              activated_at: string | null
+              auth_user_id: string | null
+              cancelled_at: string | null
+              created_at: string
+              created_by_user_id: string
+              email: string
+              full_name: string | null
+              id: string
+              role: Database["public"]["Enums"]["app_role"]
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "pending_account_activations"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+      list_visible_profiles: {
         Args: {
-          p_before_created_at?: string | null
-          p_before_id?: string | null
+          p_before_created_at?: string
+          p_before_id?: string
           p_limit?: number
         }
         Returns: {
-          activated_at: string | null
-          auth_user_id: string | null
-          cancelled_at: string | null
+          account_activated_at: string | null
           created_at: string
-          created_by_user_id: string
           email: string
           full_name: string | null
           id: string
+          is_active: boolean
           role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
         }[]
         SetofOptions: {
           from: "*"
-          to: "pending_account_activations"
+          to: "profiles"
           isOneToOne: false
           isSetofReturn: true
         }
@@ -1117,6 +1510,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_user_active: {
+        Args: { p_is_active: boolean; p_user_id: string }
+        Returns: {
+          account_activated_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_user_permission_override: {
         Args: {
           p_is_allowed: boolean
@@ -1159,25 +1571,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      update_my_profile: {
-        Args: { p_full_name: string }
-        Returns: {
-          account_activated_at: string | null
-          created_at: string
-          email: string
-          full_name: string | null
-          id: string
-          is_active: boolean
-          role: Database["public"]["Enums"]["app_role"]
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "profiles"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       transition_assigned_order: {
         Args: {
           p_next_status: Database["public"]["Enums"]["order_status"]
@@ -1197,6 +1590,8 @@ export type Database = {
           false_order_at: string | null
           fee: number
           id: string
+          idempotency_key: string | null
+          order_kind: string
           order_number: number
           pickup_address: string
           received_at: string | null
@@ -1206,6 +1601,25 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_my_profile: {
+        Args: { p_full_name: string }
+        Returns: {
+          account_activated_at: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1222,6 +1636,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "false_order"
+        | "reversed"
       order_stop_type: "pickup" | "delivery"
     }
     CompositeTypes: {
@@ -1360,6 +1775,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "false_order",
+        "reversed",
       ],
       order_stop_type: ["pickup", "delivery"],
     },

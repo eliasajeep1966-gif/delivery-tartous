@@ -279,8 +279,8 @@ export const webSupabase = {
     async profiles(): Promise<WebProfile[]> {
       const { data, error } = await getWebSupabaseClient().rpc('list_visible_profiles', {
         p_limit: 100,
-        p_before_created_at: null,
-        p_before_id: null,
+        p_before_created_at: undefined,
+        p_before_id: undefined,
       });
       return unwrap(data, error, 'تعذر تحميل الحسابات المفعّلة.');
     },
@@ -289,8 +289,8 @@ export const webSupabase = {
       const limit = normalizePageLimit(input.limit);
       const { data, error } = await getWebSupabaseClient().rpc('list_visible_profiles', {
         p_limit: limit + 1,
-        p_before_created_at: input.cursor?.createdAt ?? null,
-        p_before_id: input.cursor?.id ?? null,
+        p_before_created_at: input.cursor?.createdAt,
+        p_before_id: input.cursor?.id,
       });
       return asPage(unwrap(data, error, 'تعذر تحميل الحسابات المفعّلة.'), limit);
     },
@@ -444,8 +444,8 @@ export const webSupabase = {
       const limit = normalizePageLimit(input.limit);
       const { data, error } = await getWebSupabaseClient().rpc('list_pending_accounts', {
         p_limit: limit + 1,
-        p_before_created_at: input.cursor?.createdAt ?? null,
-        p_before_id: input.cursor?.id ?? null,
+        p_before_created_at: input.cursor?.createdAt,
+        p_before_id: input.cursor?.id,
       });
       return asPage(unwrap(data, error, 'تعذر تحميل الحسابات المعلّقة.'), limit);
     },

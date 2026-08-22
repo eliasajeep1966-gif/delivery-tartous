@@ -4,7 +4,7 @@
  */
 export type AdminRole = "admin" | "supervisor" | "captain";
 
-export type OrderStatus = "pending" | "assigned" | "received" | "in_delivery" | "completed" | "cancelled" | "false_order";
+export type OrderStatus = "pending" | "assigned" | "received" | "in_delivery" | "completed" | "cancelled" | "false_order" | "reversed";
 
 export const orderStatusPresentation: Record<OrderStatus, { label: string; className: string; stripClass: string }> = {
   pending: { label: "قيد الانتظار", className: "bg-blue-50 text-[#0060B8]", stripClass: "bg-[#0060B8]" },
@@ -14,6 +14,7 @@ export const orderStatusPresentation: Record<OrderStatus, { label: string; class
   completed: { label: "مكتمل", className: "bg-emerald-50 text-emerald-700", stripClass: "bg-emerald-500" },
   cancelled: { label: "ملغى", className: "bg-red-50 text-red-700", stripClass: "bg-red-500" },
   false_order: { label: "طلب كاذب", className: "bg-amber-50 text-amber-700", stripClass: "bg-amber-500" },
+  reversed: { label: "معكوس", className: "bg-slate-100 text-slate-700", stripClass: "bg-slate-500" },
 };
 
 export type OrderLocationDraft = { name: string; phone: string; address: string; note?: string };
