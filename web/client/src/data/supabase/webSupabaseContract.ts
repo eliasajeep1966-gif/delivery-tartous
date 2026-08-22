@@ -262,6 +262,30 @@ export const webSupabase = {
     },
   },
 
+  realtime: {
+    subscribeToCaptainOrders(captainId: string, onChange: () => void): () => void {
+      const normalizedCaptainId = captainId.trim();
+      if (!normalizedCaptainId) throw new Error('تعذر تحديد هوية الكابتن لاشتراك التحديث اللحظي.');
+
+      const client = getWebSupabaseClient();
+      const channel = client
+        .channel(`captain-orders:${normalizedCaptainId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `assigned_captain_id=eq.${normalizedCaptainId}`,
+          },
+          onChange,
+        )
+        .subscribe();
+
+      return () => { void client.removeChannel(channel); };
+    },
+  },
+
   reads: {
     async myProfile(userId: string): Promise<WebProfile> {
       const normalizedUserId = userId.trim();
