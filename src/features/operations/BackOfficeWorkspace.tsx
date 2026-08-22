@@ -10,6 +10,7 @@ import { NativeWagesPanel } from './NativeWagesPanel';
 import { NativeCompanyWagesPanel } from './NativeCompanyWagesPanel';
 import { NativeReportsPanel } from './NativeReportsPanel';
 import { NativeOfficeSettingsPanel } from './NativeOfficeSettingsPanel';
+import { NativeInfoPanel } from './NativeInfoPanel';
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import {
   deliverySupabase,
@@ -68,6 +69,8 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
   const [isCompanyWagesOpen, setIsCompanyWagesOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isOfficeSettingsOpen, setIsOfficeSettingsOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isCorrectionsOpen, setIsCorrectionsOpen] = useState(false);
 
   const {
     availableCaptainIds,
@@ -293,6 +296,8 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       <Pressable accessibilityRole="button" onPress={() => setIsCustodyOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>إدارة الأمانات</Text><Text style={styles.usersShortcutText}>سجّل أمانات الكباتن وتابع إعادتها</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => setIsReportsOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>التقارير</Text><Text style={styles.usersShortcutText}>ملخص المكتب الشهري والأجور وحصة الكباتن</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => setIsOfficeSettingsOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>إعدادات المكتب</Text><Text style={styles.usersShortcutText}>بيانات المكتب ونسب التوزيع والاستثناءات</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => setIsHelpOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>المساعدة والدعم</Text><Text style={styles.usersShortcutText}>إرشادات تشغيلية ودعم المستخدمين</Text></Pressable>
+      {role === 'admin' ? <Pressable accessibilityRole="button" onPress={() => setIsCorrectionsOpen(true)} style={styles.usersShortcut}><Text style={styles.usersShortcutTitle}>التصحيحات الإدارية</Text><Text style={styles.usersShortcutText}>إجراءات إدارية قيد التجهيز كما في الويب</Text></Pressable> : null}
       {role === 'admin' ? (
         <View style={[styles.accountForm, deliveryShadows.sm]}>
           <Text style={styles.formTitle}>إنشاء حساب معلق</Text>
@@ -374,6 +379,12 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
       </Modal>
       <Modal animationType="slide" visible={isOfficeSettingsOpen} onRequestClose={() => setIsOfficeSettingsOpen(false)}>
         <NativeOfficeSettingsPanel onClose={() => setIsOfficeSettingsOpen(false)} />
+      </Modal>
+      <Modal animationType="slide" visible={isHelpOpen} onRequestClose={() => setIsHelpOpen(false)}>
+        <NativeInfoPanel title="المساعدة والدعم" subtitle="دليفري طرطوس" onClose={() => setIsHelpOpen(false)} sections={[{ title: 'إنشاء الطلبات', body: 'أنشئ الطلب، أضف محطات المصدر والوجهة، ثم عيّن كابتناً متاحاً.' }, { title: 'متابعة التشغيل', body: 'تابع مراحل الطلب من قائمة الطلبات، ولا تكرر العملية عند ظهور حالة الحفظ.' }, { title: 'الأجور', body: 'تظهر ملخصات الأجور أولاً، وتفاصيل الكابتن أو اليوم تُفتح عند الطلب.' }]} />
+      </Modal>
+      <Modal animationType="slide" visible={isCorrectionsOpen} onRequestClose={() => setIsCorrectionsOpen(false)}>
+        <NativeInfoPanel title="التصحيحات الإدارية" subtitle="إجراءات إدارية" onClose={() => setIsCorrectionsOpen(false)} sections={[{ title: 'حالة الواجهة', body: 'هذه المساحة موجودة في نسخة الويب كإجراءات إدارية قيد التجهيز، ولا تنفذ أي تعديل خلفي غير معتمد.' }, { title: 'مبدأ الأمان', body: 'تظل كل العمليات الحساسة مرتبطة بعقد Supabase والصلاحيات الخلفية.' }]} />
       </Modal>
       <Modal animationType="slide" transparent visible={isCreateOrderOpen} onRequestClose={() => setIsCreateOrderOpen(false)}>
         <View style={styles.modalBackdrop}>
