@@ -56,13 +56,13 @@ export default function LoginScreen() {
           <FieldLabel text="البريد الإلكتروني" />
           <View style={styles.fieldContainer}>
             <MaterialIcons name="email" size={20} color="#60707D" style={styles.fieldIconRight} />
-            <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" returnKeyType="next" placeholder="example.com@" placeholderTextColor="#9BA8B1" textAlign="left" style={styles.field} editable={!isSigningIn} accessibilityLabel="البريد الإلكتروني" />
+            <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" returnKeyType="next" placeholder="example.com@" placeholderTextColor="#9BA8B1" textAlign="right" style={[styles.field, styles.ltrField]} editable={!isSigningIn} accessibilityLabel="البريد الإلكتروني" />
           </View>
 
           <FieldLabel text="كلمة المرور" style={styles.secondLabel} />
           <View style={styles.fieldContainer}>
             <MaterialIcons name="lock-outline" size={20} color="#60707D" style={styles.fieldIconRight} />
-            <TextInput value={password} onChangeText={setPassword} secureTextEntry={!visible} autoCapitalize="none" autoCorrect={false} returnKeyType="done" onSubmitEditing={handleSignIn} placeholder="••••••••" placeholderTextColor="#9BA8B1" textAlign="left" style={[styles.field, styles.passwordField]} editable={!isSigningIn} accessibilityLabel="كلمة المرور" />
+            <TextInput value={password} onChangeText={setPassword} secureTextEntry={!visible} autoCapitalize="none" autoCorrect={false} returnKeyType="done" onSubmitEditing={handleSignIn} placeholder="••••••••" placeholderTextColor="#9BA8B1" textAlign="right" style={[styles.field, styles.passwordField]} editable={!isSigningIn} accessibilityLabel="كلمة المرور" />
             <Pressable onPress={() => setVisible((current) => !current)} disabled={isSigningIn} hitSlop={10} style={({ pressed }) => [styles.visibilityButton, pressed && styles.visibilityPressed]} accessibilityLabel={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>
               <MaterialIcons name={visible ? "visibility-off" : "visibility"} size={21} color="#60707D" />
             </Pressable>
@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
   secondLabel: { marginTop: 16 },
   fieldContainer: { justifyContent: "center", marginTop: 6, position: "relative" },
   field: { backgroundColor: "rgba(255,255,255,0.95)", borderColor: "#AEBBC5", borderRadius: 12, borderWidth: 1, color: "#1C2934", fontSize: 16, height: 56, paddingLeft: 44, paddingRight: 14, shadowColor: "#17364D", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2 },
+  ltrField: { writingDirection: "ltr" },
   passwordField: { paddingRight: 44 },
   fieldIconRight: { position: "absolute", right: 12, zIndex: 1 },
   visibilityButton: { alignItems: "center", height: 44, justifyContent: "center", left: 8, position: "absolute", width: 44 },
