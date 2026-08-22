@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { WebAuthProvider } from '@/contexts/WebAuthContext';
+import AccountSettings from '@/pages/AccountSettings';
 import ActivateAccount from '@/pages/ActivateAccount';
 import ActivityLogs from '@/pages/ActivityLogs';
 import CaptainHome from '@/pages/CaptainHome';
@@ -86,6 +87,7 @@ function Router() {
         <Route path="/company-profit-history" component={() => <BackOfficeRoute component={() => <CompanyWages fullHistory />} />} />
         <Route path="/wage-orders" component={() => <BackOfficeRoute component={WageOrders} />} />
         <Route path="/more" component={() => <BackOfficeRoute component={More} />} />
+        <Route path="/account-settings" component={() => <BackOfficeRoute component={AccountSettings} />} />
         <Route path="/custody" component={() => <BackOfficeRoute component={Custody} />} />
         <Route path="/reports" component={() => <BackOfficeRoute component={Reports} />} />
         <Route path="/office-settings" component={() => <BackOfficeRoute component={OfficeSettings} />} />

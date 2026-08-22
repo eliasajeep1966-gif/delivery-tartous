@@ -224,6 +224,23 @@ export const webSupabase = {
       if (error) throw new Error(error.message);
     },
 
+    async updatePassword(password: string): Promise<void> {
+      if (password.length < 12) {
+        throw new Error('يجب أن تتكون كلمة المرور من 12 حرفاً على الأقل.');
+      }
+
+      const { error } = await getWebSupabaseClient().auth.updateUser({ password });
+      if (error) throw new Error(error.message);
+    },
+
+    async updateEmail(email: string): Promise<void> {
+      const normalizedEmail = normalizeEmail(email);
+      validateEmail(normalizedEmail);
+
+      const { error } = await getWebSupabaseClient().auth.updateUser({ email: normalizedEmail });
+      if (error) throw new Error(error.message);
+    },
+
     async activatePendingAccount(input: ActivatePendingAccountInput): Promise<ActivatePendingAccountResult> {
       const email = validatePendingActivation(input);
       const { data, error } = await getWebSupabaseClient().functions.invoke<ActivatePendingAccountResult>(
@@ -494,6 +511,17 @@ export const webSupabase = {
   },
 
   actions: {
+    async updateMyProfile(fullName: string): Promise<WebProfile> {
+      const normalizedFullName = fullName.trim();
+      if (!normalizedFullName) throw new Error('أدخل الاسم الكامل للحساب.');
+      if (normalizedFullName.length > 120) throw new Error('الاسم طويل جداً.');
+
+      const { data, error } = await getWebSupabaseClient().rpc('update_my_profile', {
+        p_full_name: normalizedFullName,
+      });
+      return unwrap(data, error, 'تعذر تحديث اسم الحساب.');
+    },
+
     async createOrderWithStops(input: CreateOrderWithStopsInput): Promise<WebOrder> {
       const stops: Json = input.stops.map((stop) => ({
         stop_type: stop.stopType,
