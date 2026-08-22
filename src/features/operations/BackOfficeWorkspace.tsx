@@ -62,6 +62,7 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
     isLoading,
     metrics,
     orders,
+    profitHistory,
     reload,
     wageSummaries,
     wageTotals,
@@ -285,6 +286,15 @@ export function BackOfficeWorkspace({ role, onSignOut }: { role: BackOfficeRole;
           <Text style={styles.wageAmount}>{formatMoney(summary.captain_net_total)}</Text>
         </View>
       ))}
+      <SectionTitle title="أرباح الشركة خلال آخر 7 أيام" />
+      {profitHistory.length === 0 ? <EmptyNotice text="لا توجد سجلات أرباح للشركة ضمن الفترة الحالية." /> : null}
+      {profitHistory.map((day) => (
+        <View key={day.business_day} style={[styles.companyProfitRow, deliveryShadows.sm]}>
+          <Text style={styles.companyProfitDay}>{new Date(`${day.business_day}T00:00:00`).toLocaleDateString('ar-SY')}</Text>
+          <Text style={styles.companyProfitMeta}>{day.order_count} طلبات · إجمالي: {formatMoney(day.gross_total)}</Text>
+          <Text style={styles.companyProfitAmount}>صافي الشركة: {formatMoney(day.company_total)}</Text>
+        </View>
+      ))}
     </ScrollView>
   );
 
@@ -451,6 +461,10 @@ const styles = StyleSheet.create({
   wageName: { color: deliveryColors.text, fontSize: 15, fontWeight: '800', textAlign: 'right' },
   wageMeta: { color: deliveryColors.muted, fontSize: 12, marginTop: 4, textAlign: 'right' },
   wageAmount: { color: deliveryColors.primary, fontSize: 15, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
+  companyProfitRow: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, padding: deliverySpacing.lg },
+  companyProfitDay: { color: deliveryColors.text, fontSize: 14, fontWeight: '800', textAlign: 'right' },
+  companyProfitMeta: { color: deliveryColors.muted, fontSize: 12, marginTop: 4, textAlign: 'right' },
+  companyProfitAmount: { color: deliveryColors.success, fontSize: 14, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
   accountForm: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, gap: deliverySpacing.md, padding: deliverySpacing.lg },
   formTitle: { color: deliveryColors.text, fontSize: 16, fontWeight: '800', textAlign: 'right' },
   input: { backgroundColor: '#F8FAFC', borderColor: '#DCE7F0', borderRadius: deliveryRadius.md, borderWidth: 1, color: deliveryColors.text, fontSize: 14, minHeight: 48, paddingHorizontal: deliverySpacing.md },

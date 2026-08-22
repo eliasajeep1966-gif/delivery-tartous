@@ -4,6 +4,7 @@ import {
   deliverySupabase,
   type CaptainStatus,
   type CaptainWageSummary,
+  type CompanyProfitHistoryDay,
   type Order,
   type Profile,
   type WageTotals,
@@ -15,6 +16,7 @@ type DashboardData = {
   captainStatuses: CaptainStatus[];
   wageTotals: WageTotals | null;
   wageSummaries: CaptainWageSummary[];
+  profitHistory: CompanyProfitHistoryDay[];
 };
 
 const initialData: DashboardData = {
@@ -23,6 +25,7 @@ const initialData: DashboardData = {
   captainStatuses: [],
   wageTotals: null,
   wageSummaries: [],
+  profitHistory: [],
 };
 
 /**
@@ -39,12 +42,13 @@ export function useAdminOperationsDashboard() {
     setError(null);
 
     try {
-      const [orders, profiles, captainStatuses, wageTotals, wageSummaries] = await Promise.all([
+      const [orders, profiles, captainStatuses, wageTotals, wageSummaries, profitHistory] = await Promise.all([
         deliverySupabase.reads.orders(),
         deliverySupabase.reads.profiles(),
         deliverySupabase.reads.captainStatuses(),
         deliverySupabase.reads.wageTotals(),
         deliverySupabase.reads.captainWageSummary(),
+        deliverySupabase.reads.companyProfitHistory({ limitDays: 7 }),
       ]);
 
       setData({
@@ -53,6 +57,7 @@ export function useAdminOperationsDashboard() {
         captainStatuses,
         wageTotals,
         wageSummaries,
+        profitHistory,
       });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'تعذر تحميل بيانات لوحة التشغيل.');

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   deliverySupabase,
   type CaptainAvailability,
+  type CaptainCustody,
   type CaptainWageDetailV2,
   type Order,
   type OrderStatus,
@@ -17,6 +18,7 @@ type CaptainSnapshot = {
   currentOrderStops: OrderStop[];
   availability: CaptainAvailability;
   wageDetails: CaptainWageDetailV2[];
+  custody: CaptainCustody[];
 };
 
 const initialSnapshot: CaptainSnapshot = {
@@ -24,6 +26,7 @@ const initialSnapshot: CaptainSnapshot = {
   currentOrderStops: [],
   availability: 'unavailable',
   wageDetails: [],
+  custody: [],
 };
 
 /**
@@ -49,10 +52,11 @@ export function useCaptainOperationsDashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      const [orders, statuses, wageDetails] = await Promise.all([
+      const [orders, statuses, wageDetails, custody] = await Promise.all([
         deliverySupabase.reads.orders(),
         deliverySupabase.reads.captainStatuses(),
         deliverySupabase.reads.captainWageDetailsV2(userId),
+        deliverySupabase.reads.myCustody(),
       ]);
       const currentOrder = orders.find((order) => activeStatuses.has(order.status));
       const currentOrderStops = currentOrder ? await deliverySupabase.reads.orderStops(currentOrder.id) : [];
@@ -63,6 +67,7 @@ export function useCaptainOperationsDashboard() {
         currentOrderStops,
         availability: ownStatus?.availability ?? 'unavailable',
         wageDetails,
+        custody,
       });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'تعذر تحميل بيانات الكابتن.');

@@ -35,8 +35,10 @@ export default function CaptainScreen() {
     availability,
     captainEarnings,
     completedCount,
+    custody,
     currentOrder,
     unpaidEarnings,
+    wageDetails,
     currentOrderStops,
     error,
     isLoading,
@@ -150,6 +152,15 @@ export default function CaptainScreen() {
         <Text style={styles.earningsAmount}>{formatCurrency(unpaidEarnings)}</Text>
         <Text style={styles.earningsHint}>تعتمد القيم على كشف الأجور الفعلي وليس على رسوم الطلبات الإجمالية.</Text>
       </View>
+      <SectionTitle title="سجل الأجور" />
+      {wageDetails.length === 0 ? <EmptyNotice text="لا توجد سجلات أجور بعد." /> : null}
+      {wageDetails.map((entry) => (
+        <View key={entry.financial_ledger_id} style={[styles.wageRow, deliveryShadows.sm]}>
+          <Text style={styles.wageOrderNumber}>طلب #{entry.order_number}</Text>
+          <Text style={styles.wageMeta}>الأجر: {formatCurrency(Number(entry.captain_amount))} · المدفوع: {formatCurrency(Number(entry.paid_amount))}</Text>
+          <Text style={styles.wageUnpaid}>المتبقي: {formatCurrency(Number(entry.unpaid_amount))}</Text>
+        </View>
+      ))}
     </ScrollView>
   );
 
@@ -159,6 +170,15 @@ export default function CaptainScreen() {
         <Text style={styles.profileName}>{profile?.full_name || profile?.email || 'الكابتن'}</Text>
         <Text style={styles.profileRole}>كابتن دليفري طرطوس</Text>
       </View>
+      <SectionTitle title="الأمانات المستلمة" />
+      {custody.length === 0 ? <EmptyNotice text="لا توجد أمانات مسجلة على حسابك." /> : null}
+      {custody.map((item) => (
+        <View key={item.id} style={[styles.custodyCard, deliveryShadows.sm]}>
+          <Text style={styles.custodyName}>{item.item_name}</Text>
+          {item.item_details ? <Text style={styles.custodyDetails}>{item.item_details}</Text> : null}
+          <Text style={[styles.custodyState, item.returned_at && styles.custodyReturned]}>{item.returned_at ? 'تمت الإعادة' : 'بحوزتك حالياً'}</Text>
+        </View>
+      ))}
       <Pressable accessibilityRole="button" onPress={() => void signOut()} style={styles.signOutButton}>
         <Text style={styles.signOutText}>تسجيل الخروج</Text>
       </Pressable>
@@ -359,6 +379,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: deliverySpacing.xs,
   },
+  wageRow: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, padding: deliverySpacing.lg },
+  wageOrderNumber: { color: deliveryColors.text, fontSize: 14, fontWeight: '800', textAlign: 'right' },
+  wageMeta: { color: deliveryColors.muted, fontSize: 12, marginTop: deliverySpacing.xs, textAlign: 'right' },
+  wageUnpaid: { color: deliveryColors.primary, fontSize: 13, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
+  custodyCard: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, padding: deliverySpacing.lg },
+  custodyName: { color: deliveryColors.text, fontSize: 15, fontWeight: '800', textAlign: 'right' },
+  custodyDetails: { color: deliveryColors.muted, fontSize: 12, marginTop: deliverySpacing.xs, textAlign: 'right' },
+  custodyState: { color: deliveryColors.warning, fontSize: 12, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
+  custodyReturned: { color: deliveryColors.success },
   signOutButton: {
     alignItems: 'center',
     backgroundColor: deliveryColors.surface,
