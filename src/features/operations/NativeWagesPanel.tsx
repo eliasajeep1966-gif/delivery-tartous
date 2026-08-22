@@ -79,6 +79,7 @@ export function NativeWagesPanel({ onRefreshDashboard }: NativeWagesPanelProps) 
   };
 
   return <View style={styles.root}>
+    <View style={styles.intro}><View><Text style={styles.introTitle}>سجل أجور الكباتن</Text><Text style={styles.introText}>كل كابتن لديه سجل طلبات مستقل مع التاريخ والوقت وحصيلته الصافية.</Text></View><View style={styles.introIcon}><Text style={styles.introIconText}>◉</Text></View></View>
     <View style={styles.periodRow}>{(['daily', 'weekly', 'monthly'] as CaptainWagePeriod[]).map((item) => <Pressable key={item} onPress={() => void load(item)} style={[styles.periodButton, period === item && styles.periodActive]}><Text style={[styles.periodText, period === item && styles.periodTextActive]}>{item === 'daily' ? 'يومي' : item === 'weekly' ? 'أسبوعي' : 'شهري'}</Text></Pressable>)}</View>
     {periodOptions.length > 1 ? <ScrollView horizontal contentContainerStyle={styles.periodOptions}>{periodOptions.map((option) => <Pressable key={option.start} onPress={() => setSelectedPeriodStart(option.start)} style={[styles.periodOption, activeStart === option.start && styles.periodOptionActive]}><Text style={[styles.periodOptionText, activeStart === option.start && styles.periodOptionTextActive]}>{periodLabel(period, option.start, option.end)}</Text></Pressable>)}</ScrollView> : null}
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -95,7 +96,12 @@ function Amount({ label, value }: { label: string; value: string }) { return <Vi
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  periodRow: { backgroundColor: deliveryColors.surface, flexDirection: 'row-reverse', gap: deliverySpacing.sm, padding: deliverySpacing.md },
+  intro: { alignItems: 'flex-start', backgroundColor: '#FFFFFF', borderColor: '#D3E3F0', borderRadius: 16, borderWidth: 1, flexDirection: 'row-reverse', justifyContent: 'space-between', margin: deliverySpacing.lg, marginBottom: 0, padding: 14 },
+  introTitle: { color: '#1C1B1B', fontSize: 18, fontWeight: '800', textAlign: 'right' },
+  introText: { color: '#58616B', fontSize: 12, lineHeight: 18, marginTop: 4, maxWidth: 260, textAlign: 'right' },
+  introIcon: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 14, height: 44, justifyContent: 'center', width: 44 },
+  introIconText: { color: '#15803D', fontSize: 20, fontWeight: '800' },
+  periodRow: { backgroundColor: deliveryColors.surface, flexDirection: 'row-reverse', gap: deliverySpacing.sm, marginTop: deliverySpacing.md, padding: deliverySpacing.md },
   periodButton: { alignItems: 'center', borderColor: '#DCE7F0', borderRadius: deliveryRadius.md, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 40 },
   periodActive: { backgroundColor: deliveryColors.primary, borderColor: deliveryColors.primary },
   periodText: { color: deliveryColors.muted, fontSize: 12, fontWeight: '800' },
@@ -112,13 +118,13 @@ const styles = StyleSheet.create({
   retry: { alignItems: 'center', borderColor: '#FECACA', borderRadius: deliveryRadius.sm, borderWidth: 1, marginTop: deliverySpacing.sm, minHeight: 36 },
   retryText: { color: deliveryColors.danger, fontSize: 12, fontWeight: '800', paddingTop: 8 },
   metricsGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: deliverySpacing.md },
-  metric: { alignItems: 'center', backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, flexBasis: '47%', flexGrow: 1, minHeight: 92, justifyContent: 'center', padding: deliverySpacing.md },
-  metricValue: { color: deliveryColors.primary, fontSize: 15, fontWeight: '800', textAlign: 'center' },
-  metricLabel: { color: deliveryColors.muted, fontSize: 11, marginTop: 6, textAlign: 'center' },
+  metric: { alignItems: 'flex-start', backgroundColor: '#FFFFFF', borderColor: '#E0E8EE', borderRadius: 16, borderWidth: 1, flexBasis: '47%', flexGrow: 1, minHeight: 104, justifyContent: 'center', padding: 14 },
+  metricValue: { color: deliveryColors.primary, fontSize: 15, fontWeight: '800', textAlign: 'right' },
+  metricLabel: { color: '#4F5D6B', fontSize: 11, fontWeight: '800', marginTop: 6, textAlign: 'right' },
   sectionTitle: { color: deliveryColors.text, fontSize: 16, fontWeight: '800', marginTop: deliverySpacing.sm, textAlign: 'right' },
   empty: { alignItems: 'center', backgroundColor: deliveryColors.surface, borderColor: '#DCE7F0', borderRadius: deliveryRadius.lg, borderStyle: 'dashed', borderWidth: 1, justifyContent: 'center', minHeight: 120, padding: deliverySpacing.lg },
   emptyText: { color: deliveryColors.muted, fontSize: 14, textAlign: 'center' },
-  wageCard: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, padding: deliverySpacing.lg },
+  wageCard: { backgroundColor: '#FFFFFF', borderColor: '#D3E3F0', borderRadius: 16, borderWidth: 1, padding: 14 },
   captainName: { color: deliveryColors.text, fontSize: 16, fontWeight: '800', textAlign: 'right' },
   meta: { color: deliveryColors.muted, fontSize: 12, marginTop: 4, textAlign: 'right' },
   amounts: { flexDirection: 'row-reverse', gap: deliverySpacing.sm, marginTop: deliverySpacing.md },
