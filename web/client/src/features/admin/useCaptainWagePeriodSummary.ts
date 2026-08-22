@@ -14,6 +14,12 @@ type PeriodSummaryState = {
   rows: CaptainWagePeriodRow[];
   loading: boolean;
   error: string | null;
+  hasMore: boolean;
+};
+
+type PeriodCursor = {
+  periodStart?: string;
+  captainId?: string;
 };
 
 function errorMessage(error: unknown): string {
@@ -21,32 +27,78 @@ function errorMessage(error: unknown): string {
 }
 
 export function useCaptainWagePeriodSummary(captainId?: string) {
-  const [state, setState] = useState<PeriodSummaryState>({ period: 'daily', rows: [], loading: true, error: null });
+  const [state, setState] = useState<PeriodSummaryState>({
+    period: 'daily',
+    rows: [],
+    loading: true,
+    error: null,
+    hasMore: true,
+  });
+  const cursor = useRef<PeriodCursor>({});
   const requestVersion = useRef(0);
-  const mounted = useRef(true);
+  const mounted = useRef(false);
+  const initialCaptainKey = useRef<string | null>(null);
 
-  const load = useCallback(async (period: CaptainWagePeriod) => {
+  const load = useCallback(async (period: CaptainWagePeriod, append = false) => {
     const version = ++requestVersion.current;
-    setState({ period, rows: [], loading: true, error: null });
+    const pageCursor = append ? cursor.current : {};
+
+    if (!append) {
+      cursor.current = {};
+      setState({ period, rows: [], loading: true, error: null, hasMore: true });
+    } else {
+      setState((current) => ({ ...current, loading: true, error: null }));
+    }
+
     try {
       const result = await withWebRequestTimeout(webSupabase.reads.captainWagePeriodSummary({
         p_period: period,
         p_captain_id: captainId,
         p_limit: PERIOD_PAGE_SIZE,
+        p_before_period_start: pageCursor.periodStart,
+        p_before_captain_id: pageCursor.captainId,
       }), PERIOD_TIMEOUT);
       if (!mounted.current || version !== requestVersion.current) return;
-      setState({ period, rows: result.map(mapCaptainWagePeriodRow), loading: false, error: null });
+
+      const rows = result.map(mapCaptainWagePeriodRow);
+      const last = rows.at(-1);
+      cursor.current = last ? { periodStart: last.periodStart, captainId: last.captainId } : pageCursor;
+      setState((current) => ({
+        period,
+        rows: append ? [...current.rows, ...rows] : rows,
+        loading: false,
+        error: null,
+        hasMore: rows.length === PERIOD_PAGE_SIZE,
+      }));
     } catch (error) {
       if (!mounted.current || version !== requestVersion.current) return;
-      setState({ period, rows: [], loading: false, error: errorMessage(error) });
+      setState((current) => ({
+        ...current,
+        period,
+        rows: append ? current.rows : [],
+        loading: false,
+        error: errorMessage(error),
+        hasMore: false,
+      }));
     }
   }, [captainId]);
 
+  const loadMore = useCallback(async () => {
+    if (state.loading || !state.hasMore) return;
+    await load(state.period, true);
+  }, [load, state.hasMore, state.loading, state.period]);
+
   useEffect(() => {
     mounted.current = true;
-    void load('daily');
     return () => { mounted.current = false; };
-  }, [load, captainId]);
+  }, []);
 
-  return { ...state, load };
+  useEffect(() => {
+    const captainKey = captainId ?? '__all_captains__';
+    if (initialCaptainKey.current === captainKey) return;
+    initialCaptainKey.current = captainKey;
+    void load('daily');
+  }, [captainId, load]);
+
+  return { ...state, load, loadMore };
 }
