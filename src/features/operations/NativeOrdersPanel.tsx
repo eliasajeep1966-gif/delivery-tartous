@@ -4,7 +4,7 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View 
 import { deliveryColors, deliveryRadius, deliveryShadows, deliverySpacing } from '@/constants/deliveryTheme';
 import { deliverySupabase, type Order, type OrderStatus, type OrderStatusHistory, type OrderStop, type Profile } from '@/data/supabase/supabaseContract';
 
-type OrderFilter = 'all' | 'pending' | 'assigned' | 'delivery_active' | 'completed' | 'cancelled';
+type OrderFilter = 'all' | 'pending' | 'assigned' | 'received' | 'in_delivery' | 'completed' | 'cancelled' | 'false_order';
 
 type NativeOrdersPanelProps = {
   orders: Order[];
@@ -29,6 +29,7 @@ function captainName(profile: Profile | undefined) {
 
 export function NativeOrdersPanel({ orders, captains, availableCaptainIds, onReload }: NativeOrdersPanelProps) {
   const [filter, setFilter] = useState<OrderFilter>('all');
+  const [query, setQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [stops, setStops] = useState<OrderStop[]>([]);
   const [history, setHistory] = useState<OrderStatusHistory[]>([]);
@@ -41,10 +42,11 @@ export function NativeOrdersPanel({ orders, captains, availableCaptainIds, onRel
   const [isSaving, setIsSaving] = useState(false);
 
   const visibleOrders = useMemo(() => orders.filter((order) => {
-    if (filter === 'all') return true;
-    if (filter === 'delivery_active') return order.status === 'received' || order.status === 'in_delivery';
-    return order.status === filter;
-  }), [filter, orders]);
+    const normalized = query.trim().toLowerCase();
+    const matchesFilter = filter === 'all' || order.status === filter;
+    const searchable = `${order.order_number} ${order.customer_name} ${order.customer_phone} ${order.pickup_address} ${order.delivery_address}`.toLowerCase();
+    return matchesFilter && (!normalized || searchable.includes(normalized));
+  }), [filter, orders, query]);
   const assignableCaptains = useMemo(() => captains.filter((captain) => captain.is_active && availableCaptainIds.has(captain.id)), [availableCaptainIds, captains]);
 
   useEffect(() => {
@@ -101,10 +103,12 @@ export function NativeOrdersPanel({ orders, captains, availableCaptainIds, onRel
 
   return (
     <View style={styles.root}>
-      <View style={styles.filterRow}>{([['all', 'الكل'], ['pending', 'معلّقة'], ['assigned', 'معيّنة'], ['delivery_active', 'توصيل'], ['completed', 'مكتملة'], ['cancelled', 'ملغاة']] as const).map(([key, label]) => <Pressable key={key} onPress={() => setFilter(key)} style={[styles.filterButton, filter === key && styles.filterActive]}><Text style={[styles.filterText, filter === key && styles.filterTextActive]}>{label}</Text></Pressable>)}</View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {visibleOrders.length === 0 ? <View style={styles.empty}><Text style={styles.emptyText}>لا توجد طلبات ضمن هذا الفلتر.</Text></View> : null}
-        {visibleOrders.map((order) => <Pressable key={order.id} accessibilityRole="button" onPress={() => setSelectedOrder(order)} style={[styles.orderCard, deliveryShadows.sm]}><View style={styles.orderHeading}><Text style={styles.orderNumber}>طلب #{order.order_number}</Text><Text style={styles.status}>{labels[order.status]}</Text></View><Text style={styles.address} numberOfLines={1}>من: {order.pickup_address}</Text><Text style={styles.address} numberOfLines={1}>إلى: {order.delivery_address}</Text><Text style={styles.fee}>{Number(order.fee).toLocaleString('ar-SY')} ل.س</Text></Pressable>)}
+        <View style={[styles.introCard, deliveryShadows.sm]}><View style={styles.introHeading}><View><Text style={styles.introTitle}>قائمة الطلبات</Text><Text style={styles.introText}>ابحث، صفِّ الحالات، ثم اعرض التفاصيل التشغيلية.</Text></View><View style={styles.introIcon}><Text style={styles.introIconText}>□</Text></View></View><View style={styles.searchShell}><Text style={styles.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder="ابحث برقم الطلب أو العميل أو العنوان" placeholderTextColor="#8A98A6" style={styles.searchInput} textAlign="right" /></View></View>
+        <ScrollView horizontal contentContainerStyle={styles.filterRow} showsHorizontalScrollIndicator={false}>{([['all', 'الكل'], ['pending', 'قيد الانتظار'], ['assigned', 'تم التعيين'], ['received', 'تم الاستلام'], ['in_delivery', 'قيد التوصيل'], ['completed', 'مكتملة'], ['cancelled', 'ملغاة'], ['false_order', 'طلب كاذب']] as const).map(([key, label]) => <Pressable key={key} onPress={() => setFilter(key)} style={[styles.filterButton, filter === key && styles.filterActive]}><Text style={[styles.filterText, filter === key && styles.filterTextActive]}>{label}</Text></Pressable>)}</ScrollView>
+        <View style={styles.listHeading}><Text style={styles.listTitle}>الطلبات المعروضة</Text><Text style={styles.count}>{visibleOrders.length} طلبات</Text></View>
+        {visibleOrders.length === 0 ? <View style={styles.empty}><Text style={styles.emptyIcon}>□</Text><Text style={styles.emptyText}>لا توجد طلبات مطابقة</Text><Text style={styles.emptyHint}>جرّب تغيير البحث أو الحالة.</Text></View> : null}
+        {visibleOrders.map((order) => <Pressable key={order.id} accessibilityRole="button" onPress={() => setSelectedOrder(order)} style={[styles.orderCard, deliveryShadows.sm]}><View style={[styles.orderStrip, { backgroundColor: order.status === 'completed' ? deliveryColors.success : order.status === 'false_order' || order.status === 'cancelled' ? deliveryColors.danger : deliveryColors.primary }]} /><View style={styles.orderBody}><View style={styles.orderHeading}><Text style={styles.orderNumber}>#{order.order_number}</Text><Text style={styles.status}>{labels[order.status]}</Text></View><View style={styles.customerRow}><Text style={styles.customer}>{order.customer_name}</Text><Text style={styles.fee}>{Number(order.fee).toLocaleString('ar-SY')} ل.س</Text></View><Text style={styles.address} numberOfLines={1}>⌖ {order.pickup_address} ← {order.delivery_address}</Text><Text style={styles.orderTime}>{new Date(order.created_at).toLocaleDateString('ar-SY')}</Text></View><Text style={styles.arrow}>‹</Text></Pressable>)}
       </ScrollView>
 
       <Modal animationType="slide" visible={selectedOrder !== null} onRequestClose={() => setSelectedOrder(null)}><View style={styles.detailRoot}><View style={styles.detailHeader}><Pressable onPress={() => setSelectedOrder(null)} style={styles.backButton}><Text style={styles.backText}>رجوع</Text></Pressable><View><Text style={styles.detailTitle}>تفاصيل الطلب</Text><Text style={styles.detailSubtitle}>طلب #{selectedOrder?.order_number}</Text></View></View><ScrollView contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>{isDetailsLoading ? <Text style={styles.loading}>جارٍ تحميل التفاصيل...</Text> : null}{detailsError ? <Text style={styles.error}>{detailsError}</Text> : null}{selectedOrder ? <><View style={styles.detailCard}><Text style={styles.detailLabel}>الحالة</Text><Text style={styles.detailValue}>{labels[selectedOrder.status]}</Text><Text style={styles.detailLabel}>الأجرة</Text><Text style={styles.detailValue}>{Number(selectedOrder.fee).toLocaleString('ar-SY')} ل.س</Text></View><Text style={styles.sectionTitle}>المحطات</Text>{stops.length === 0 ? <View style={styles.detailCard}><Text style={styles.detailValue}>المصدر: {selectedOrder.pickup_address}</Text><Text style={styles.detailValue}>الوجهة: {selectedOrder.delivery_address}</Text></View> : null}{stops.map((stop) => <View key={stop.id} style={styles.stopCard}><Text style={styles.stopType}>{stop.stop_type === 'pickup' ? 'مصدر الاستلام' : 'وجهة التوصيل'}</Text><Text style={styles.stopName}>{stop.contact_name}</Text><Text style={styles.stopInfo}>{stop.contact_phone} · {stop.address}</Text>{stop.note ? <Text style={styles.stopNote}>تعليمات: {stop.note}</Text> : null}</View>)}<View style={styles.actionRow}>{!['completed', 'cancelled', 'false_order'].includes(selectedOrder.status) ? <Pressable onPress={() => { setChosenCaptainId(null); setIsAssignOpen(true); }} style={styles.assignButton}><Text style={styles.assignText}>تعيين كابتن</Text></Pressable> : null}{!['completed', 'cancelled', 'false_order'].includes(selectedOrder.status) ? <Pressable onPress={() => { setCancelReason(''); setIsCancelOpen(true); }} style={styles.cancelButton}><Text style={styles.cancelText}>إلغاء الطلب</Text></Pressable> : null}</View><Text style={styles.sectionTitle}>سجل الحالة</Text>{history.length === 0 ? <Text style={styles.hint}>لا توجد حركات حالة إضافية.</Text> : null}{history.map((entry) => <View key={entry.id} style={styles.historyRow}><Text style={styles.historyStatus}>{labels[entry.next_status]}</Text><Text style={styles.historyTime}>{new Date(entry.changed_at).toLocaleString('ar-SY')}</Text></View>)}</> : null}</ScrollView></View></Modal>
@@ -116,20 +120,40 @@ export function NativeOrdersPanel({ orders, captains, availableCaptainIds, onRel
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  filterRow: { backgroundColor: deliveryColors.surface, flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 6, padding: deliverySpacing.md },
-  filterButton: { alignItems: 'center', borderColor: '#DCE7F0', borderRadius: 999, borderWidth: 1, flexGrow: 1, justifyContent: 'center', minHeight: 32, paddingHorizontal: 9 },
+  filterRow: { flexDirection: 'row-reverse', gap: 8, paddingHorizontal: 2 },
+  filterButton: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D4E2EC', borderRadius: 999, borderWidth: 1, justifyContent: 'center', minHeight: 32, paddingHorizontal: 12 },
   filterActive: { backgroundColor: deliveryColors.primary, borderColor: deliveryColors.primary },
   filterText: { color: deliveryColors.muted, fontSize: 10, fontWeight: '800' },
   filterTextActive: { color: deliveryColors.surface },
   scrollContent: { gap: deliverySpacing.md, padding: deliverySpacing.lg, paddingBottom: deliverySpacing.xxxl },
-  empty: { alignItems: 'center', backgroundColor: deliveryColors.surface, borderColor: '#DCE7F0', borderRadius: deliveryRadius.lg, borderStyle: 'dashed', borderWidth: 1, justifyContent: 'center', minHeight: 120, padding: deliverySpacing.lg },
-  emptyText: { color: deliveryColors.muted, fontSize: 14, textAlign: 'center' },
-  orderCard: { backgroundColor: deliveryColors.surface, borderRadius: deliveryRadius.lg, gap: deliverySpacing.sm, padding: deliverySpacing.lg },
+  introCard: { backgroundColor: '#FFFFFF', borderColor: '#D3E3F0', borderRadius: 16, borderWidth: 1, padding: 14 },
+  introHeading: { alignItems: 'flex-start', flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  introTitle: { color: '#1C1B1B', fontSize: 18, fontWeight: '800', textAlign: 'right' },
+  introText: { color: '#58616B', fontSize: 12, lineHeight: 18, marginTop: 4, textAlign: 'right' },
+  introIcon: { alignItems: 'center', backgroundColor: '#EAF4FF', borderRadius: 14, height: 44, justifyContent: 'center', width: 44 },
+  introIconText: { color: '#0060B8', fontSize: 22, fontWeight: '800' },
+  searchShell: { alignItems: 'center', backgroundColor: '#FBFDFF', borderColor: '#C9D9E7', borderRadius: 12, borderWidth: 1, flexDirection: 'row-reverse', height: 44, marginTop: 14 },
+  searchIcon: { color: '#75818E', fontSize: 22, paddingHorizontal: 10 },
+  searchInput: { color: '#1C2934', flex: 1, fontSize: 13, height: '100%', paddingLeft: 10 },
+  listHeading: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 3 },
+  listTitle: { color: '#1C1B1B', fontSize: 16, fontWeight: '800' },
+  count: { backgroundColor: '#DBEEFF', borderRadius: 99, color: '#0060B8', fontSize: 11, fontWeight: '800', overflow: 'hidden', paddingHorizontal: 10, paddingVertical: 5 },
+  empty: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.72)', borderColor: '#C7DAE8', borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, justifyContent: 'center', minHeight: 150, padding: deliverySpacing.lg },
+  emptyIcon: { color: '#7D9AB0', fontSize: 28 },
+  emptyText: { color: '#4F5D6B', fontSize: 14, fontWeight: '800', marginTop: 6, textAlign: 'center' },
+  emptyHint: { color: '#75818E', fontSize: 11, marginTop: 4, textAlign: 'center' },
+  orderCard: { backgroundColor: '#FFFFFF', borderColor: '#E0E8EE', borderRadius: 16, borderWidth: 1, flexDirection: 'row-reverse', overflow: 'hidden' },
+  orderStrip: { height: '100%', width: 5 },
+  orderBody: { flex: 1, gap: 6, padding: 14 },
   orderHeading: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between' },
-  orderNumber: { color: deliveryColors.text, fontSize: 15, fontWeight: '800' },
-  status: { backgroundColor: deliveryColors.primarySoft, borderRadius: 999, color: deliveryColors.primary, fontSize: 10, fontWeight: '800', overflow: 'hidden', paddingHorizontal: deliverySpacing.sm, paddingVertical: 4 },
-  address: { color: deliveryColors.muted, fontSize: 12, textAlign: 'right' },
-  fee: { color: deliveryColors.primary, fontSize: 15, fontWeight: '800', marginTop: 3, textAlign: 'right' },
+  orderNumber: { color: '#1C1B1B', fontSize: 16, fontWeight: '800' },
+  status: { backgroundColor: '#EAF4FF', borderRadius: 5, color: '#0060B8', fontSize: 11, fontWeight: '800', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 3 },
+  customerRow: { alignItems: 'center', flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  customer: { color: '#1C1B1B', fontSize: 14, textAlign: 'right' },
+  address: { color: '#414752', fontSize: 12, textAlign: 'right' },
+  fee: { color: '#1C1B1B', fontSize: 15, fontWeight: '800', textAlign: 'left' },
+  orderTime: { color: '#75818E', fontSize: 10, textAlign: 'right' },
+  arrow: { alignSelf: 'center', color: '#75818E', fontSize: 25, marginLeft: 10 },
   detailRoot: { flex: 1, backgroundColor: deliveryColors.background },
   detailHeader: { alignItems: 'center', backgroundColor: deliveryColors.primary, flexDirection: 'row-reverse', justifyContent: 'space-between', minHeight: 74, paddingHorizontal: deliverySpacing.lg },
   detailTitle: { color: deliveryColors.surface, fontSize: 18, fontWeight: '800', textAlign: 'right' },
