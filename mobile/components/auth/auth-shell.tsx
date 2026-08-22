@@ -39,9 +39,9 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   gradient: { ...StyleSheet.absoluteFill },
-  topGlow: { backgroundColor: "rgba(255,255,255,0.95)", borderRadius: 180, height: 260, left: -90, opacity: 0.95, position: "absolute", top: -40, width: 260 },
-  topRing: { borderColor: "rgba(255,255,255,0.32)", borderRadius: 144, borderWidth: 22, height: 288, position: "absolute", right: -112, top: -72, width: 288 },
-  bottomRing: { borderColor: "rgba(0,96,184,0.10)", borderRadius: 170, borderWidth: 30, bottom: -108, height: 340, left: -122, position: "absolute", width: 340 },
+  topGlow: { backgroundColor: "rgba(255,255,255,0.55)", borderRadius: 144, height: 288, left: -96, position: "absolute", top: -96, width: 288 },
+  topRing: { borderColor: "rgba(255,255,255,0.25)", borderRadius: 128, borderWidth: 22, height: 256, position: "absolute", right: -80, top: -64, width: 256 },
+  bottomRing: { borderColor: "rgba(0,96,184,0.10)", borderRadius: 144, borderWidth: 30, bottom: -96, height: 288, left: -96, position: "absolute", width: 288 },
   scrollContent: { alignItems: "center", flexGrow: 1, justifyContent: "center", paddingHorizontal: 16, paddingVertical: 32 },
   card: { alignSelf: "center", backgroundColor: "rgba(255,255,255,0.55)", borderColor: "rgba(255,255,255,0.75)", borderRadius: 32, borderWidth: 1, maxWidth: 410, padding: 20, shadowColor: "#0059A0", shadowOffset: { width: 0, height: 25 }, shadowOpacity: 0.18, shadowRadius: 35, width: "100%", elevation: 6 },
   headingGroup: { alignItems: "center" },
