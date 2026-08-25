@@ -359,13 +359,10 @@ export function AdminHome() {
         </Pressable>
 
         <View style={styles.headerBrand}>
-          <View style={styles.headerBrandMark}>
-            <MaterialIcons name="local-shipping" size={17} color="#0878D1" />
-          </View>
-          <View style={styles.headerBrandText}>
-            <Text style={styles.headerTitle}>دليفري طرطوس</Text>
-            <Text style={styles.headerEyebrow}>لوحة التشغيل اليوم</Text>
-          </View>
+          <Text style={styles.headerEyebrow}>
+            {profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
+          </Text>
+          <Text style={styles.headerTitle}>دليفري طرطوس</Text>
         </View>
 
         <Pressable
@@ -783,9 +780,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F4F7FB",
     flexDirection: "row-reverse",
-    height: 62,
+    height: 56,
     justifyContent: "space-between",
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
   },
   neonDivider: {
     backgroundColor: "#15C8FF",
@@ -799,50 +796,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderColor: "#D9EBF8",
-    borderRadius: 14,
+    borderRadius: 15,
     borderWidth: 1,
     height: 34,
     justifyContent: "center",
     width: 34,
   },
-  headerBrand: {
-    alignItems: "center",
-    flex: 1,
-    flexDirection: "row-reverse",
-    justifyContent: "center",
-    paddingHorizontal: 8,
-  },
-  headerBrandMark: {
-    alignItems: "center",
-    backgroundColor: "#E9F7FF",
-    borderColor: "#B7E9FF",
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 28,
-    justifyContent: "center",
-    marginLeft: 8,
-    width: 28,
-  },
-  headerBrandText: { alignItems: "flex-start" },
+  headerBrand: { alignItems: "center", flex: 1, paddingHorizontal: 10 },
   headerEyebrow: {
     color: "#6F8A9D",
-    fontFamily: "Cairo_600SemiBold",
-    fontSize: 8,
-    lineHeight: 12,
+    fontSize: 9,
+    fontWeight: "700",
     writingDirection: "rtl",
   },
   headerTitle: {
     color: "#07488D",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: -1,
     writingDirection: "rtl",
   },
   headerRoundButton: {
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderColor: "#D9EBF8",
-    borderRadius: 14,
+    borderRadius: 15,
     borderWidth: 1,
     height: 34,
     justifyContent: "center",
