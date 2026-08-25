@@ -6,6 +6,7 @@ import {
   Alert,
   AppState,
   FlatList,
+  type LayoutChangeEvent,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -159,6 +160,14 @@ export function AdminHome() {
   }, [isBackOffice, refetch, scheduleRealtimeRefresh]);
 
   const createLedProgress = useSharedValue(0);
+  const createLedWidth = useSharedValue(0);
+  const createLedHeight = useSharedValue(0);
+  const handleCreateCardLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    createLedWidth.value = width;
+    createLedHeight.value = height;
+  };
+
   useEffect(() => {
     createLedProgress.value = withRepeat(
       withTiming(1, { duration: 5200, easing: Easing.linear }),
@@ -166,19 +175,113 @@ export function AdminHome() {
       false,
     );
   }, [createLedProgress]);
-  const createLedStyle = useAnimatedStyle(() => {
-    const progress = createLedProgress.value;
-    const x = interpolate(progress, [0, 0.25, 0.5, 0.75, 1], [16, 318, 338, 16, 16]);
-    const y = interpolate(progress, [0, 0.25, 0.5, 0.75, 1], [7, 7, 110, 110, 7]);
-    const rotation = interpolate(progress, [0, 0.25, 0.5, 0.75, 1], [0, 0, 90, 180, 270]);
+
+  const getLedPoint = (distance: number, width: number, height: number) => {
+    "worklet";
+    const inset = 2;
+    const innerWidth = Math.max(width - inset * 2, 1);
+    const innerHeight = Math.max(height - inset * 2, 1);
+    const radius = Math.min(18, innerWidth / 2, innerHeight / 2);
+    const horizontal = Math.max(innerWidth - radius * 2, 0);
+    const vertical = Math.max(innerHeight - radius * 2, 0);
+    const corner = (Math.PI * radius) / 2;
+    const perimeter = horizontal * 2 + vertical * 2 + corner * 4;
+    let travel = distance % perimeter;
+    const left = inset;
+    const right = inset + innerWidth;
+    const top = inset;
+    const bottom = inset + innerHeight;
+
+    if (travel <= horizontal) {
+      return { x: left + radius + travel, y: top, angle: 0, perimeter };
+    }
+    travel -= horizontal;
+    if (travel <= corner) {
+      const theta = -Math.PI / 2 + (travel / corner) * (Math.PI / 2);
+      return {
+        x: right - radius + radius * Math.cos(theta),
+        y: top + radius + radius * Math.sin(theta),
+        angle: theta + Math.PI / 2,
+        perimeter,
+      };
+    }
+    travel -= corner;
+    if (travel <= vertical) {
+      return { x: right, y: top + radius + travel, angle: Math.PI / 2, perimeter };
+    }
+    travel -= vertical;
+    if (travel <= corner) {
+      const theta = (travel / corner) * (Math.PI / 2);
+      return {
+        x: right - radius + radius * Math.cos(theta),
+        y: bottom - radius + radius * Math.sin(theta),
+        angle: theta + Math.PI / 2,
+        perimeter,
+      };
+    }
+    travel -= corner;
+    if (travel <= horizontal) {
+      return { x: right - radius - travel, y: bottom, angle: Math.PI, perimeter };
+    }
+    travel -= horizontal;
+    if (travel <= corner) {
+      const theta = Math.PI / 2 + (travel / corner) * (Math.PI / 2);
+      return {
+        x: left + radius + radius * Math.cos(theta),
+        y: bottom - radius + radius * Math.sin(theta),
+        angle: theta + Math.PI / 2,
+        perimeter,
+      };
+    }
+    travel -= corner;
+    if (travel <= vertical) {
+      return { x: left, y: bottom - radius - travel, angle: (Math.PI * 3) / 2, perimeter };
+    }
+    travel -= vertical;
+    const theta = Math.PI + (travel / corner) * (Math.PI / 2);
+    return {
+      x: left + radius + radius * Math.cos(theta),
+      y: top + radius + radius * Math.sin(theta),
+      angle: theta + Math.PI / 2,
+      perimeter,
+    };
+  };
+
+  const createLedDotStyle = useAnimatedStyle(() => {
+    if (!createLedWidth.value || !createLedHeight.value) return { opacity: 0 };
+    const point = getLedPoint(
+      createLedProgress.value * getLedPoint(0, createLedWidth.value, createLedHeight.value).perimeter,
+      createLedWidth.value,
+      createLedHeight.value,
+    );
+    return {
+      opacity: 1,
+      left: point.x - 5,
+      top: point.y - 5,
+    };
+  });
+
+  const createLedTailStyle = useAnimatedStyle(() => {
+    if (!createLedWidth.value || !createLedHeight.value) return { opacity: 0 };
+    const start = getLedPoint(0, createLedWidth.value, createLedHeight.value);
+    const currentDistance = createLedProgress.value * start.perimeter;
+    const point = getLedPoint(currentDistance, createLedWidth.value, createLedHeight.value);
+    const previous = getLedPoint(
+      (currentDistance - 34 + start.perimeter) % start.perimeter,
+      createLedWidth.value,
+      createLedHeight.value,
+    );
+    const dx = point.x - previous.x;
+    const dy = point.y - previous.y;
+    const length = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
 
     return {
-      opacity: interpolate(progress, [0, 0.02, 0.98, 1], [0, 1, 1, 0]),
-      transform: [
-        { translateX: x - 38 },
-        { translateY: y - 6 },
-        { rotate: `${rotation}deg` },
-      ],
+      opacity: 0.9,
+      left: (point.x + previous.x) / 2 - length / 2,
+      top: (point.y + previous.y) / 2 - 1,
+      width: length,
+      transform: [{ rotate: `${angle}deg` }],
     };
   });
 
@@ -366,6 +469,7 @@ export function AdminHome() {
 
             <Animated.View entering={FadeInDown.delay(150).duration(220)}>
               <Pressable
+                onLayout={handleCreateCardLayout}
                 onPress={() => {
                   setCreateError(null);
                   setCreateOpen(true);
@@ -380,11 +484,12 @@ export function AdminHome() {
                 >
                   <Animated.View
                     pointerEvents="none"
-                    style={[styles.createLedMarker, createLedStyle]}
-                  >
-                    <View style={styles.createLedTail} />
-                    <View style={styles.createLedDot} />
-                  </Animated.View>
+                    style={[styles.createLedTail, createLedTailStyle]}
+                  />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.createLedDot, createLedDotStyle]}
+                  />
                   <View style={styles.createIconWrap}>
                     <MaterialIcons name="add" size={26} color="#0C679D" />
                   </View>
@@ -826,9 +931,8 @@ const styles = StyleSheet.create({
   skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
   createCard: { borderColor: "rgba(84,222,255,0.62)", borderRadius: 20, borderWidth: 1, marginTop: 18, overflow: "hidden", shadowColor: "#16CEFF", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.28, shadowRadius: 16 },
   createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, overflow: "hidden", paddingHorizontal: 16, paddingVertical: 15, position: "relative" },
-  createLedMarker: { alignItems: "center", flexDirection: "row", height: 12, position: "absolute", width: 44 },
-  createLedTail: { backgroundColor: "rgba(167,246,255,0.34)", borderRadius: 3, height: 2, width: 34 },
-  createLedDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
+  createLedTail: { backgroundColor: "rgba(167,246,255,0.42)", borderRadius: 3, height: 2, position: "absolute" },
+  createLedDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
   createIconWrap: { alignItems: "center", backgroundColor: "#F5FDFF", borderColor: "rgba(137,240,255,0.8)", borderRadius: 17, borderWidth: 1, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
   createCopy: { flex: 1 },
   createKicker: { color: "rgba(231,248,255,0.72)", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
