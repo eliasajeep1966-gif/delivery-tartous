@@ -50,22 +50,13 @@ const config: ExpoConfig = {
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
-<<<<<<< HEAD
   extra: {
     supabaseUrl,
     supabasePublishableKey,
     eas: {
       projectId: "50bd336a-0524-45a8-a8e5-337b02b1828d",
     },
-=======
- extra: {
-  supabaseUrl,
-  supabasePublishableKey,
-  eas: {
-    projectId: "50bd336a-0524-45a8-a8e5-337b02b1828d",
->>>>>>> d3c5aa3 (Configure EAS mobile build)
   },
-},
 
   ios: {
     supportsTablet: true,

@@ -64,6 +64,7 @@ export function AdminNewOrderModal({
   ]);
   const [fee, setFee] = useState("");
   const [captainId, setCaptainId] = useState("");
+  const [step, setStep] = useState(1);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const reset = () => {
@@ -71,6 +72,7 @@ export function AdminNewOrderModal({
     setDestinations([blankLocation(`delivery-${sequence.current++}`)]);
     setFee("");
     setCaptainId("");
+    setStep(1);
     setValidationError(null);
   };
 
@@ -78,6 +80,46 @@ export function AdminNewOrderModal({
     if (isSubmitting) return;
     reset();
     onClose();
+  };
+
+  const validateLocations = (
+    locations: LocationEntry[],
+    type: "pickup" | "delivery",
+    label: string,
+  ) => {
+    try {
+      normalizeLocations(locations, type, label);
+      setValidationError(null);
+      return true;
+    } catch (error) {
+      setValidationError(
+        error instanceof Error
+          ? error.message
+          : "تحقق من بيانات المحطة قبل المتابعة.",
+      );
+      return false;
+    }
+  };
+
+  const nextStep = () => {
+    if (isSubmitting) return;
+    if (
+      step === 1 &&
+      !validateLocations(pickups, "pickup", "مصدر الاستلام")
+    )
+      return;
+    if (
+      step === 2 &&
+      !validateLocations(destinations, "delivery", "وجهة التوصيل")
+    )
+      return;
+    setStep((current) => Math.min(current + 1, 3));
+  };
+
+  const previousStep = () => {
+    if (isSubmitting) return;
+    setValidationError(null);
+    setStep((current) => Math.max(current - 1, 1));
   };
 
   const submit = async () => {
@@ -140,11 +182,11 @@ export function AdminNewOrderModal({
         </View>
 
         <View style={styles.routeSteps}>
-          <RouteStep number="1" label="الاستلام" active />
-          <View style={styles.routeConnector} />
-          <RouteStep number="2" label="التوصيل" />
-          <View style={styles.routeConnector} />
-          <RouteStep number="3" label="التعيين" />
+          <RouteStep number="1" label="مصدر الاستلام" active={step === 1} complete={step > 1} />
+          <View style={[styles.routeConnector, step > 1 && styles.routeConnectorComplete]} />
+          <RouteStep number="2" label="وجهة التوصيل" active={step === 2} complete={step > 2} />
+          <View style={[styles.routeConnector, step > 2 && styles.routeConnectorComplete]} />
+          <RouteStep number="3" label="التعيين" active={step === 3} />
         </View>
 
         <ScrollView
@@ -153,97 +195,106 @@ export function AdminNewOrderModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <LocationSection
-              title="مصادر الاستلام"
-              description="المكان الذي سيستلم منه الكابتن الطلب"
-              type="pickup"
-              locations={pickups}
-              disabled={isSubmitting}
-              setLocations={setPickups}
-              nextId={() => `pickup-${sequence.current++}`}
-            />
-            <LocationSection
-              title="وجهات التسليم"
-              description="المكان الذي ستصل إليه الطلبية"
-              type="delivery"
-              locations={destinations}
-              disabled={isSubmitting}
-              setLocations={setDestinations}
-              nextId={() => `delivery-${sequence.current++}`}
-            />
-
-            <View style={styles.formCard}>
-              <SectionTitle
-                icon="payments"
-                color="#A16207"
-                background="#FFF4D9"
-                title="أجرة الطلب كاملة"
-                subtitle="الأجرة الإجمالية للطلب بالكامل"
+            {step === 1 ? (
+              <LocationSection
+                title="مصدر الاستلام"
+                description="المكان الذي سيستلم منه الكابتن الطلب"
+                type="pickup"
+                locations={pickups}
+                disabled={isSubmitting}
+                setLocations={setPickups}
+                nextId={() => `pickup-${sequence.current++}`}
               />
-              <View style={styles.moneyInputWrap}>
-                <TextInput
-                  editable={!isSubmitting}
-                  value={fee}
-                  onChangeText={setFee}
-                  keyboardType="decimal-pad"
-                  placeholder="مثال: 25000"
-                  placeholderTextColor="#8A98A6"
-                  style={styles.moneyInput}
-                  textAlign="right"
-                />
-                <Text style={styles.currency}>ل.س</Text>
-              </View>
-            </View>
+            ) : null}
 
-            <View style={styles.formCard}>
-              <SectionTitle
-                icon="person"
-                color="#047857"
-                background="#E0FAEF"
-                title="اختيار الكابتن"
-                subtitle="تظهر الكباتن المفعّلة والمتاحة فقط"
+            {step === 2 ? (
+              <LocationSection
+                title="وجهة التوصيل"
+                description="المكان الذي ستصل إليه الطلبية"
+                type="delivery"
+                locations={destinations}
+                disabled={isSubmitting}
+                setLocations={setDestinations}
+                nextId={() => `delivery-${sequence.current++}`}
               />
-              {captains.length ? (
-                <View style={styles.captainGrid}>
-                  {captains.map((captain) => (
-                    <Pressable
-                      key={captain.id}
-                      disabled={isSubmitting}
-                      onPress={() => setCaptainId(captain.id)}
-                      style={[
-                        styles.captain,
-                        captainId === captain.id && styles.captainSelected,
-                      ]}
-                    >
-                      <View style={styles.captainTextRow}>
-                        <View style={styles.availableDot} />
-                        <Text
-                          numberOfLines={1}
+            ) : null}
+
+            {step === 3 ? (
+              <>
+                <View style={styles.formCard}>
+                  <SectionTitle
+                    icon="payments"
+                    color="#A16207"
+                    background="#FFF4D9"
+                    title="أجرة الطلب كاملة"
+                    subtitle="الأجرة الإجمالية للطلب بالكامل"
+                  />
+                  <View style={styles.moneyInputWrap}>
+                    <TextInput
+                      editable={!isSubmitting}
+                      value={fee}
+                      onChangeText={setFee}
+                      keyboardType="decimal-pad"
+                      placeholder="مثال: 25000"
+                      placeholderTextColor="#8A98A6"
+                      style={styles.moneyInput}
+                      textAlign="right"
+                    />
+                    <Text style={styles.currency}>ل.س</Text>
+                  </View>
+                </View>
+
+                <View style={styles.formCard}>
+                  <SectionTitle
+                    icon="person"
+                    color="#047857"
+                    background="#E0FAEF"
+                    title="تعيين الكابتن"
+                    subtitle="تظهر الكباتن المفعّلة والمتاحة فقط"
+                  />
+                  {captains.length ? (
+                    <View style={styles.captainGrid}>
+                      {captains.map((captain) => (
+                        <Pressable
+                          key={captain.id}
+                          disabled={isSubmitting}
+                          onPress={() => setCaptainId(captain.id)}
                           style={[
-                            styles.captainText,
-                            captainId === captain.id &&
-                              styles.captainTextSelected,
+                            styles.captain,
+                            captainId === captain.id && styles.captainSelected,
                           ]}
                         >
-                          {captain.name}
-                        </Text>
-                      </View>
-                      <MaterialIcons
-                        name={
-                          captainId === captain.id
-                            ? "check-circle"
-                            : "radio-button-unchecked"
-                        }
-                        size={19}
-                        color={captainId === captain.id ? "#0878D1" : "#A2B5C3"}
-                      />
-                    </Pressable>
-                  ))}
+                          <View style={styles.captainTextRow}>
+                            <View style={styles.availableDot} />
+                            <Text
+                              numberOfLines={1}
+                              style={[
+                                styles.captainText,
+                                captainId === captain.id &&
+                                  styles.captainTextSelected,
+                              ]}
+                            >
+                              {captain.name}
+                            </Text>
+                          </View>
+                          <MaterialIcons
+                            name={
+                              captainId === captain.id
+                                ? "check-circle"
+                                : "radio-button-unchecked"
+                            }
+                            size={19}
+                            color={captainId === captain.id ? "#0878D1" : "#A2B5C3"}
+                          />
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.empty}>لا يوجد كابتن متاح حالياً.</Text>
+                  )}
                 </View>
-              ) : (
-                <Text style={styles.empty}>لا يوجد كابتن متاح حالياً.</Text>
-              )}
-            </View>
+              </>
+            ) : null}
           </ScrollView>
 
           <View style={styles.footer}>
@@ -252,27 +303,47 @@ export function AdminNewOrderModal({
                 {validationError ?? errorMessage}
               </Text>
             ) : null}
-            <Pressable
-              disabled={isSubmitting || captains.length === 0}
-              onPress={() => void submit()}
-              style={[
-                styles.submit,
-                (isSubmitting || captains.length === 0) && styles.disabled,
-              ]}
-            >
-              <LinearGradient
-                colors={["#063B78", "#0878D1", "#0CBDF2"]}
-                start={{ x: 1, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={styles.submitGradient}
+            <View style={styles.footerActions}>
+              {step > 1 ? (
+                <Pressable
+                  disabled={isSubmitting}
+                  onPress={previousStep}
+                  style={[styles.backButton, isSubmitting && styles.disabled]}
+                >
+                  <MaterialIcons name="arrow-forward" size={17} color="#0878D1" />
+                  <Text style={styles.backButtonText}>السابق</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                disabled={isSubmitting || (step === 3 && captains.length === 0)}
+                onPress={() => (step === 3 ? void submit() : nextStep())}
+                style={[
+                  styles.submit,
+                  (isSubmitting || (step === 3 && captains.length === 0)) &&
+                    styles.disabled,
+                ]}
               >
-                <MaterialIcons name="send" size={18} color="#FFFFFF" />
-                <Text style={styles.submitText}>
-                  {isSubmitting ? "جارٍ إنشاء الطلب..." : "إرسال الطلبية"}
-                </Text>
-                <MaterialIcons name="arrow-back" size={17} color="rgba(255,255,255,0.8)" />
-              </LinearGradient>
-            </Pressable>
+                <LinearGradient
+                  colors={["#063B78", "#0878D1", "#0CBDF2"]}
+                  start={{ x: 1, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={styles.submitGradient}
+                >
+                  <MaterialIcons
+                    name={step === 3 ? "send" : "arrow-back"}
+                    size={18}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.submitText}>
+                    {step === 3
+                      ? isSubmitting
+                        ? "جارٍ إنشاء الطلب..."
+                        : "إرسال الطلبية"
+                      : "التالي"}
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -430,19 +501,39 @@ function RouteStep({
   number,
   label,
   active = false,
+  complete = false,
 }: {
   number: string;
   label: string;
   active?: boolean;
+  complete?: boolean;
 }) {
   return (
     <View style={styles.routeStep}>
-      <View style={[styles.routeNumber, active && styles.routeNumberActive]}>
-        <Text style={[styles.routeNumberText, active && styles.routeNumberTextActive]}>
-          {number}
-        </Text>
+      <View
+        style={[
+          styles.routeNumber,
+          active && styles.routeNumberActive,
+          complete && styles.routeNumberComplete,
+        ]}
+      >
+        {complete ? (
+          <MaterialIcons name="check" size={13} color="#FFFFFF" />
+        ) : (
+          <Text style={[styles.routeNumberText, active && styles.routeNumberTextActive]}>
+            {number}
+          </Text>
+        )}
       </View>
-      <Text style={[styles.routeLabel, active && styles.routeLabelActive]}>{label}</Text>
+      <Text
+        style={[
+          styles.routeLabel,
+          active && styles.routeLabelActive,
+          complete && styles.routeLabelComplete,
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -530,11 +621,14 @@ const styles = StyleSheet.create({
   routeStep: { alignItems: "center", gap: 3 },
   routeNumber: { alignItems: "center", backgroundColor: "#EDF4F8", borderRadius: 10, height: 20, justifyContent: "center", width: 20 },
   routeNumberActive: { backgroundColor: "#0878D1" },
+  routeNumberComplete: { backgroundColor: "#18A775" },
   routeNumberText: { color: "#6D8799", fontFamily: "Cairo_700Bold", fontSize: 10 },
   routeNumberTextActive: { color: "#FFFFFF" },
   routeLabel: { color: "#8399A8", fontFamily: "Cairo_700Bold", fontSize: 9, writingDirection: "rtl" },
   routeLabelActive: { color: "#0878D1" },
+  routeLabelComplete: { color: "#15916C" },
   routeConnector: { backgroundColor: "#D8E8F2", height: 1, marginBottom: 16, marginHorizontal: 8, width: 46 },
+  routeConnectorComplete: { backgroundColor: "#18A775" },
   content: { gap: 10, padding: 14, paddingBottom: 16 },
   formCard: {
     backgroundColor: "#FFFFFF",
@@ -698,7 +792,10 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   footer: { backgroundColor: "#FFFFFF", borderTopColor: "#E0EDF6", borderTopWidth: 1, gap: 8, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 14 },
-  submit: { borderRadius: 15, overflow: "hidden" },
+  footerActions: { alignItems: "center", flexDirection: "row-reverse", gap: 9 },
+  backButton: { alignItems: "center", backgroundColor: "#F0F8FE", borderColor: "#BCE3FA", borderRadius: 15, borderWidth: 1, flexDirection: "row-reverse", gap: 4, height: 52, justifyContent: "center", paddingHorizontal: 14 },
+  backButtonText: { color: "#0878D1", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
+  submit: { borderRadius: 15, flex: 1, overflow: "hidden" },
   submitGradient: { alignItems: "center", borderColor: "rgba(133,239,255,0.65)", borderRadius: 15, borderWidth: 1, flexDirection: "row-reverse", gap: 8, height: 52, justifyContent: "center" },
   submitText: {
     color: "#FFFFFF",
