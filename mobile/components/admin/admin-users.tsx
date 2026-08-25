@@ -277,7 +277,10 @@ export function AdminUsers() {
           <UserCard
             user={item}
             canChangeRole={isAdmin}
-            canToggle={isAdmin || item.role === "captain"}
+            canToggle={
+              item.role === "captain"
+              || (isAdmin && item.role === "supervisor")
+            }
             disabled={users.isMutating}
             onToggle={() => toggle(item)}
             onChangeRole={() => setRoleUser(item)}
