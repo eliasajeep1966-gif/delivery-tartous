@@ -12,6 +12,7 @@ import {
   type WebProfile,
 } from '@/data/supabase/webSupabaseContract';
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
+import { useRealtimeRefresh } from '@/lib/useRealtimeRefresh';
 
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل بيانات الطلبات بعد 15 ثانية. حاول مرة أخرى.';
 type ReloadOptions = { background?: boolean; force?: boolean };
@@ -190,6 +191,16 @@ export function useAvailableCaptains(): AvailableCaptainsData {
     const availabilityByCaptainId = new Map(captainStatuses.map((item) => [item.captain_id, item.availability]));
     return profiles.filter((profile) => profile.role === 'captain' && profile.is_active && availabilityByCaptainId.get(profile.id) === 'available').map((profile) => ({ id: profile.id, name: profileDisplayName(profile), initial: profileDisplayName(profile).slice(0, 1), availability: 'available' as const }));
   }, [captainStatuses, profiles]);
+
+  useRealtimeRefresh({
+    enabled: true,
+    channelName: 'available-captains',
+    targets: [
+      { table: 'captain_status' },
+      { table: 'profiles', event: 'UPDATE' },
+    ],
+    onRefresh: () => void reload({ background: true, force: true }),
+  });
   const createOrderWithStops = useCallback((input: CreateOrderWithStopsInput) => withWebRequestTimeout(webSupabase.actions.createOrderWithStops(input), 'انتهت مهلة إنشاء الطلب بعد 15 ثانية. تحقّق من قائمة الطلبات قبل إعادة الإرسال.'), []);
   const assignOrderCaptain = useCallback((orderId: string, captainId: string) => withWebRequestTimeout(webSupabase.actions.assignOrderCaptain(orderId, captainId), 'انتهت مهلة تعيين الكابتن بعد 15 ثانية. تحقّق من حالة الطلب قبل إعادة المحاولة.'), []);
   return { availableCaptains, isInitialLoading, hasLoaded, readError, reload, createOrderWithStops, assignOrderCaptain };

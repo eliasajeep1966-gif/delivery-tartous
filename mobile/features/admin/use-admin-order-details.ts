@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
+
 import { type AdminOrderStatus } from "@/lib/admin/admin-home-mappers";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 
@@ -63,5 +65,20 @@ export function useAdminOrderDetails(orderId: string | null) {
 }
 
 export function useAvailableCaptains(enabled: boolean) {
-  return useQuery({ queryKey: ["admin-available-captains"], queryFn: loadAvailableCaptains, enabled, staleTime: 30_000, retry: 1 });
+  const query = useQuery({
+    queryKey: ["admin-available-captains"],
+    queryFn: loadAvailableCaptains,
+    enabled,
+    staleTime: 0,
+    refetchOnMount: true,
+    retry: 1,
+  });
+
+  useRealtimeOrders({
+    enabled,
+    onCaptain: () => void query.refetch(),
+    onProfile: () => void query.refetch(),
+  });
+
+  return query;
 }
