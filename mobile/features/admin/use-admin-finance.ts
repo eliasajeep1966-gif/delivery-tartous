@@ -227,6 +227,48 @@ export function useNativeCompanyProfitHistory(period: NativeFinancePeriod) {
   });
 }
 
+const COMPANY_PROFIT_HISTORY_PAGE_SIZE = 30;
+
+export function useNativeFullCompanyProfitHistory() {
+  const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
+  const query = useInfiniteQuery({
+    queryKey: ["admin-company-profit-full-history", period],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      nativeAdminFinanceContract.reads.companyProfitPeriodHistory({
+        period,
+        beforePeriodStart: pageParam,
+        limit: COMPANY_PROFIT_HISTORY_PAGE_SIZE,
+      }),
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length !== COMPANY_PROFIT_HISTORY_PAGE_SIZE) {
+        return undefined;
+      }
+      return lastPage.at(-1)?.period_start;
+    },
+    staleTime: 20_000,
+    retry: 1,
+  });
+
+  const changePeriod = useCallback((next: NativeFinancePeriod) => {
+    setPeriod(next);
+  }, []);
+  const loadMore = useCallback(() => {
+    if (query.hasNextPage && !query.isFetchingNextPage) {
+      void query.fetchNextPage();
+    }
+  }, [query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
+
+  return {
+    ...query,
+    data: query.data?.pages.flat() ?? [],
+    period,
+    changePeriod,
+    loadMore,
+    hasMore: Boolean(query.hasNextPage),
+  };
+}
+
 export function useNativeCaptainWageDetails(captainId: string | null) {
   return useQuery({
     queryKey: ["admin-wage-details", captainId],

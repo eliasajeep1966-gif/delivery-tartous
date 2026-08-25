@@ -122,6 +122,25 @@ export function AdminCompanyWages() {
           <Text style={styles.title}>سجل الأرباح حسب التاريخ</Text>
           <Text style={styles.badge}>{rows.length} فترات</Text>
         </View>
+        <Pressable
+          accessibilityLabel="فتح سجل أرباح الشركة الكامل"
+          onPress={() => router.push("/company-profit-history" as never)}
+          style={({ pressed }) => [
+            styles.fullHistoryButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.fullHistoryCopy}>
+            <Text style={styles.fullHistoryTitle}>عرض السجل الكامل</Text>
+            <Text style={styles.fullHistoryText}>
+              استعرض فترات أقدم مع تحميل متدرج.
+            </Text>
+          </View>
+          <View style={styles.fullHistoryIcon}>
+            <MaterialIcons name="history" size={19} color={BLUE} />
+          </View>
+          <MaterialIcons name="arrow-back" size={19} color={BLUE} />
+        </Pressable>
         {history.isPending ? (
           <Message text="جارٍ تحميل سجل الأرباح..." />
         ) : history.error ? (
@@ -260,6 +279,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
+  fullHistoryButton: {
+    alignItems: "center",
+    backgroundColor: "#EAF6FF",
+    borderColor: "#A7D8FF",
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 10,
+    minHeight: 64,
+    paddingHorizontal: 13,
+  },
+  fullHistoryIcon: {
+    alignItems: "center",
+    backgroundColor: "#D7EEFF",
+    borderRadius: 11,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  fullHistoryCopy: { alignItems: "flex-end", flex: 1 },
+  fullHistoryTitle: { color: "#00569F", fontSize: 13, fontWeight: "800" },
+  fullHistoryText: {
+    color: "#51728A",
+    fontSize: 10,
+    marginTop: 3,
+    textAlign: "right",
+  },
+  pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   row: {
     backgroundColor: "#FFF",
     borderColor: "#D3E3F0",
