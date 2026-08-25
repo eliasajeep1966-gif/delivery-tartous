@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Alert,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
@@ -154,7 +154,7 @@ export function AdminWages() {
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
       <View style={styles.header}>
-        <Pressable
+        <MotionPressable
           onPress={() => {
             if (router.canGoBack()) {
               router.back();
@@ -165,7 +165,7 @@ export function AdminWages() {
           style={styles.backButton}
         >
           <MaterialIcons name="arrow-forward" size={21} color="#0878D1" />
-        </Pressable>
+        </MotionPressable>
         <View style={styles.headerText}>
           <Text style={styles.headerEyebrow}>متابعة الأجور والدفعات</Text>
           <Text style={styles.headerTitle}>أجور الكباتن</Text>
@@ -203,7 +203,7 @@ export function AdminWages() {
         </View>
         <View style={styles.periods}>
           {(["daily", "weekly", "monthly"] as const).map((value) => (
-            <Pressable
+            <MotionPressable
               key={value}
               onPress={() => wagePeriods.changePeriod(value)}
               style={[
@@ -223,7 +223,7 @@ export function AdminWages() {
                     ? "أسبوعي"
                     : "شهري"}
               </Text>
-            </Pressable>
+            </MotionPressable>
           ))}
         </View>
         {options.length > 0 ? (
@@ -233,7 +233,7 @@ export function AdminWages() {
             contentContainerStyle={styles.dateOptions}
           >
             {options.map((row) => (
-              <Pressable
+              <MotionPressable
                 key={row.period_start}
                 onPress={() => setSelectedPeriodStart(row.period_start)}
                 style={[
@@ -250,7 +250,7 @@ export function AdminWages() {
                 >
                   {periodLabel(wagePeriods.period, row)}
                 </Text>
-              </Pressable>
+              </MotionPressable>
             ))}
           </ScrollView>
         ) : null}
@@ -286,7 +286,7 @@ export function AdminWages() {
             color={BLUE}
           />
         </View>
-        <Pressable
+        <MotionPressable
           onPress={() => router.push("/company-wages" as never)}
           style={styles.companyCard}
         >
@@ -300,7 +300,7 @@ export function AdminWages() {
             </Text>
           </View>
           <MaterialIcons name="arrow-back" size={21} color={BLUE} />
-        </Pressable>
+        </MotionPressable>
         <View style={styles.sectionHeading}>
           <Text style={styles.sectionTitle}>
             سجلات الكباتن — {selectedLabel}
@@ -312,7 +312,7 @@ export function AdminWages() {
         ) : null}
         {selectedRows.map((captain) => (
           <View key={captain.captain_id} style={styles.captainCard}>
-            <Pressable
+            <MotionPressable
               onPress={() =>
                 router.push({
                   pathname: "/captain-wage-detail" as never,
@@ -333,7 +333,7 @@ export function AdminWages() {
                 </Text>
               </View>
               <MaterialIcons name="chevron-left" size={22} color="#75818E" />
-            </Pressable>
+            </MotionPressable>
             <View style={styles.amountGrid}>
               <Amount label="مجموع الأجور" value={captain.gross_total} />
               <Amount
@@ -376,7 +376,7 @@ export function AdminWages() {
                 style={styles.paymentInput}
                 textAlign="right"
               />
-              <Pressable
+              <MotionPressable
                 disabled={
                   captain.unpaid_total <= 0 ||
                   payingCaptainId === captain.captain_id
@@ -394,18 +394,18 @@ export function AdminWages() {
                     ? "جارٍ التسجيل..."
                     : "تسليم دفعة"}
                 </Text>
-              </Pressable>
+              </MotionPressable>
             </View>
           </View>
         ))}
         {wagePeriods.hasMore ? (
-          <Pressable
+          <MotionPressable
             onPress={wagePeriods.loadMore}
             disabled={wagePeriods.isFetching}
             style={styles.loadMore}
           >
             <Text style={styles.loadMoreText}>تحميل فترات أقدم</Text>
-          </Pressable>
+          </MotionPressable>
         ) : null}
       </ScrollView>
       <WageDetails
@@ -441,9 +441,9 @@ function WageDetails({
     <View style={styles.detailPanel}>
       <View style={styles.detailHeading}>
         <Text style={styles.sectionTitle}>كشف {captain.captain_name}</Text>
-        <Pressable onPress={onClose}>
+        <MotionPressable onPress={onClose}>
           <MaterialIcons name="close" size={20} color="#52616B" />
-        </Pressable>
+        </MotionPressable>
       </View>
       {loading ? (
         <Text style={styles.muted}>جارٍ تحميل تفاصيل الطلبات...</Text>

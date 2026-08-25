@@ -1,11 +1,12 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import {
   Alert,
   Linking,
   Modal,
-  Pressable,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -114,24 +116,24 @@ export function CaptainHome() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topBar}>
-          <Pressable
+          <MotionPressable
             onPress={() =>
               Alert.alert("المساعدة", "تواصل مع الإدارة عند الحاجة.")
             }
             style={styles.iconButton}
           >
             <MaterialIcons name="info-outline" size={20} color={BLUE} />
-          </Pressable>
+          </MotionPressable>
           <View style={styles.brand}>
             <Text style={styles.brandTitle}>دليفري طرطوس</Text>
             <Text style={styles.brandSubtitle}>حساب الكابتن</Text>
           </View>
-          <Pressable
+          <MotionPressable
             onPress={() => router.push("/(tabs)/settings")}
             style={styles.iconButton}
           >
             <MaterialIcons name="settings" size={20} color={BLUE} />
-          </Pressable>
+          </MotionPressable>
         </View>
         <View style={styles.header}>
           <View>
@@ -140,9 +142,9 @@ export function CaptainHome() {
               تابع طلبك الحالي وحالة التوفر من مكان واحد.
             </Text>
           </View>
-          <Pressable onPress={() => void signOut()} style={styles.iconButton}>
+          <MotionPressable onPress={() => void signOut()} style={styles.iconButton}>
             <MaterialIcons name="logout" size={19} color={BLUE} />
-          </Pressable>
+          </MotionPressable>
         </View>
         {dashboard.loading ? (
           <StateCard text="جارٍ تحميل حسابك..." />
@@ -171,11 +173,14 @@ export function CaptainHome() {
               <Switch
                 value={available}
                 disabled={dashboard.availabilitySaving}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
+                  if (Platform.OS !== "web") {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  }
                   void dashboard.updateAvailability(
                     value ? "available" : "unavailable",
-                  )
-                }
+                  );
+                }}
                 trackColor={{ false: "#D8E7EE", true: BLUE }}
                 thumbColor="#FFFFFF"
               />
@@ -215,7 +220,7 @@ export function CaptainHome() {
                     </Text>
                   ) : null}
                   {action ? (
-                    <Pressable
+                    <MotionPressable
                       disabled={dashboard.orderSaving}
                       onPress={() => void advance()}
                       style={styles.primaryButton}
@@ -225,17 +230,17 @@ export function CaptainHome() {
                           ? "جارٍ التحديث..."
                           : action.label}
                       </Text>
-                    </Pressable>
+                    </MotionPressable>
                   ) : null}
                   {current.status === "received" ||
                   current.status === "in_delivery" ? (
-                    <Pressable
+                    <MotionPressable
                       disabled={dashboard.orderSaving}
                       onPress={() => setFalseOrderOpen(true)}
                       style={styles.dangerButton}
                     >
                       <Text style={styles.dangerText}>تسجيل طلب كاذب</Text>
-                    </Pressable>
+                    </MotionPressable>
                   ) : null}
                 </View>
               ) : (
@@ -305,13 +310,13 @@ export function CaptainHome() {
               التوصيل، ولا يمكن التراجع عن العملية.
             </Text>
             <View style={styles.modalActions}>
-              <Pressable
+              <MotionPressable
                 onPress={() => setFalseOrderOpen(false)}
                 style={styles.cancelButton}
               >
                 <Text style={styles.cancelText}>إلغاء</Text>
-              </Pressable>
-              <Pressable
+              </MotionPressable>
+              <MotionPressable
                 disabled={dashboard.orderSaving}
                 onPress={() => void markFalse()}
                 style={styles.dangerButton}
@@ -321,7 +326,7 @@ export function CaptainHome() {
                     ? "جارٍ الحفظ..."
                     : "تأكيد الطلب الكاذب"}
                 </Text>
-              </Pressable>
+              </MotionPressable>
             </View>
           </View>
         </View>
@@ -401,9 +406,9 @@ function StopCard({
         الاسم: {stop?.contact_name || "غير متاح"}
       </Text>
       {stop?.contact_phone ? (
-        <Pressable onPress={() => onCall(stop.contact_phone)}>
+        <MotionPressable onPress={() => onCall(stop.contact_phone)}>
           <Text style={styles.phone}>{stop.contact_phone}</Text>
-        </Pressable>
+        </MotionPressable>
       ) : null}
       <Text style={styles.detail}>العنوان: {stop?.address || fallback}</Text>
       {stop?.note ? <Text style={styles.note}>{stop.note}</Text> : null}
@@ -432,9 +437,9 @@ function StateCard({ text, retry }: { text: string; retry?: () => void }) {
     <View style={styles.state}>
       <Text style={styles.stateText}>{text}</Text>
       {retry ? (
-        <Pressable onPress={retry}>
+        <MotionPressable onPress={retry}>
           <Text style={styles.link}>إعادة المحاولة</Text>
-        </Pressable>
+        </MotionPressable>
       ) : null}
     </View>
   );

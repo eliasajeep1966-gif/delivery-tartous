@@ -97,7 +97,11 @@ function AuthAwareNavigator() {
     <View style={styles.navigator}>
       <Stack
         initialRouteName="login"
-        screenOptions={{ headerShown: false, animation: "slide_from_left" }}
+        screenOptions={{
+          headerShown: false,
+          animation: "fade_from_bottom",
+          animationDuration: 220,
+        }}
       >
         <Stack.Screen name="login" />
         <Stack.Screen name="activate-account" />

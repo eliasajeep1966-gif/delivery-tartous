@@ -7,7 +7,6 @@ import {
   AppState,
   FlatList,
   type LayoutChangeEvent,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text as NativeText,
@@ -28,6 +27,7 @@ import {
   type NativeNewOrderDraft,
 } from "@/components/admin/admin-new-order-modal";
 import { ScreenContainer } from "@/components/screen-container";
+import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -350,13 +350,13 @@ export function AdminHome() {
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
       <View style={styles.header}>
-        <Pressable
+        <MotionPressable
           onPress={() => router.push("/account-settings" as Href)}
           style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
           accessibilityLabel="إعدادات الحساب"
         >
           <MaterialIcons name="account-circle" size={22} color="#0878D1" />
-        </Pressable>
+        </MotionPressable>
 
         <View style={styles.headerBrand}>
           <Text style={styles.headerEyebrow}>
@@ -365,14 +365,14 @@ export function AdminHome() {
           <Text style={styles.headerTitle}>دليفري طرطوس</Text>
         </View>
 
-        <Pressable
+        <MotionPressable
           onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
           style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
           accessibilityLabel="الإشعارات"
         >
           <MaterialIcons name="notifications-none" size={20} color="#0878D1" />
           <View style={styles.notificationDot} />
-        </Pressable>
+        </MotionPressable>
       </View>
       <View style={styles.neonDivider} />
 
@@ -428,12 +428,12 @@ export function AdminHome() {
                       : "تعذر تحميل لوحة الإدارة."}
                   </Text>
                 </View>
-                <Pressable
+                <MotionPressable
                   onPress={() => void home.refetch()}
                   style={({ pressed }) => [styles.retryButton, pressed && styles.smallPressed]}
                 >
                   <MaterialIcons name="refresh" size={16} color="#0878D1" />
-                </Pressable>
+                </MotionPressable>
               </Animated.View>
             ) : null}
 
@@ -442,13 +442,13 @@ export function AdminHome() {
                 <Text style={styles.overline}>لقطة تشغيلية</Text>
                 <Text style={styles.metricsTitle}>حركة الطلبات اليوم</Text>
               </View>
-              <Pressable
+              <MotionPressable
                 onPress={openOrders}
                 style={({ pressed }) => [styles.viewOrdersButton, pressed && styles.smallPressed]}
               >
                 <Text style={styles.viewOrdersText}>كل الطلبات</Text>
                 <MaterialIcons name="arrow-back" size={14} color="#0878D1" />
-              </Pressable>
+              </MotionPressable>
             </View>
 
             <View style={styles.metricGrid}>
@@ -467,7 +467,7 @@ export function AdminHome() {
             </View>
 
             <Animated.View entering={FadeInDown.delay(150).duration(220)}>
-              <Pressable
+              <MotionPressable
                 onLayout={handleCreateCardLayout}
                 onPress={() => {
                   setCreateError(null);
@@ -505,7 +505,7 @@ export function AdminHome() {
                   </View>
                   <MaterialIcons name="arrow-back" size={21} color="rgba(255,255,255,0.88)" />
                 </LinearGradient>
-              </Pressable>
+              </MotionPressable>
             </Animated.View>
 
             <SectionHeading
@@ -554,7 +554,7 @@ export function AdminHome() {
                   entering={FadeInDown.delay(Math.min(index * 35, 175)).duration(180)}
                   layout={Layout.duration(180)}
                 >
-                  <Pressable
+                  <MotionPressable
                     onPress={() => router.push("/(tabs)/captains" as Href)}
                     style={({ pressed }) => [styles.captainItem, pressed && styles.captainPressed]}
                   >
@@ -566,7 +566,7 @@ export function AdminHome() {
                       {item.name}
                     </Text>
                     <Text style={styles.captainAvailability}>متاح الآن</Text>
-                  </Pressable>
+                  </MotionPressable>
                 </Animated.View>
               )}
               ListEmptyComponent={
@@ -659,7 +659,7 @@ function MetricCard({
       layout={Layout.duration(180)}
       style={styles.metricAnimatedWrap}
     >
-      <Pressable
+      <MotionPressable
         onPress={onPress}
         style={({ pressed }) => [
           styles.metricCard,
@@ -684,7 +684,7 @@ function MetricCard({
         <Text style={[styles.metricLabel, highlighted && styles.metricLabelHighlight]}>
           {metric.label}
         </Text>
-      </Pressable>
+      </MotionPressable>
     </Animated.View>
   );
 }
@@ -704,7 +704,7 @@ function ActivityRow({
       entering={FadeInDown.delay(Math.min(80 + index * 35, 260)).duration(180)}
       layout={Layout.duration(180)}
     >
-      <Pressable
+      <MotionPressable
         onPress={onPress}
         style={({ pressed }) => [
           styles.activityCard,
@@ -741,7 +741,7 @@ function ActivityRow({
           </View>
         </View>
         <MaterialIcons name="chevron-left" size={19} color="#8EAABB" />
-      </Pressable>
+      </MotionPressable>
     </Animated.View>
   );
 }
@@ -763,14 +763,14 @@ function SectionHeading({
         <Text style={styles.sectionTitle}>{title}</Text>
         <Text style={styles.sectionSubtitle}>{subtitle}</Text>
       </View>
-      <Pressable
+      <MotionPressable
         onPress={onPress}
         hitSlop={8}
         style={({ pressed }) => [styles.sectionAction, pressed && styles.smallPressed]}
       >
         <Text style={styles.sectionActionText}>{action}</Text>
         <MaterialIcons name="arrow-back" size={13} color="#0878D1" />
-      </Pressable>
+      </MotionPressable>
     </View>
   );
 }

@@ -2,7 +2,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Linking,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useNativeCaptainDashboard } from "@/features/captain/use-native-captain-dashboard";
 import {
@@ -67,13 +67,13 @@ export function CaptainOrders() {
               <View>
                 <Text style={styles.muted}>الطلب #{order.order_number}</Text>
                 <Text style={styles.title}>{order.customer_name}</Text>
-                <Pressable
+                <MotionPressable
                   onPress={() =>
                     void Linking.openURL(`tel:${order.customer_phone}`)
                   }
                 >
                   <Text style={styles.phone}>{order.customer_phone}</Text>
-                </Pressable>
+                </MotionPressable>
               </View>
               <View style={styles.left}>
                 <Text style={styles.badge}>{order.status}</Text>
@@ -143,7 +143,7 @@ export function CaptainWages() {
     >
       <View style={styles.periods}>
         {(["daily", "weekly", "monthly"] as const).map((value) => (
-          <Pressable
+          <MotionPressable
             key={value}
             onPress={() => setPeriod(value)}
             style={[styles.period, period === value && styles.periodActive]}
@@ -160,7 +160,7 @@ export function CaptainWages() {
                   ? "أسبوعي"
                   : "شهري"}
             </Text>
-          </Pressable>
+          </MotionPressable>
         ))}
       </View>
       {error ? (
@@ -466,7 +466,7 @@ function Button({
   danger?: boolean;
 }) {
   return (
-    <Pressable
+    <MotionPressable
       onPress={onPress}
       disabled={disabled}
       style={[
@@ -478,7 +478,7 @@ function Button({
       <Text style={[styles.buttonText, danger && styles.buttonDangerText]}>
         {label}
       </Text>
-    </Pressable>
+    </MotionPressable>
   );
 }
 

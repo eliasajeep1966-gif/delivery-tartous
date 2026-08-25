@@ -1,4 +1,5 @@
 import { CheckCircle2, XCircle } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 import {
   Animated,
   Easing,
@@ -51,6 +52,14 @@ export function AppToastProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!toast) return;
+
+    if (Platform.OS !== "web") {
+      void Haptics.notificationAsync(
+        toast.tone === "error"
+          ? Haptics.NotificationFeedbackType.Error
+          : Haptics.NotificationFeedbackType.Success,
+      );
+    }
 
     opacity.setValue(0);
     translateY.setValue(18);
