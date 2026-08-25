@@ -42,7 +42,7 @@ export function useNativeCaptainDashboard() {
       }
       try {
         const [nextMetrics, nextOrders] = await Promise.all([
-          nativeCaptainContract.reads.homeMetrics(),
+          nativeCaptainContract.reads.homeMetrics(captainId),
           nativeCaptainContract.reads.orders(captainId),
         ]);
         const current = nextOrders.find((order) =>
