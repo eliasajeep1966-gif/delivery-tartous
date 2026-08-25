@@ -85,8 +85,35 @@ function first<T>(result: Result<T[]>, fallback: string): T {
 
 export const nativeCaptainContract = {
   reads: {
-    async homeMetrics(): Promise<CaptainHomeMetrics> {
-      return first(await client().rpc("get_captain_home_metrics"), "لم يُرجع ملخص الكابتن نتيجة.");
+    async homeMetrics(captainId: string): Promise<CaptainHomeMetrics> {
+      const supabase = client();
+      const [statusResult, completedResult] = await Promise.all([
+        supabase
+          .from("captain_status")
+          .select("availability")
+          .eq("captain_id", captainId)
+          .maybeSingle(),
+        supabase
+          .from("orders")
+          .select("fee")
+          .eq("assigned_captain_id", captainId)
+          .eq("status", "completed"),
+      ]);
+
+      if (statusResult.error) throw new Error(statusResult.error.message);
+      if (completedResult.error) throw new Error(completedResult.error.message);
+
+      const completedOrders = (completedResult.data ?? []) as { fee: number }[];
+      return {
+        availability:
+          (statusResult.data?.availability as CaptainAvailability | undefined) ??
+          "offline",
+        completed_count: completedOrders.length,
+        completed_gross: completedOrders.reduce(
+          (total, order) => total + Number(order.fee),
+          0,
+        ),
+      };
     },
     async orders(captainId: string): Promise<CaptainOrder[]> {
       const result = await client().from("orders").select("*").eq("assigned_captain_id", captainId).order("created_at", { ascending: false }).order("id", { ascending: false });
