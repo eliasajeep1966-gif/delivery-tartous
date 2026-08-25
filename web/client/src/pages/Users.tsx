@@ -273,7 +273,7 @@ export default function Users() {
   const [roleTarget, setRoleTarget] = useState<WebProfile | null>(null);
   const [selectedNewRole, setSelectedNewRole] = useState<WebAppRole | null>(null);
   const [changingRoleUserId, setChangingRoleUserId] = useState<string | null>(null);
-  const [togglingCaptainId, setTogglingCaptainId] = useState<string | null>(null);
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
   const [permissionTarget, setPermissionTarget] = useState<WebProfile | null>(null);
   const [permissions, setPermissions] = useState<WebPermission[]>([]);
   const [overrides, setOverrides] = useState<WebUserPermissionOverride[]>([]);
@@ -424,22 +424,35 @@ export default function Users() {
     }
   };
 
-  const toggleCaptain = async (user: WebProfile) => {
-    if (user.role !== 'captain' || togglingCaptainId) return;
-    setTogglingCaptainId(user.id);
+  const canToggleAccount = (user: WebProfile) => (
+    (user.role === 'captain' && canManageCaptains)
+    || (user.role === 'supervisor' && isAdmin)
+  );
+
+  const toggleAccount = async (user: WebProfile) => {
+    if (!canToggleAccount(user) || togglingUserId) return;
+
+    const roleLabel = user.role === 'captain' ? 'الكابتن' : 'المشرف';
+    const actionLabel = user.is_active ? 'تعطيل' : 'تفعيل';
+    if (!window.confirm(`هل تريد ${actionLabel} حساب ${roleLabel} «${displayName(user)}»؟`)) return;
+
+    setTogglingUserId(user.id);
 
     try {
+      const updateRequest = user.role === 'captain'
+        ? webSupabase.actions.setCaptainActive(user.id, !user.is_active)
+        : webSupabase.actions.setUserActive(user.id, !user.is_active);
       const updatedProfile = await withWebRequestTimeout(
-        webSupabase.actions.setCaptainActive(user.id, !user.is_active),
-        'انتهت مهلة تحديث حالة الكابتن بعد 15 ثانية. تم التحقق من القائمة؛ لا تعِد العملية قبل مراجعتها.',
+        updateRequest,
+        `انتهت مهلة ${actionLabel} الحساب بعد 15 ثانية. تم التحقق من القائمة؛ لا تعِد العملية قبل مراجعتها.`,
       );
 
       replaceProfile(updatedProfile);
-      toast.success(updatedProfile.is_active ? 'تم تفعيل الكابتن.' : 'تم تعطيل الكابتن.');
+      toast.success(updatedProfile.is_active ? `تم تفعيل ${roleLabel}.` : `تم تعطيل ${roleLabel}.`);
     } catch (error) {
-      reportMutationFailure('Set captain active', error, 'تعذر تحديث حالة الكابتن.');
+      reportMutationFailure('Set account active', error, `تعذر ${actionLabel} حساب ${roleLabel}.`);
     } finally {
-      if (mounted.current) setTogglingCaptainId(null);
+      if (mounted.current) setTogglingUserId(null);
     }
   };
 
@@ -647,11 +660,12 @@ export default function Users() {
                   <div className="space-y-3">
                     {profiles.map((user) => {
                       const captainStatus = user.role === 'captain' ? captainStatusById.get(user.id) : undefined;
-                      const isToggling = togglingCaptainId === user.id;
+                      const isToggling = togglingUserId === user.id;
                       const isChangingRole = changingRoleUserId === user.id;
                       const canConfigureOverrides = isAdmin && user.role === 'supervisor';
                       const canChangeRole = canChangeRoles;
-                      const actionCount = Math.max(1, Number(canChangeRole) + Number(user.role === 'captain') + Number(canConfigureOverrides));
+                      const canToggle = canToggleAccount(user);
+                      const actionCount = Math.max(1, Number(canChangeRole) + Number(canToggle) + Number(canConfigureOverrides));
                       const actionColumns = `repeat(${actionCount}, minmax(0, 1fr))`;
 
                       return (
@@ -664,10 +678,12 @@ export default function Users() {
                                 <div className="mt-1"><RoleChip role={user.role} /></div>
                               </div>
                             </div>
-                            {user.role === 'captain' && (
+                            {(user.role === 'captain' || user.role === 'supervisor') && (
                               <div className="flex flex-col items-end gap-1">
                                 <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${user.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-[#ba1a1a]'}`}>{user.is_active ? 'مفعّل' : 'معطّل'}</span>
-                                <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${captainStatus?.availability === 'available' ? 'bg-blue-50 text-[#0060B8]' : 'bg-slate-100 text-slate-600'}`}>{captainStatus?.availability === 'available' ? 'متاح' : 'غير متاح'}</span>
+                                {user.role === 'captain' && (
+                                  <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${captainStatus?.availability === 'available' ? 'bg-blue-50 text-[#0060B8]' : 'bg-slate-100 text-slate-600'}`}>{captainStatus?.availability === 'available' ? 'متاح' : 'غير متاح'}</span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -683,11 +699,11 @@ export default function Users() {
                               </button>
                             )}
 
-                            {user.role === 'captain' && canManageCaptains && (
-                              <button type="button" onClick={() => void toggleCaptain(user)} disabled={isToggling} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 text-xs font-bold text-[#ba1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
+                            {canToggle && (
+                              <button type="button" onClick={() => void toggleAccount(user)} disabled={isToggling} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 text-xs font-bold text-[#ba1a1a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
                                 {isToggling && <LoaderCircle className="animate-spin" size={15} />}
                                 <Ban size={16} />
-                                {isToggling ? 'جارٍ التحديث...' : user.is_active ? 'تعطيل الكابتن' : 'تفعيل الكابتن'}
+                                {isToggling ? 'جارٍ التحديث...' : user.is_active ? `تعطيل ${user.role === 'captain' ? 'الكابتن' : 'المشرف'}` : `تفعيل ${user.role === 'captain' ? 'الكابتن' : 'المشرف'}`}
                               </button>
                             )}
 

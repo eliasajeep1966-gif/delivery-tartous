@@ -6,13 +6,23 @@ import {
   Alert,
   AppState,
   FlatList,
+  type LayoutChangeEvent,
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
+  Text as NativeText,
   View,
 } from "react-native";
-import Animated, { FadeInDown, Layout } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeInDown,
+  interpolate,
+  Layout,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 import {
   AdminNewOrderModal,
@@ -37,6 +47,21 @@ import { notifyCaptainOfOrder } from "@/lib/notifications";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
 type IconName = ComponentProps<typeof MaterialIcons>["name"];
+
+function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
+  const flattened = StyleSheet.flatten(style);
+  const isBold =
+    flattened?.fontWeight === "700" ||
+    flattened?.fontWeight === "800" ||
+    flattened?.fontWeight === "bold";
+
+  return (
+    <NativeText
+      {...props}
+      style={[{ fontFamily: isBold ? "Cairo_700Bold" : "Cairo_400Regular" }, style]}
+    />
+  );
+}
 
 const statusStyle: Record<
   AdminOrderStatus,
@@ -134,6 +159,132 @@ export function AdminHome() {
     };
   }, [isBackOffice, refetch, scheduleRealtimeRefresh]);
 
+  const createLedProgress = useSharedValue(0);
+  const createLedWidth = useSharedValue(0);
+  const createLedHeight = useSharedValue(0);
+  const handleCreateCardLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    createLedWidth.value = width;
+    createLedHeight.value = height;
+  };
+
+  useEffect(() => {
+    createLedProgress.value = withRepeat(
+      withTiming(1, { duration: 5200, easing: Easing.linear }),
+      -1,
+      false,
+    );
+  }, [createLedProgress]);
+
+  const getLedPoint = (distance: number, width: number, height: number) => {
+    "worklet";
+    const inset = 2;
+    const innerWidth = Math.max(width - inset * 2, 1);
+    const innerHeight = Math.max(height - inset * 2, 1);
+    const radius = Math.min(18, innerWidth / 2, innerHeight / 2);
+    const horizontal = Math.max(innerWidth - radius * 2, 0);
+    const vertical = Math.max(innerHeight - radius * 2, 0);
+    const corner = (Math.PI * radius) / 2;
+    const perimeter = horizontal * 2 + vertical * 2 + corner * 4;
+    let travel = distance % perimeter;
+    const left = inset;
+    const right = inset + innerWidth;
+    const top = inset;
+    const bottom = inset + innerHeight;
+
+    if (travel <= horizontal) {
+      return { x: left + radius + travel, y: top, angle: 0, perimeter };
+    }
+    travel -= horizontal;
+    if (travel <= corner) {
+      const theta = -Math.PI / 2 + (travel / corner) * (Math.PI / 2);
+      return {
+        x: right - radius + radius * Math.cos(theta),
+        y: top + radius + radius * Math.sin(theta),
+        angle: theta + Math.PI / 2,
+        perimeter,
+      };
+    }
+    travel -= corner;
+    if (travel <= vertical) {
+      return { x: right, y: top + radius + travel, angle: Math.PI / 2, perimeter };
+    }
+    travel -= vertical;
+    if (travel <= corner) {
+      const theta = (travel / corner) * (Math.PI / 2);
+      return {
+        x: right - radius + radius * Math.cos(theta),
+        y: bottom - radius + radius * Math.sin(theta),
+        angle: theta + Math.PI / 2,
+        perimeter,
+      };
+    }
+    travel -= corner;
+    if (travel <= horizontal) {
+      return { x: right - radius - travel, y: bottom, angle: Math.PI, perimeter };
+    }
+    travel -= horizontal;
+    if (travel <= corner) {
+      const theta = Math.PI / 2 + (travel / corner) * (Math.PI / 2);
+      return {
+        x: left + radius + radius * Math.cos(theta),
+        y: bottom - radius + radius * Math.sin(theta),
+        angle: theta + Math.PI / 2,
+        perimeter,
+      };
+    }
+    travel -= corner;
+    if (travel <= vertical) {
+      return { x: left, y: bottom - radius - travel, angle: (Math.PI * 3) / 2, perimeter };
+    }
+    travel -= vertical;
+    const theta = Math.PI + (travel / corner) * (Math.PI / 2);
+    return {
+      x: left + radius + radius * Math.cos(theta),
+      y: top + radius + radius * Math.sin(theta),
+      angle: theta + Math.PI / 2,
+      perimeter,
+    };
+  };
+
+  const createLedDotStyle = useAnimatedStyle(() => {
+    if (!createLedWidth.value || !createLedHeight.value) return { opacity: 0 };
+    const point = getLedPoint(
+      createLedProgress.value * getLedPoint(0, createLedWidth.value, createLedHeight.value).perimeter,
+      createLedWidth.value,
+      createLedHeight.value,
+    );
+    return {
+      opacity: 1,
+      left: point.x - 5,
+      top: point.y - 5,
+    };
+  });
+
+  const createLedTailStyle = useAnimatedStyle(() => {
+    if (!createLedWidth.value || !createLedHeight.value) return { opacity: 0 };
+    const start = getLedPoint(0, createLedWidth.value, createLedHeight.value);
+    const currentDistance = createLedProgress.value * start.perimeter;
+    const point = getLedPoint(currentDistance, createLedWidth.value, createLedHeight.value);
+    const previous = getLedPoint(
+      (currentDistance - 34 + start.perimeter) % start.perimeter,
+      createLedWidth.value,
+      createLedHeight.value,
+    );
+    const dx = point.x - previous.x;
+    const dy = point.y - previous.y;
+    const length = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+    return {
+      opacity: 0.9,
+      left: (point.x + previous.x) / 2 - length / 2,
+      top: (point.y + previous.y) / 2 - 1,
+      width: length,
+      transform: [{ rotate: `${angle}deg` }],
+    };
+  });
+
   if (!isBackOffice) {
     return (
       <ScreenContainer className="p-5">
@@ -199,18 +350,13 @@ export function AdminHome() {
 
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
-      <LinearGradient
-        colors={["#07488D", "#0872CC", "#0A86E7"]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <Pressable
           onPress={() => router.push("/account-settings" as Href)}
           style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
           accessibilityLabel="إعدادات الحساب"
         >
-          <MaterialIcons name="account-circle" size={24} color="#FFFFFF" />
+          <MaterialIcons name="account-circle" size={22} color="#0878D1" />
         </Pressable>
 
         <View style={styles.headerBrand}>
@@ -225,10 +371,11 @@ export function AdminHome() {
           style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
           accessibilityLabel="الإشعارات"
         >
-          <MaterialIcons name="notifications-none" size={21} color="#FFFFFF" />
+          <MaterialIcons name="notifications-none" size={20} color="#0878D1" />
           <View style={styles.notificationDot} />
         </Pressable>
-      </LinearGradient>
+      </View>
+      <View style={styles.neonDivider} />
 
       <FlatList
         data={snapshot?.activities ?? []}
@@ -322,6 +469,7 @@ export function AdminHome() {
 
             <Animated.View entering={FadeInDown.delay(150).duration(220)}>
               <Pressable
+                onLayout={handleCreateCardLayout}
                 onPress={() => {
                   setCreateError(null);
                   setCreateOpen(true);
@@ -329,11 +477,19 @@ export function AdminHome() {
                 style={({ pressed }) => [styles.createCard, pressed && styles.createPressed]}
               >
                 <LinearGradient
-                  colors={["#07488D", "#0872CC", "#0A86E7"]}
+                  colors={["#063B78", "#0872CC", "#0CBDF2"]}
                   start={{ x: 1, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={styles.createGradient}
                 >
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.createLedTail, createLedTailStyle]}
+                  />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.createLedDot, createLedDotStyle]}
+                  />
                   <View style={styles.createIconWrap}>
                     <MaterialIcons name="add" size={26} color="#0C679D" />
                   </View>
@@ -623,63 +779,68 @@ function SectionHeading({
 const styles = StyleSheet.create({
   header: {
     alignItems: "center",
+    backgroundColor: "#F4F7FB",
     flexDirection: "row-reverse",
-    height: 72,
+    height: 56,
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    shadowColor: "#0A385D",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+  },
+  neonDivider: {
+    backgroundColor: "#15C8FF",
+    height: 2,
+    shadowColor: "#15C8FF",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
   },
   accountButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderColor: "rgba(255,255,255,0.20)",
-    borderRadius: 17,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D9EBF8",
+    borderRadius: 15,
     borderWidth: 1,
-    height: 38,
+    height: 34,
     justifyContent: "center",
-    width: 38,
+    width: 34,
   },
-  headerBrand: { alignItems: "center", flex: 1, paddingHorizontal: 12 },
+  headerBrand: { alignItems: "center", flex: 1, paddingHorizontal: 10 },
   headerEyebrow: {
-    color: "rgba(226,244,255,0.76)",
-    fontSize: 10,
+    color: "#6F8A9D",
+    fontSize: 9,
     fontWeight: "700",
     writingDirection: "rtl",
   },
   headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: "#07488D",
+    fontSize: 14,
     fontWeight: "800",
-    marginTop: 1,
+    marginTop: -1,
     writingDirection: "rtl",
   },
   headerRoundButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderColor: "rgba(255,255,255,0.20)",
-    borderRadius: 17,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D9EBF8",
+    borderRadius: 15,
     borderWidth: 1,
-    height: 38,
+    height: 34,
     justifyContent: "center",
     position: "relative",
-    width: 38,
+    width: 34,
   },
   notificationDot: {
-    backgroundColor: "#7DE1FF",
-    borderColor: "#0E5E91",
+    backgroundColor: "#15C8FF",
+    borderColor: "#F4F7FB",
     borderRadius: 5,
     borderWidth: 2,
     height: 10,
     position: "absolute",
-    right: 5,
-    top: 5,
+    right: 3,
+    top: 3,
     width: 10,
   },
   headerPressed: { opacity: 0.78, transform: [{ scale: 0.96 }] },
-  listContent: { paddingBottom: 34, paddingHorizontal: 16, paddingTop: 16 },
+  listContent: { paddingBottom: 34, paddingHorizontal: 16, paddingTop: 12 },
   heroCard: {
     borderColor: "#D8EBF7",
     borderRadius: 24,
@@ -768,9 +929,11 @@ const styles = StyleSheet.create({
   skeletonIcon: { alignSelf: "flex-end", backgroundColor: "#EDF3F7", borderRadius: 10, height: 29, width: 29 },
   skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 19, marginLeft: "auto", marginTop: 8, width: "36%" },
   skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
-  createCard: { borderRadius: 20, marginTop: 18, overflow: "hidden", shadowColor: "#0878D1", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.22, shadowRadius: 15 },
-  createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, paddingHorizontal: 16, paddingVertical: 15 },
-  createIconWrap: { alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 17, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
+  createCard: { borderColor: "rgba(84,222,255,0.62)", borderRadius: 20, borderWidth: 1, marginTop: 18, overflow: "hidden", shadowColor: "#16CEFF", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.28, shadowRadius: 16 },
+  createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, overflow: "hidden", paddingHorizontal: 16, paddingVertical: 15, position: "relative" },
+  createLedTail: { backgroundColor: "rgba(167,246,255,0.42)", borderRadius: 3, height: 2, position: "absolute" },
+  createLedDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
+  createIconWrap: { alignItems: "center", backgroundColor: "#F5FDFF", borderColor: "rgba(137,240,255,0.8)", borderRadius: 17, borderWidth: 1, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
   createCopy: { flex: 1 },
   createKicker: { color: "rgba(231,248,255,0.72)", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   createTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginTop: 3, textAlign: "right", writingDirection: "rtl" },

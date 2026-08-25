@@ -609,6 +609,14 @@ export const webSupabase = {
       return unwrap(data, error, 'تعذر تحديث حالة الكابتن.');
     },
 
+    async setUserActive(userId: string, isActive: boolean): Promise<WebProfile> {
+      const { data, error } = await getWebSupabaseClient().rpc('set_user_active', {
+        p_user_id: userId,
+        p_is_active: isActive,
+      });
+      return unwrap(data, error, 'تعذر تحديث حالة الحساب.');
+    },
+
     async assignCaptainCustody(captainId: string, itemName: string, itemDetails?: string): Promise<WebCaptainCustody> {
       const normalizedCaptainId = captainId.trim();
       const normalizedItemName = itemName.trim();

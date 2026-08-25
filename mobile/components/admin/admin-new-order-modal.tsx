@@ -110,7 +110,8 @@ export function AdminNewOrderModal({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
+      hardwareAccelerated
       onRequestClose={close}
     >
       <KeyboardAvoidingView
