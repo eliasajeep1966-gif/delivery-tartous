@@ -49,7 +49,7 @@ export async function registerCaptainPushNotifications(
         name: "Orders",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        sound: "new-order.mp3",
+        sound: "new_order",
       });
     }
 

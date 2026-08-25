@@ -1,7 +1,7 @@
 import { useAudioPlayer } from "expo-audio";
 import { createContext, useCallback, useContext, type PropsWithChildren } from "react";
 
-const NEW_ORDER_SOUND = require("@/assets/sounds/new-order.mp3");
+const NEW_ORDER_SOUND = require("@/assets/sounds/new_order.mp3");
 const CAPTAIN_ORDER_SUCCESS_SOUND = require("@/assets/sounds/captain-order-success.mp3");
 const ADMIN_ORDER_SUCCESS_SOUND = require("@/assets/sounds/admin-order-success.mp3");
 

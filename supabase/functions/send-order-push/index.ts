@@ -23,7 +23,7 @@ Deno.serve(async (req: Request) => {
     if (orderError || !order?.assigned_captain_id) throw new Error("Assigned order not found");
     const { data: tokens, error: tokenError } = await admin.from("push_tokens").select("token").eq("user_id", order.assigned_captain_id);
     if (tokenError) throw tokenError;
-    const messages = (tokens ?? []).map((row: { token: string }) => ({ to: row.token, sound: "new-order.mp3", title: "طلب جديد", body: `تم إسناد الطلب #${order.order_number} إليك`, data: { orderId: order.id, type: "assigned_order" }, priority: "high", channelId: "orders-v2" }));
+    const messages = (tokens ?? []).map((row: { token: string }) => ({ to: row.token, sound: "new_order", title: "طلب جديد", body: `تم إسناد الطلب #${order.order_number} إليك`, data: { orderId: order.id, type: "assigned_order" }, priority: "high", channelId: "orders-v2" }));
     if (messages.length) {
       const response = await fetch("https://exp.host/--/api/v2/push/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(messages) });
       if (!response.ok) throw new Error(`Expo Push API failed: ${response.status}`);
