@@ -197,7 +197,7 @@ export function AdminHome() {
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
       <LinearGradient
-        colors={["#0A385D", "#0D5B8F", "#1376AB"]}
+        colors={["#07488D", "#0872CC", "#0A86E7"]}
         start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.header}
@@ -237,7 +237,7 @@ export function AdminHome() {
           <RefreshControl
             refreshing={home.isRefetching}
             onRefresh={() => void home.refetch()}
-            tintColor="#0D6EA9"
+            tintColor="#0878D1"
           />
         }
         contentContainerStyle={styles.listContent}
@@ -245,7 +245,7 @@ export function AdminHome() {
           <>
             <Animated.View entering={FadeInDown.duration(220)}>
               <LinearGradient
-                colors={["#F0F8FF", "#FFFFFF"]}
+                  colors={["#EEF7FF", "#FFFFFF"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.heroCard}
@@ -283,7 +283,7 @@ export function AdminHome() {
                   onPress={() => void home.refetch()}
                   style={({ pressed }) => [styles.retryButton, pressed && styles.smallPressed]}
                 >
-                  <MaterialIcons name="refresh" size={16} color="#0D6EA9" />
+                  <MaterialIcons name="refresh" size={16} color="#0878D1" />
                 </Pressable>
               </Animated.View>
             ) : null}
@@ -298,7 +298,7 @@ export function AdminHome() {
                 style={({ pressed }) => [styles.viewOrdersButton, pressed && styles.smallPressed]}
               >
                 <Text style={styles.viewOrdersText}>كل الطلبات</Text>
-                <MaterialIcons name="arrow-back" size={14} color="#0D6EA9" />
+                <MaterialIcons name="arrow-back" size={14} color="#0878D1" />
               </Pressable>
             </View>
 
@@ -326,7 +326,7 @@ export function AdminHome() {
                 style={({ pressed }) => [styles.createCard, pressed && styles.createPressed]}
               >
                 <LinearGradient
-                  colors={["#095B92", "#0877AE", "#1098C6"]}
+                  colors={["#07488D", "#0872CC", "#0A86E7"]}
                   start={{ x: 1, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={styles.createGradient}
@@ -477,7 +477,7 @@ function MetricCard({
     in_delivery: {
       icon: "two-wheeler",
       accent: "#FFFFFF",
-      background: "#0D6EA9",
+      background: "#0878D1",
       iconBackground: "rgba(255,255,255,0.16)",
     },
     completed_today: {
@@ -611,7 +611,7 @@ function SectionHeading({
         style={({ pressed }) => [styles.sectionAction, pressed && styles.smallPressed]}
       >
         <Text style={styles.sectionActionText}>{action}</Text>
-        <MaterialIcons name="arrow-back" size={13} color="#0D6EA9" />
+        <MaterialIcons name="arrow-back" size={13} color="#0878D1" />
       </Pressable>
     </View>
   );
@@ -738,34 +738,34 @@ const styles = StyleSheet.create({
   overline: { color: "#7B9AAC", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   metricsTitle: { color: "#163E5C", fontSize: 17, fontWeight: "800", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   viewOrdersButton: { alignItems: "center", flexDirection: "row-reverse", gap: 3, paddingVertical: 5 },
-  viewOrdersText: { color: "#0D6EA9", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
-  metricGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 10, justifyContent: "space-between" },
+  viewOrdersText: { color: "#0878D1", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  metricGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, justifyContent: "space-between" },
   metricAnimatedWrap: { width: "48.5%" },
   metricCard: {
     borderColor: "#E6EEF4",
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    minHeight: 104,
+    minHeight: 90,
     overflow: "hidden",
-    padding: 13,
+    padding: 11,
     shadowColor: "#113D5B",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.055,
     shadowRadius: 9,
   },
-  metricCardHighlight: { borderColor: "#0D6EA9", shadowColor: "#0D6EA9", shadowOpacity: 0.2, shadowRadius: 13 },
+  metricCardHighlight: { borderColor: "#0878D1", shadowColor: "#0878D1", shadowOpacity: 0.2, shadowRadius: 13 },
   metricTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
-  metricIcon: { alignItems: "center", borderRadius: 11, height: 32, justifyContent: "center", width: 32 },
-  metricValue: { color: "#164C70", fontSize: 24, fontWeight: "800", marginTop: 10, textAlign: "right", writingDirection: "rtl" },
+  metricIcon: { alignItems: "center", borderRadius: 10, height: 29, justifyContent: "center", width: 29 },
+  metricValue: { color: "#164C70", fontSize: 22, fontWeight: "800", marginTop: 8, textAlign: "right", writingDirection: "rtl" },
   metricValueHighlight: { color: "#FFFFFF" },
-  metricLabel: { color: "#6A879A", fontSize: 11, fontWeight: "700", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  metricLabel: { color: "#6A879A", fontSize: 10, fontWeight: "700", marginTop: 1, textAlign: "right", writingDirection: "rtl" },
   metricLabelHighlight: { color: "rgba(255,255,255,0.82)" },
   metricPressed: { opacity: 0.88, transform: [{ scale: 0.975 }] },
-  metricSkeleton: { backgroundColor: "#FFFFFF", borderColor: "#E6EEF4", borderRadius: 18, borderWidth: 1, minHeight: 104, overflow: "hidden", padding: 13, width: "48.5%" },
-  skeletonIcon: { alignSelf: "flex-end", backgroundColor: "#EDF3F7", borderRadius: 12, height: 36, width: 36 },
-  skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 21, marginLeft: "auto", marginTop: 10, width: "36%" },
-  skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 9, marginLeft: "auto", marginTop: 7, width: "65%" },
-  createCard: { borderRadius: 20, marginTop: 18, overflow: "hidden", shadowColor: "#0D6EA9", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.22, shadowRadius: 15 },
+  metricSkeleton: { backgroundColor: "#FFFFFF", borderColor: "#E6EEF4", borderRadius: 16, borderWidth: 1, minHeight: 90, overflow: "hidden", padding: 11, width: "48.5%" },
+  skeletonIcon: { alignSelf: "flex-end", backgroundColor: "#EDF3F7", borderRadius: 10, height: 29, width: 29 },
+  skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 19, marginLeft: "auto", marginTop: 8, width: "36%" },
+  skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
+  createCard: { borderRadius: 20, marginTop: 18, overflow: "hidden", shadowColor: "#0878D1", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.22, shadowRadius: 15 },
   createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, paddingHorizontal: 16, paddingVertical: 15 },
   createIconWrap: { alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 17, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
   createCopy: { flex: 1 },
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: "#163E5C", fontSize: 17, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   sectionSubtitle: { color: "#7894A7", fontSize: 10, fontWeight: "700", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   sectionAction: { alignItems: "center", flexDirection: "row-reverse", gap: 3, paddingVertical: 6 },
-  sectionActionText: { color: "#0D6EA9", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  sectionActionText: { color: "#0878D1", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
   activityCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E4EDF3", borderRadius: 18, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 9, minHeight: 94, overflow: "hidden", paddingHorizontal: 12, paddingVertical: 11, shadowColor: "#153C58", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.045, shadowRadius: 7 },
   activityAccent: { bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
   activityIconWrap: { alignItems: "center", backgroundColor: "#F3F8FB", borderRadius: 12, height: 38, justifyContent: "center", width: 38 },
