@@ -158,22 +158,29 @@ export function AdminHome() {
     };
   }, [isBackOffice, refetch, scheduleRealtimeRefresh]);
 
-  const createGlowProgress = useSharedValue(0);
+  const createLedProgress = useSharedValue(0);
   useEffect(() => {
-    createGlowProgress.value = withRepeat(
-      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.quad) }),
+    createLedProgress.value = withRepeat(
+      withTiming(1, { duration: 5200, easing: Easing.linear }),
       -1,
       false,
     );
-  }, [createGlowProgress]);
-  const createGlowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(createGlowProgress.value, [0, 0.08, 0.9, 1], [0, 0.95, 0.95, 0]),
-    transform: [
-      {
-        translateX: interpolate(createGlowProgress.value, [0, 1], [-78, 340]),
-      },
-    ],
-  }));
+  }, [createLedProgress]);
+  const createLedStyle = useAnimatedStyle(() => {
+    const progress = createLedProgress.value;
+    const x = interpolate(progress, [0, 0.25, 0.5, 0.75, 1], [16, 318, 338, 16, 16]);
+    const y = interpolate(progress, [0, 0.25, 0.5, 0.75, 1], [7, 7, 110, 110, 7]);
+    const rotation = interpolate(progress, [0, 0.25, 0.5, 0.75, 1], [0, 0, 90, 180, 270]);
+
+    return {
+      opacity: interpolate(progress, [0, 0.02, 0.98, 1], [0, 1, 1, 0]),
+      transform: [
+        { translateX: x - 38 },
+        { translateY: y - 6 },
+        { rotate: `${rotation}deg` },
+      ],
+    };
+  });
 
   if (!isBackOffice) {
     return (
@@ -373,10 +380,10 @@ export function AdminHome() {
                 >
                   <Animated.View
                     pointerEvents="none"
-                    style={[styles.createGlowTrail, createGlowStyle]}
+                    style={[styles.createLedMarker, createLedStyle]}
                   >
-                    <View style={styles.createGlowTail} />
-                    <View style={styles.createGlowDot} />
+                    <View style={styles.createLedTail} />
+                    <View style={styles.createLedDot} />
                   </Animated.View>
                   <View style={styles.createIconWrap}>
                     <MaterialIcons name="add" size={26} color="#0C679D" />
@@ -819,9 +826,9 @@ const styles = StyleSheet.create({
   skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
   createCard: { borderColor: "rgba(84,222,255,0.62)", borderRadius: 20, borderWidth: 1, marginTop: 18, overflow: "hidden", shadowColor: "#16CEFF", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.28, shadowRadius: 16 },
   createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, overflow: "hidden", paddingHorizontal: 16, paddingVertical: 15, position: "relative" },
-  createGlowTrail: { alignItems: "center", flexDirection: "row", height: 12, left: 0, position: "absolute", top: 9, width: 68 },
-  createGlowTail: { backgroundColor: "rgba(167,246,255,0.14)", borderRadius: 3, height: 2, width: 56 },
-  createGlowDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
+  createLedMarker: { alignItems: "center", flexDirection: "row", height: 12, position: "absolute", width: 44 },
+  createLedTail: { backgroundColor: "rgba(167,246,255,0.34)", borderRadius: 3, height: 2, width: 34 },
+  createLedDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
   createIconWrap: { alignItems: "center", backgroundColor: "#F5FDFF", borderColor: "rgba(137,240,255,0.8)", borderRadius: 17, borderWidth: 1, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
   createCopy: { flex: 1 },
   createKicker: { color: "rgba(231,248,255,0.72)", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
