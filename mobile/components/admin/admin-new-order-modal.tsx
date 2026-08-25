@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { type Dispatch, type SetStateAction, useRef, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -159,7 +160,7 @@ export function AdminNewOrderModal({
     >
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         <View style={styles.sheet}>
@@ -190,9 +191,12 @@ export function AdminNewOrderModal({
         </View>
 
         <ScrollView
-
+            style={styles.scroll}
             contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="always"
+            nestedScrollEnabled
+            onScrollBeginDrag={Keyboard.dismiss}
             showsVerticalScrollIndicator={false}
           >
             {step === 1 ? (
@@ -466,8 +470,11 @@ function LocationSection({
             onChangeText={(value) => update(location.id, "phone", value)}
             placeholder="رقم الهاتف"
             placeholderTextColor="#89939E"
+            autoComplete="tel"
             keyboardType="phone-pad"
+            returnKeyType="next"
             style={styles.input}
+            textContentType="telephoneNumber"
             textAlign="right"
           />
           <TextInput
@@ -629,7 +636,8 @@ const styles = StyleSheet.create({
   routeLabelComplete: { color: "#15916C" },
   routeConnector: { backgroundColor: "#D8E8F2", height: 1, marginBottom: 16, marginHorizontal: 8, width: 46 },
   routeConnectorComplete: { backgroundColor: "#18A775" },
-  content: { gap: 10, padding: 14, paddingBottom: 16 },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1, gap: 10, padding: 14, paddingBottom: 28 },
   formCard: {
     backgroundColor: "#FFFFFF",
     borderColor: "#E1EDF5",
