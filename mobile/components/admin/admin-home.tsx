@@ -12,7 +12,16 @@ import {
   Text as NativeText,
   View,
 } from "react-native";
-import Animated, { FadeInDown, Layout } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeInDown,
+  interpolate,
+  Layout,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 import {
   AdminNewOrderModal,
@@ -148,6 +157,23 @@ export function AdminHome() {
       }
     };
   }, [isBackOffice, refetch, scheduleRealtimeRefresh]);
+
+  const createGlowProgress = useSharedValue(0);
+  useEffect(() => {
+    createGlowProgress.value = withRepeat(
+      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      false,
+    );
+  }, [createGlowProgress]);
+  const createGlowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(createGlowProgress.value, [0, 0.08, 0.9, 1], [0, 0.95, 0.95, 0]),
+    transform: [
+      {
+        translateX: interpolate(createGlowProgress.value, [0, 1], [-78, 340]),
+      },
+    ],
+  }));
 
   if (!isBackOffice) {
     return (
@@ -340,11 +366,18 @@ export function AdminHome() {
                 style={({ pressed }) => [styles.createCard, pressed && styles.createPressed]}
               >
                 <LinearGradient
-                  colors={["#07488D", "#0872CC", "#0A86E7"]}
+                  colors={["#063B78", "#0872CC", "#0CBDF2"]}
                   start={{ x: 1, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={styles.createGradient}
                 >
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.createGlowTrail, createGlowStyle]}
+                  >
+                    <View style={styles.createGlowTail} />
+                    <View style={styles.createGlowDot} />
+                  </Animated.View>
                   <View style={styles.createIconWrap}>
                     <MaterialIcons name="add" size={26} color="#0C679D" />
                   </View>
@@ -784,9 +817,12 @@ const styles = StyleSheet.create({
   skeletonIcon: { alignSelf: "flex-end", backgroundColor: "#EDF3F7", borderRadius: 10, height: 29, width: 29 },
   skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 19, marginLeft: "auto", marginTop: 8, width: "36%" },
   skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
-  createCard: { borderRadius: 20, marginTop: 18, overflow: "hidden", shadowColor: "#0878D1", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.22, shadowRadius: 15 },
-  createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, paddingHorizontal: 16, paddingVertical: 15 },
-  createIconWrap: { alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 17, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
+  createCard: { borderColor: "rgba(84,222,255,0.62)", borderRadius: 20, borderWidth: 1, marginTop: 18, overflow: "hidden", shadowColor: "#16CEFF", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.28, shadowRadius: 16 },
+  createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, overflow: "hidden", paddingHorizontal: 16, paddingVertical: 15, position: "relative" },
+  createGlowTrail: { alignItems: "center", flexDirection: "row", height: 12, left: 0, position: "absolute", top: 9, width: 68 },
+  createGlowTail: { backgroundColor: "rgba(167,246,255,0.14)", borderRadius: 3, height: 2, width: 56 },
+  createGlowDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
+  createIconWrap: { alignItems: "center", backgroundColor: "#F5FDFF", borderColor: "rgba(137,240,255,0.8)", borderRadius: 17, borderWidth: 1, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
   createCopy: { flex: 1 },
   createKicker: { color: "rgba(231,248,255,0.72)", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   createTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginTop: 3, textAlign: "right", writingDirection: "rtl" },
