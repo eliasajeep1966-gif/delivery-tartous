@@ -30,6 +30,7 @@ import {
 import "@/lib/_core/nativewind-pressable";
 import { AuthStateScreen } from "@/components/auth/auth-state-screen";
 import { AppToastProvider } from "@/contexts/app-toast-context";
+import { AppSoundProvider } from "@/contexts/app-sound-context";
 import {
   DeliveryAuthProvider,
   useDeliveryAuth,
@@ -190,9 +191,11 @@ export default function RootLayout() {
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <AppToastProvider>
-            <DeliveryAuthProvider>
-              <AuthAwareNavigator />
-            </DeliveryAuthProvider>
+            <AppSoundProvider>
+              <DeliveryAuthProvider>
+                <AuthAwareNavigator />
+              </DeliveryAuthProvider>
+            </AppSoundProvider>
           </AppToastProvider>
           <StatusBar style="dark" />
         </QueryClientProvider>

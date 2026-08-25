@@ -96,7 +96,12 @@ const config: ExpoConfig = {
       {
         icon: "./assets/images/icon.png",
         color: "#0060B8",
-        defaultChannel: "orders",
+        defaultChannel: "orders-v2",
+        sounds: [
+          "./assets/sounds/new-order.mp3",
+          "./assets/sounds/captain-order-success.mp3",
+          "./assets/sounds/admin-order-success.mp3",
+        ],
       },
     ],
     "expo-asset",

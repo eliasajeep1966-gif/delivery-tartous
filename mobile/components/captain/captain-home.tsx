@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useNativeCaptainDashboard } from "@/features/captain/use-native-captain-dashboard";
@@ -67,6 +68,7 @@ export function CaptainHome() {
   const router = useRouter();
   const { profile, signOut } = useDeliveryAuth();
   const { showToast } = useAppToast();
+  const { playSound } = useAppSound();
   const dashboard = useNativeCaptainDashboard();
   const [falseOrderOpen, setFalseOrderOpen] = useState(false);
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
@@ -88,8 +90,10 @@ export function CaptainHome() {
       current &&
       action &&
       (await dashboard.transitionOrder(current.id, action.next))
-    )
+    ) {
+      playSound("captainOrderSuccess");
       showToast({ message: `أصبحت حالة الطلب: ${statusLabels[action.next]}` });
+    }
   };
   const markFalse = async () => {
     if (current && (await dashboard.transitionOrder(current.id, "false_order")))

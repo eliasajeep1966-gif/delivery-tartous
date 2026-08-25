@@ -45,11 +45,11 @@ export async function registerCaptainPushNotifications(
 
   try {
     if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("orders", {
+      await Notifications.setNotificationChannelAsync("orders-v2", {
         name: "Orders",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        sound: "default",
+        sound: "new-order.mp3",
       });
     }
 
