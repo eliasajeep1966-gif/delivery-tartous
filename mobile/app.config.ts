@@ -91,6 +91,14 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/icon.png",
+        color: "#0060B8",
+        defaultChannel: "orders",
+      },
+    ],
     "expo-asset",
     "expo-font",
     "expo-image",

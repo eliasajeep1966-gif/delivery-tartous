@@ -26,9 +26,46 @@ export class SupabaseConfigurationError extends Error {
   }
 }
 
+const NATIVE_SESSION_CHUNK_SIZE = 900;
+const NATIVE_SESSION_META_SUFFIX = ".meta";
+const NATIVE_SESSION_CHUNK_SUFFIX = ".chunk.";
+
+type NativeSessionMetadata = {
+  chunks: number;
+};
+
+function nativeSessionMetaKey(key: string) {
+  return `${key}${NATIVE_SESSION_META_SUFFIX}`;
+}
+
+function nativeSessionChunkKey(key: string, index: number) {
+  return `${key}${NATIVE_SESSION_CHUNK_SUFFIX}${index}`;
+}
+
 const authStorage = {
   getItem: async (key: string) => {
     if (Platform.OS === "web") return AsyncStorage.getItem(key);
+
+    const metadataValue = await SecureStore.getItemAsync(nativeSessionMetaKey(key));
+    if (metadataValue) {
+      try {
+        const metadata = JSON.parse(metadataValue) as NativeSessionMetadata;
+        if (Number.isInteger(metadata.chunks) && metadata.chunks > 0) {
+          const chunks = await Promise.all(
+            Array.from({ length: metadata.chunks }, (_, index) =>
+              SecureStore.getItemAsync(nativeSessionChunkKey(key, index)),
+            ),
+          );
+          if (chunks.every((chunk): chunk is string => typeof chunk === "string")) {
+            return chunks.join("");
+          }
+        }
+      } catch {
+        // Fall through to the legacy single-value entry below.
+      }
+    }
+
+    // Read sessions written by the previous storage implementation and migrate them on the next write.
     return SecureStore.getItemAsync(key);
   },
   setItem: async (key: string, value: string) => {
@@ -36,14 +73,41 @@ const authStorage = {
       await AsyncStorage.setItem(key, value);
       return;
     }
-    await SecureStore.setItemAsync(key, value);
+
+    const chunks = value.match(new RegExp(`.{1,${NATIVE_SESSION_CHUNK_SIZE}}`, "g")) ?? [""];
+    await Promise.all(
+      chunks.map((chunk, index) =>
+        SecureStore.setItemAsync(nativeSessionChunkKey(key, index), chunk),
+      ),
+    );
+    await SecureStore.setItemAsync(
+      nativeSessionMetaKey(key),
+      JSON.stringify({ chunks: chunks.length } satisfies NativeSessionMetadata),
+    );
+    await SecureStore.deleteItemAsync(key);
   },
   removeItem: async (key: string) => {
     if (Platform.OS === "web") {
       await AsyncStorage.removeItem(key);
       return;
     }
-    await SecureStore.deleteItemAsync(key);
+
+    const metadataValue = await SecureStore.getItemAsync(nativeSessionMetaKey(key));
+    let chunkCount = 0;
+    try {
+      const metadata = metadataValue ? (JSON.parse(metadataValue) as NativeSessionMetadata) : null;
+      chunkCount = metadata && Number.isInteger(metadata.chunks) ? metadata.chunks : 0;
+    } catch {
+      chunkCount = 0;
+    }
+
+    await Promise.all([
+      SecureStore.deleteItemAsync(key),
+      SecureStore.deleteItemAsync(nativeSessionMetaKey(key)),
+      ...Array.from({ length: chunkCount }, (_, index) =>
+        SecureStore.deleteItemAsync(nativeSessionChunkKey(key, index)),
+      ),
+    ]);
   },
 };
 

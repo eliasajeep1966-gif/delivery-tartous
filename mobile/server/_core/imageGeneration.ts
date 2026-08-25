@@ -25,11 +25,11 @@ const DEFAULT_IMAGE_QUALITY = "medium";
 
 export type GenerateImageOptions = {
   prompt: string;
-  originalImages?: Array<{
+  originalImages?: {
     url?: string;
     b64Json?: string;
     mimeType?: string;
-  }>;
+  }[];
   /** Forge image model enum, e.g. "MODEL_GPT_IMAGE_2". Defaults to GPT Image 2. */
   model?: string;
   /** Generation quality, e.g. "medium" | "high". Defaults to "medium" for GPT Image 2. */

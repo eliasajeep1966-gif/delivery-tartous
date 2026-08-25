@@ -25,16 +25,10 @@ export function useCaptainDashboard() {
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [transitionError, setTransitionError] = useState<string | null>(null);
-  const [newAssignedOrder, setNewAssignedOrder] = useState<WebOrder | null>(null);
   const mounted = useRef(true);
-  const knownOrderIds = useRef<Set<string>>(new Set());
-  const hasLoadedOrders = useRef(false);
 
   const reload = useCallback(async () => {
     if (!userId) {
-      knownOrderIds.current.clear();
-      hasLoadedOrders.current = false;
-      setNewAssignedOrder(null);
       setHomeMetrics(null);
       setAvailability(null);
       setIsInitialLoading(false);
@@ -51,18 +45,12 @@ export function useCaptainDashboard() {
       const activeStatuses = new Set<WebOrder['status']>(['assigned', 'received', 'in_delivery']);
       const nextCurrentOrder = nextOrders.find((order) => activeStatuses.has(order.status));
       const nextStops = nextCurrentOrder ? await withWebRequestTimeout(webSupabase.reads.orderStops(nextCurrentOrder.id), LOAD_TIMEOUT_MESSAGE) : [];
-      const nextAssignedOrder = hasLoadedOrders.current
-        ? nextOrders.find((order) => order.status === 'assigned' && !knownOrderIds.current.has(order.id)) ?? null
-        : null;
-      knownOrderIds.current = new Set(nextOrders.map((order) => order.id));
-      hasLoadedOrders.current = true;
       if (!mounted.current) return;
       setProfile(nextProfile);
       setHomeMetrics(nextMetrics);
       setAvailability(nextMetrics.availability);
       setOrders(nextOrders);
       setCurrentOrderStops(nextStops);
-      if (nextAssignedOrder) setNewAssignedOrder(nextAssignedOrder);
     } catch (error) {
       if (mounted.current) setReadError(getErrorMessage(error, 'تعذر تحميل حساب الكابتن. حاول مرة أخرى.'));
     } finally {
@@ -75,24 +63,6 @@ export function useCaptainDashboard() {
     void reload();
     return () => { mounted.current = false; };
   }, [reload]);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
-    const unsubscribe = webSupabase.realtime.subscribeToCaptainOrders(userId, () => {
-      if (reloadTimer) return;
-      reloadTimer = setTimeout(() => {
-        reloadTimer = null;
-        void reload();
-      }, 250);
-    });
-
-    return () => {
-      if (reloadTimer) clearTimeout(reloadTimer);
-      unsubscribe();
-    };
-  }, [reload, userId]);
 
   const updateAvailability = useCallback(async (nextAvailability: WebCaptainAvailability): Promise<boolean> => {
     if (updatingAvailability) return false;
@@ -130,7 +100,6 @@ export function useCaptainDashboard() {
   }, [updatingOrderId]);
 
   const clearTransitionError = useCallback(() => setTransitionError(null), []);
-  const dismissNewAssignedOrder = useCallback(() => setNewAssignedOrder(null), []);
 
   const derived = useMemo(() => {
     const activeStatuses = new Set<WebOrder['status']>(['assigned', 'received', 'in_delivery']);
@@ -142,5 +111,5 @@ export function useCaptainDashboard() {
     };
   }, [homeMetrics, orders]);
 
-  return { profile, availability, orders, currentOrderStops, isInitialLoading, readError, transitionError, clearTransitionError, newAssignedOrder, dismissNewAssignedOrder, updatingAvailability, updatingOrderId, reload, updateAvailability, transitionOrder, ...derived };
+  return { profile, availability, orders, currentOrderStops, isInitialLoading, readError, transitionError, clearTransitionError, updatingAvailability, updatingOrderId, reload, updateAvailability, transitionOrder, ...derived };
 }

@@ -1,9 +1,28 @@
-import type { AuthChangeEvent, Session, SupabaseClient } from "@supabase/supabase-js";
+import type {
+  AuthChangeEvent,
+  Session,
+  SupabaseClient,
+} from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppState, type AppStateStatus, Platform } from "react-native";
-import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { type AuthIssue, classifyAuthError, withAuthTimeout } from "@/lib/auth/auth-errors";
+import { registerCaptainPushNotifications } from "@/lib/notifications";
+import {
+  createContext,
+  type PropsWithChildren,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  type AuthIssue,
+  classifyAuthError,
+  withAuthTimeout,
+} from "@/lib/auth/auth-errors";
 import {
   type DeliveryProfile,
   getNativeSupabaseClient,
@@ -19,7 +38,12 @@ export type DeliveryAuthStatus =
   | "profile-missing"
   | "auth-invalid";
 
-type AuthOperation = "idle" | "signing-in" | "activating" | "signing-out" | "retrying";
+type AuthOperation =
+  | "idle"
+  | "signing-in"
+  | "activating"
+  | "signing-out"
+  | "retrying";
 
 type DeliveryAuthState = {
   status: DeliveryAuthStatus;
@@ -35,7 +59,11 @@ type DeliveryAuthContextValue = DeliveryAuthState & {
   refresh: () => Promise<void>;
   retryProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  activatePendingAccount: (email: string, password: string, passwordConfirmation: string) => Promise<void>;
+  activatePendingAccount: (
+    email: string,
+    password: string,
+    passwordConfirmation: string,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   resetToLogin: () => Promise<void>;
   homePathForRole: (role: DeliveryRole) => "/(tabs)";
@@ -49,7 +77,9 @@ const initialState: DeliveryAuthState = {
   operation: "idle",
 };
 
-const DeliveryAuthContext = createContext<DeliveryAuthContextValue | null>(null);
+const DeliveryAuthContext = createContext<DeliveryAuthContextValue | null>(
+  null,
+);
 
 function isDeliveryRole(value: unknown): value is DeliveryRole {
   return value === "admin" || value === "supervisor" || value === "captain";
@@ -60,7 +90,8 @@ function profileIssue(code: "profile-missing" | "profile-mismatch"): AuthIssue {
     return {
       code,
       title: "عدم تطابق في الحساب",
-      message: "ملف الحساب الذي تم تحميله لا يطابق جلسة الدخول. تم إيقاف الوصول كإجراء حماية؛ سجّل الدخول من جديد.",
+      message:
+        "ملف الحساب الذي تم تحميله لا يطابق جلسة الدخول. تم إيقاف الوصول كإجراء حماية؛ سجّل الدخول من جديد.",
       recoverable: true,
     };
   }
@@ -68,7 +99,8 @@ function profileIssue(code: "profile-missing" | "profile-mismatch"): AuthIssue {
   return {
     code,
     title: "ملف الحساب غير موجود",
-    message: "تم تسجيل الدخول، لكن لم يتم العثور على ملف الحساب أو صلاحياته. تواصل مع الإدارة ولا تنشئ حساباً جديداً من هنا.",
+    message:
+      "تم تسجيل الدخول، لكن لم يتم العثور على ملف الحساب أو صلاحياته. تواصل مع الإدارة ولا تنشئ حساباً جديداً من هنا.",
     recoverable: true,
   };
 }
@@ -91,7 +123,10 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
   const clearQueryCache = useCallback(() => queryClient.clear(), [queryClient]);
 
   const signOutLocallyWithIssue = useCallback(
-    async (status: Extract<DeliveryAuthStatus, "account-disabled" | "auth-invalid">, issue: AuthIssue) => {
+    async (
+      status: Extract<DeliveryAuthStatus, "account-disabled" | "auth-invalid">,
+      issue: AuthIssue,
+    ) => {
       const version = ++requestVersionRef.current;
       preserveSignOutIssueRef.current = true;
       clearQueryCache();
@@ -103,7 +138,13 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
       } finally {
         preserveSignOutIssueRef.current = false;
         if (mountedRef.current && version === requestVersionRef.current) {
-          applyState({ status, session: null, profile: null, issue, operation: "idle" });
+          applyState({
+            status,
+            session: null,
+            profile: null,
+            issue,
+            operation: "idle",
+          });
         }
       }
     },
@@ -117,11 +158,16 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
       loadingProfileForUserRef.current = session.user.id;
       const version = ++requestVersionRef.current;
       const current = stateRef.current;
-      if (current.session?.user.id && current.session.user.id !== session.user.id) clearQueryCache();
+      if (
+        current.session?.user.id &&
+        current.session.user.id !== session.user.id
+      )
+        clearQueryCache();
       applyState({
         status: "initializing",
         session,
-        profile: current.profile?.id === session.user.id ? current.profile : null,
+        profile:
+          current.profile?.id === session.user.id ? current.profile : null,
         issue: null,
         operation: current.operation,
       });
@@ -132,16 +178,25 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           Promise.resolve(
             client
               .from("profiles")
-              .select("id, email, full_name, is_active, role, account_activated_at, created_at, updated_at")
+              .select(
+                "id, email, full_name, is_active, role, account_activated_at, created_at, updated_at",
+              )
               .eq("id", session.user.id)
               .maybeSingle(),
           ),
         );
 
-        if (!mountedRef.current || version !== requestVersionRef.current) return;
+        if (!mountedRef.current || version !== requestVersionRef.current)
+          return;
         if (error) throw error;
         if (!data) {
-          applyState({ status: "profile-missing", session, profile: null, issue: profileIssue("profile-missing"), operation: "idle" });
+          applyState({
+            status: "profile-missing",
+            session,
+            profile: null,
+            issue: profileIssue("profile-missing"),
+            operation: "idle",
+          });
           return;
         }
 
@@ -160,7 +215,8 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
             issue: {
               code: "unknown",
               title: "دور الحساب غير مدعوم",
-              message: "تمت قراءة ملف الحساب، لكن دوره لا يطابق أدوار Delivery Tartous المعتمدة. لا يمكن فتح التطبيق قبل مراجعة الإدارة.",
+              message:
+                "تمت قراءة ملف الحساب، لكن دوره لا يطابق أدوار Delivery Tartous المعتمدة. لا يمكن فتح التطبيق قبل مراجعة الإدارة.",
               recoverable: false,
             },
             operation: "idle",
@@ -172,23 +228,43 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           await signOutLocallyWithIssue("account-disabled", {
             code: "session-invalid",
             title: "الحساب معطّل",
-            message: "هذا الحساب معطّل حالياً. تم تسجيل خروجه من الجهاز؛ تواصل مع الإدارة لتفعيله.",
+            message:
+              "هذا الحساب معطّل حالياً. تم تسجيل خروجه من الجهاز؛ تواصل مع الإدارة لتفعيله.",
             recoverable: false,
           });
           return;
         }
 
-        applyState({ status: "authenticated", session, profile, issue: null, operation: "idle" });
+        applyState({
+          status: "authenticated",
+          session,
+          profile,
+          issue: null,
+          operation: "idle",
+        });
+        if (profile.role === "captain") {
+          void registerCaptainPushNotifications(profile.id).catch(
+            () => undefined,
+          );
+        }
       } catch (error) {
-        if (!mountedRef.current || version !== requestVersionRef.current) return;
+        if (!mountedRef.current || version !== requestVersionRef.current)
+          return;
         const issue = classifyAuthError(error, "profile");
         if (issue.code === "session-invalid") {
           await signOutLocallyWithIssue("auth-invalid", issue);
           return;
         }
-        applyState({ status: "profile-unavailable", session, profile: null, issue, operation: "idle" });
+        applyState({
+          status: "profile-unavailable",
+          session,
+          profile: null,
+          issue,
+          operation: "idle",
+        });
       } finally {
-        if (loadingProfileForUserRef.current === session.user.id) loadingProfileForUserRef.current = null;
+        if (loadingProfileForUserRef.current === session.user.id)
+          loadingProfileForUserRef.current = null;
       }
     },
     [applyState, clearQueryCache, getClient, signOutLocallyWithIssue],
@@ -196,7 +272,12 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
 
   const refresh = useCallback(async () => {
     const current = stateRef.current;
-    applyState({ ...current, status: "initializing", issue: null, operation: "retrying" });
+    applyState({
+      ...current,
+      status: "initializing",
+      issue: null,
+      operation: "retrying",
+    });
 
     try {
       const client = getClient();
@@ -204,7 +285,13 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
       if (error) throw error;
       if (!data.session) {
         clearQueryCache();
-        applyState({ status: "unauthenticated", session: null, profile: null, issue: null, operation: "idle" });
+        applyState({
+          status: "unauthenticated",
+          session: null,
+          profile: null,
+          issue: null,
+          operation: "idle",
+        });
         return;
       }
       await loadProfile(data.session);
@@ -214,9 +301,21 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
         await signOutLocallyWithIssue("auth-invalid", issue);
         return;
       }
-      applyState({ status: "profile-unavailable", session: current.session, profile: null, issue, operation: "idle" });
+      applyState({
+        status: "profile-unavailable",
+        session: current.session,
+        profile: null,
+        issue,
+        operation: "idle",
+      });
     }
-  }, [applyState, clearQueryCache, getClient, loadProfile, signOutLocallyWithIssue]);
+  }, [
+    applyState,
+    clearQueryCache,
+    getClient,
+    loadProfile,
+    signOutLocallyWithIssue,
+  ]);
 
   const retryProfile = useCallback(async () => {
     const session = stateRef.current.session;
@@ -231,7 +330,13 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
   const signIn = useCallback(
     async (email: string, password: string) => {
       const normalizedEmail = email.trim().toLowerCase();
-      applyState({ status: "unauthenticated", session: null, profile: null, issue: null, operation: "signing-in" });
+      applyState({
+        status: "unauthenticated",
+        session: null,
+        profile: null,
+        issue: null,
+        operation: "signing-in",
+      });
 
       try {
         const client = getClient();
@@ -249,7 +354,13 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           await signOutLocallyWithIssue("auth-invalid", issue);
           return;
         }
-        applyState({ status: "unauthenticated", session: null, profile: null, issue, operation: "idle" });
+        applyState({
+          status: "unauthenticated",
+          session: null,
+          profile: null,
+          issue,
+          operation: "idle",
+        });
       }
     },
     [applyState, getClient, loadProfile, signOutLocallyWithIssue],
@@ -258,7 +369,13 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
   const activatePendingAccount = useCallback(
     async (email: string, password: string, passwordConfirmation: string) => {
       const normalizedEmail = email.trim().toLowerCase();
-      applyState({ status: "unauthenticated", session: null, profile: null, issue: null, operation: "activating" });
+      applyState({
+        status: "unauthenticated",
+        session: null,
+        profile: null,
+        issue: null,
+        operation: "activating",
+      });
 
       try {
         const client = getClient();
@@ -277,11 +394,18 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           client.auth.signInWithPassword({ email: normalizedEmail, password }),
         );
         if (signInError) throw signInError;
-        if (!data.session) throw new Error("تم تفعيل الحساب، لكن تعذر إنشاء جلسة دخول.");
+        if (!data.session)
+          throw new Error("تم تفعيل الحساب، لكن تعذر إنشاء جلسة دخول.");
         await loadProfile(data.session);
       } catch (error) {
         const issue = classifyAuthError(error, "activation");
-        applyState({ status: "unauthenticated", session: null, profile: null, issue, operation: "idle" });
+        applyState({
+          status: "unauthenticated",
+          session: null,
+          profile: null,
+          issue,
+          operation: "idle",
+        });
       }
     },
     [applyState, getClient, loadProfile],
@@ -292,13 +416,31 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
     applyState({ ...current, operation: "signing-out" });
     clearQueryCache();
     try {
+      if (current.profile?.role === "captain") {
+        await getClient()
+          .from("push_tokens")
+          .delete()
+          .eq("user_id", current.profile.id);
+      }
       await getClient().auth.signOut();
-      applyState({ status: "unauthenticated", session: null, profile: null, issue: null, operation: "idle" });
+      applyState({
+        status: "unauthenticated",
+        session: null,
+        profile: null,
+        issue: null,
+        operation: "idle",
+      });
     } catch {
       try {
         await getClient().auth.signOut({ scope: "local" });
       } finally {
-        applyState({ status: "unauthenticated", session: null, profile: null, issue: null, operation: "idle" });
+        applyState({
+          status: "unauthenticated",
+          session: null,
+          profile: null,
+          issue: null,
+          operation: "idle",
+        });
       }
     }
   }, [applyState, clearQueryCache, getClient]);
@@ -310,7 +452,13 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
     } catch {
       // The state reset below keeps the user out even if local cleanup reports an error.
     }
-    applyState({ status: "unauthenticated", session: null, profile: null, issue: null, operation: "idle" });
+    applyState({
+      status: "unauthenticated",
+      session: null,
+      profile: null,
+      issue: null,
+      operation: "idle",
+    });
   }, [applyState, clearQueryCache, getClient]);
 
   useEffect(() => {
@@ -331,29 +479,46 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
       };
     }
 
-    const { data: listener } = client.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
-      queueMicrotask(() => {
-        if (!mountedRef.current) return;
-        if (event === "SIGNED_OUT" || !session) {
-          const currentStatus = stateRef.current.status;
-          const mustKeepIssue = currentStatus === "account-disabled" || currentStatus === "auth-invalid";
-          if (!preserveSignOutIssueRef.current && !mustKeepIssue) {
-            clearQueryCache();
-            applyState({ status: "unauthenticated", session: null, profile: null, issue: null, operation: "idle" });
+    const { data: listener } = client.auth.onAuthStateChange(
+      (event: AuthChangeEvent, session: Session | null) => {
+        queueMicrotask(() => {
+          if (!mountedRef.current) return;
+          if (event === "SIGNED_OUT" || !session) {
+            const currentStatus = stateRef.current.status;
+            const mustKeepIssue =
+              currentStatus === "account-disabled" ||
+              currentStatus === "auth-invalid";
+            if (!preserveSignOutIssueRef.current && !mustKeepIssue) {
+              clearQueryCache();
+              applyState({
+                status: "unauthenticated",
+                session: null,
+                profile: null,
+                issue: null,
+                operation: "idle",
+              });
+            }
+            return;
           }
-          return;
-        }
 
-        if (event === "TOKEN_REFRESHED" && stateRef.current.profile?.id === session.user.id) {
-          applyState({ ...stateRef.current, session, operation: "idle" });
-          return;
-        }
+          if (
+            event === "TOKEN_REFRESHED" &&
+            stateRef.current.profile?.id === session.user.id
+          ) {
+            applyState({ ...stateRef.current, session, operation: "idle" });
+            return;
+          }
 
-        if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "USER_UPDATED") {
-          void loadProfile(session);
-        }
-      });
-    });
+          if (
+            event === "INITIAL_SESSION" ||
+            event === "SIGNED_IN" ||
+            event === "USER_UPDATED"
+          ) {
+            void loadProfile(session);
+          }
+        });
+      },
+    );
 
     void refresh();
 
@@ -398,14 +563,29 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
       resetToLogin,
       homePathForRole: () => "/(tabs)",
     }),
-    [activatePendingAccount, refresh, resetToLogin, retryProfile, signIn, signOut, state],
+    [
+      activatePendingAccount,
+      refresh,
+      resetToLogin,
+      retryProfile,
+      signIn,
+      signOut,
+      state,
+    ],
   );
 
-  return <DeliveryAuthContext.Provider value={value}>{children}</DeliveryAuthContext.Provider>;
+  return (
+    <DeliveryAuthContext.Provider value={value}>
+      {children}
+    </DeliveryAuthContext.Provider>
+  );
 }
 
 export function useDeliveryAuth(): DeliveryAuthContextValue {
   const context = useContext(DeliveryAuthContext);
-  if (!context) throw new Error("useDeliveryAuth must be used within DeliveryAuthProvider.");
+  if (!context)
+    throw new Error(
+      "useDeliveryAuth must be used within DeliveryAuthProvider.",
+    );
   return context;
 }

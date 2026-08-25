@@ -5,7 +5,9 @@ import { SymbolWeight, type SFSymbol } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Partial<Record<SFSymbol, ComponentProps<typeof MaterialIcons>["name"]>>;
+type IconMapping = Partial<
+  Record<SFSymbol, ComponentProps<typeof MaterialIcons>["name"]>
+>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
@@ -19,6 +21,11 @@ const MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
+  "list.bullet": "list",
+  "person.2.fill": "people",
+  "wallet.pass.fill": "account-balance-wallet",
+  "shippingbox.fill": "inventory-2",
+  "gearshape.fill": "settings",
 } as const satisfies IconMapping;
 
 /**
@@ -38,5 +45,12 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={MAPPING[name]}
+      style={style}
+    />
+  );
 }
