@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import {
   nativeAdminFinanceContract,
   useNativeCaptainWageDetails,
@@ -32,6 +33,7 @@ const dateLabel = (value: string) =>
 
 export function AdminCaptainWageDetail() {
   const router = useRouter();
+  const { showToast } = useAppToast();
   const { captainId } = useLocalSearchParams<{ captainId: string }>();
   const details = useNativeCaptainWageDetails(captainId ?? null);
   const periods = useNativeAdminWagePeriods();
@@ -76,7 +78,7 @@ export function AdminCaptainWageDetail() {
       setAmount("");
       await details.refetch();
       await periods.refetch();
-      Alert.alert("تم التسجيل", `تم تسجيل دفعة بقيمة ${money(value)}.`);
+      showToast({ message: `تم تسجيل دفعة بقيمة ${money(value)}.` });
     } catch (error) {
       Alert.alert(
         "تعذر التسجيل",

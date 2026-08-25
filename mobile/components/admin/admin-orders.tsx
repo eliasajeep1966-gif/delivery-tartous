@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   useAdminOrderDetails,
@@ -112,6 +113,7 @@ function formatDate(value: string) {
 export function AdminOrders() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
   const [filter, setFilter] = useState<AdminOrdersFilter>("all");
@@ -205,10 +207,7 @@ export function AdminOrders() {
         { p_order_id: selectedOrder.id, p_captain_id: selectedCaptainId },
       );
       if (error) throw new Error(error.message);
-      Alert.alert(
-        "تم التعيين",
-        `تم تعيين الكابتن للطلب #${selectedOrder.orderNumber}.`,
-      );
+      showToast({ message: `تم تعيين الكابتن للطلب #${selectedOrder.orderNumber}.` });
       setAssignmentOpen(false);
       setSelectedCaptainId(null);
       await refreshOrderData();
@@ -231,10 +230,7 @@ export function AdminOrders() {
         p_cancellation_reason: cancellationReason.trim(),
       });
       if (error) throw new Error(error.message);
-      Alert.alert(
-        "تم الإلغاء",
-        `تم إلغاء الطلب #${selectedOrder.orderNumber}.`,
-      );
+      showToast({ message: `تم إلغاء الطلب #${selectedOrder.orderNumber}.` });
       setCancelOpen(false);
       setCancellationReason("");
       await refreshOrderData();

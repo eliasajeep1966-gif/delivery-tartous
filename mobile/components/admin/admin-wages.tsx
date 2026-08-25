@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   nativeAdminFinanceContract,
@@ -60,6 +61,7 @@ function dateLabel(value: string) {
 
 export function AdminWages() {
   const { profile } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const router = useRouter();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
@@ -137,7 +139,7 @@ export function AdminWages() {
         amount,
       );
       setPaymentInputs((current) => ({ ...current, [captain.captain_id]: "" }));
-      Alert.alert("تم التسجيل", `تم تسجيل دفعة بقيمة ${money(amount)}.`);
+      showToast({ message: `تم تسجيل دفعة بقيمة ${money(amount)}.` });
       await wagePeriods.refetch();
     } catch (cause) {
       Alert.alert(

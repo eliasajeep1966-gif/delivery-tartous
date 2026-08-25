@@ -17,6 +17,7 @@ import {
   type NativeNewOrderDraft,
 } from "@/components/admin/admin-new-order-modal";
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   type AdminHomeActivity,
@@ -85,6 +86,7 @@ const statusStyle: Record<
 export function AdminHome() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
   const home = useAdminHome(isBackOffice);
@@ -160,10 +162,7 @@ export function AdminHome() {
         );
         void notifyCaptainOfOrder(assigned.id).catch(() => undefined);
         setCreateOpen(false);
-        Alert.alert(
-          "تم إنشاء الطلب",
-          `تم إنشاء وتعيين الطلب #${assigned.orderNumber}.`,
-        );
+        showToast({ message: `تم إنشاء وتعيين الطلب #${assigned.orderNumber}.` });
       } catch (assignmentError) {
         setCreateOpen(false);
         const message =

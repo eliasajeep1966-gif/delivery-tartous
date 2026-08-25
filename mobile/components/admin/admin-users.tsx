@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useAdminUsers } from "@/features/admin/use-admin-users";
 import {
@@ -35,6 +36,7 @@ const roleLabels: Record<NativeAppRole | "all", string> = {
 export function AdminUsers() {
   const router = useRouter();
   const { profile, refresh } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const users = useAdminUsers();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<NativeAppRole | "all">("all");
@@ -75,7 +77,7 @@ export function AdminUsers() {
   ) => {
     try {
       await users.mutate(input);
-      Alert.alert("تمت العملية", success);
+      showToast({ message: success });
       if (input.type === "role" && input.userId === profile?.id) await refresh();
       return true;
     } catch (error) {

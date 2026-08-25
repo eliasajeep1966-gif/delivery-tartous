@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useAdminCaptainsData } from "@/features/admin/use-admin-captains";
 
@@ -41,6 +42,7 @@ function formatDate(value: string) {
 export default function AdminCustodyScreen() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const data = useAdminCaptainsData();
   const [filter, setFilter] = useState<CustodyFilter>("all");
   const [returningId, setReturningId] = useState<string | null>(null);
@@ -79,10 +81,7 @@ export default function AdminCustodyScreen() {
     setReturningId(record.id);
     try {
       await data.returnCustody(record.id);
-      Alert.alert(
-        "تمت العملية",
-        `تم تسجيل إرجاع الأمانة من ${record.captainName}.`,
-      );
+      showToast({ message: `تم تسجيل إرجاع الأمانة من ${record.captainName}.` });
     } catch (cause) {
       Alert.alert(
         "تعذر تسجيل الإرجاع",

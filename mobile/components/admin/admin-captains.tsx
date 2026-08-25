@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useAdminCaptains } from "@/features/admin/use-admin-captains";
 import type { NativeCaptain } from "@/lib/supabase/native-captain-admin-contract";
@@ -221,6 +222,7 @@ function CaptainDetails({
 export function AdminCaptainsScreen() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const data = useAdminCaptains();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CaptainFilter>("all");
@@ -247,7 +249,7 @@ export function AdminCaptainsScreen() {
   const perform = async (operation: () => Promise<void>, success: string) => {
     try {
       await operation();
-      Alert.alert("تمت العملية", success);
+      showToast({ message: success });
     } catch (cause) {
       Alert.alert(
         "تعذر تنفيذ العملية",

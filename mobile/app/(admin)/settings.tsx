@@ -20,6 +20,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 
 type Exception = {
@@ -36,6 +37,7 @@ const validSplit = (captain: string, office: string) =>
 export default function OfficeSettingsScreen() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const [office, setOffice] = useState({
     name: "دليفري طرطوس",
     phone: "0933000000",
@@ -72,7 +74,7 @@ export default function OfficeSettingsScreen() {
         "بيانات غير صحيحة",
         "أكمل نص الاستثناء ونسبه، ويجب أن يكون مجموع النسب 100%.",
       );
-    Alert.alert("تم الحفظ", "تم حفظ إعدادات المكتب ضمن هذه الجلسة.");
+    showToast({ message: "تم حفظ إعدادات المكتب ضمن هذه الجلسة." });
   };
   if (!isBackOffice)
     return (

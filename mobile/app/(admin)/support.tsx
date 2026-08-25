@@ -21,6 +21,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 
 const questions = [
@@ -49,6 +50,7 @@ const categories = [
 export default function AdminSupportScreen() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const [open, setOpen] = useState<number | null>(0);
   const [name, setName] = useState("");
   const [category, setCategory] = useState(categories[0]);
@@ -74,7 +76,7 @@ export default function AdminSupportScreen() {
     void openUrl(
       `mailto:eliasajeep1966@gmail.com?subject=${encodeURIComponent(`بلاغ دعم — ${category}`)}&body=${encodeURIComponent(message)}`,
     );
-    Alert.alert("تم تجهيز البلاغ", "تم فتح البريد لمراجعة الرسالة وإرسالها.");
+    showToast({ message: "تم فتح البريد لمراجعة البلاغ وإرساله." });
   };
   if (!isBackOffice)
     return (

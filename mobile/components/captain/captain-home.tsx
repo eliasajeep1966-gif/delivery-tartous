@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useNativeCaptainDashboard } from "@/features/captain/use-native-captain-dashboard";
 import type { CaptainOrderStatus } from "@/lib/supabase/native-captain-contract";
@@ -65,6 +66,7 @@ function nextAction(status: CaptainOrderStatus) {
 export function CaptainHome() {
   const router = useRouter();
   const { profile, signOut } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const dashboard = useNativeCaptainDashboard();
   const [falseOrderOpen, setFalseOrderOpen] = useState(false);
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
@@ -87,10 +89,7 @@ export function CaptainHome() {
       action &&
       (await dashboard.transitionOrder(current.id, action.next))
     )
-      Alert.alert(
-        "تم التحديث",
-        `أصبحت حالة الطلب: ${statusLabels[action.next]}`,
-      );
+      showToast({ message: `أصبحت حالة الطلب: ${statusLabels[action.next]}` });
   };
   const markFalse = async () => {
     if (current && (await dashboard.transitionOrder(current.id, "false_order")))

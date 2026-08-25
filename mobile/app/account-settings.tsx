@@ -4,6 +4,7 @@ import { KeyRound, Mail, Save, ShieldCheck, UserRound } from "lucide-react-nativ
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { nativeCaptainContract } from "@/lib/supabase/native-captain-contract";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
@@ -13,6 +14,7 @@ const BLUE = "#0060B8";
 export default function AccountSettingsScreen() {
   const router = useRouter();
   const auth = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const [fullName, setFullName] = useState(auth.profile?.full_name ?? "");
   const [email, setEmail] = useState(auth.profile?.email ?? auth.session?.user.email ?? "");
   const [password, setPassword] = useState("");
@@ -25,7 +27,7 @@ export default function AccountSettingsScreen() {
     try {
       await nativeCaptainContract.actions.updateName(fullName.trim());
       await auth.refresh();
-      Alert.alert("تم التحديث", "تم تحديث الاسم بنجاح.");
+      showToast({ message: "تم تحديث الاسم بنجاح." });
     } catch (cause) {
       Alert.alert("تعذر تحديث الاسم", cause instanceof Error ? cause.message : "حاول مرة أخرى.");
     } finally {
@@ -42,7 +44,7 @@ export default function AccountSettingsScreen() {
     try {
       const { error } = await getNativeSupabaseClient().auth.updateUser({ email: nextEmail });
       if (error) throw new Error(error.message);
-      Alert.alert("تم إرسال التأكيد", "تحقق من البريد الجديد لتأكيد التغيير.");
+      showToast({ message: "تم إرسال رسالة التأكيد إلى البريد الجديد." });
     } catch (cause) {
       Alert.alert("تعذر تحديث البريد", cause instanceof Error ? cause.message : "حاول مرة أخرى.");
     } finally {
@@ -58,7 +60,7 @@ export default function AccountSettingsScreen() {
       await nativeCaptainContract.actions.updatePassword(password);
       setPassword("");
       setConfirmation("");
-      Alert.alert("تم التحديث", "تم تغيير كلمة المرور بنجاح.");
+      showToast({ message: "تم تغيير كلمة المرور بنجاح." });
     } catch (cause) {
       Alert.alert("تعذر تغيير كلمة المرور", cause instanceof Error ? cause.message : "حاول مرة أخرى.");
     } finally {

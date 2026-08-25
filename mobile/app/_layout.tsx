@@ -29,6 +29,7 @@ import {
 
 import "@/lib/_core/nativewind-pressable";
 import { AuthStateScreen } from "@/components/auth/auth-state-screen";
+import { AppToastProvider } from "@/contexts/app-toast-context";
 import {
   DeliveryAuthProvider,
   useDeliveryAuth,
@@ -188,9 +189,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <DeliveryAuthProvider>
-            <AuthAwareNavigator />
-          </DeliveryAuthProvider>
+          <AppToastProvider>
+            <DeliveryAuthProvider>
+              <AuthAwareNavigator />
+            </DeliveryAuthProvider>
+          </AppToastProvider>
           <StatusBar style="dark" />
         </QueryClientProvider>
       </trpc.Provider>
