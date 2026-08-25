@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type AdminOrderStatus } from "@/lib/admin/admin-home-mappers";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
+import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
 export type AdminOrdersFilter = "all" | AdminOrderStatus | "delivery_active";
 
@@ -102,9 +103,15 @@ async function loadOrdersPage(filter: AdminOrdersFilter, cursor: Cursor | null):
 }
 
 export function useAdminOrders(filter: AdminOrdersFilter, enabled = true) {
+  const queryClient = useQueryClient();
   const [cursorHistory, setCursorHistory] = useState<(Cursor | null)[]>([null]);
   const [pageIndex, setPageIndex] = useState(0);
   const currentCursor = cursorHistory[pageIndex] ?? null;
+
+  useRealtimeOrders({
+    enabled,
+    onOrder: () => void queryClient.invalidateQueries({ queryKey: ["admin-orders"] }),
+  });
 
   useEffect(() => {
     setCursorHistory([null]);
