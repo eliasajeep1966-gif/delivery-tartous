@@ -41,7 +41,6 @@ import {
   subscribeSafeAreaInsets,
 } from "@/lib/_core/manus-runtime";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { createTRPCClient, trpc } from "@/lib/trpc";
 
 I18nManager.allowRTL(true);
 
@@ -107,7 +106,6 @@ function AuthAwareNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="navigation-test" />
         <Stack.Screen name="activity-logs" />
-        <Stack.Screen name="oauth/callback" />
       </Stack>
 
       {status === "initializing" ? (
@@ -155,7 +153,6 @@ export default function RootLayout() {
         defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
       }),
   );
-  const [trpcClient] = useState(() => createTRPCClient());
 
   useEffect(() => {
     initManusRuntime();
@@ -188,18 +185,16 @@ export default function RootLayout() {
 
   const content = (
     <GestureHandlerRootView style={styles.root}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <AppToastProvider>
-            <AppSoundProvider>
-              <DeliveryAuthProvider>
-                <AuthAwareNavigator />
-              </DeliveryAuthProvider>
-            </AppSoundProvider>
-          </AppToastProvider>
-          <StatusBar style="dark" />
-        </QueryClientProvider>
-      </trpc.Provider>
+      <QueryClientProvider client={queryClient}>
+        <AppToastProvider>
+          <AppSoundProvider>
+            <DeliveryAuthProvider>
+              <AuthAwareNavigator />
+            </DeliveryAuthProvider>
+          </AppSoundProvider>
+        </AppToastProvider>
+        <StatusBar style="dark" />
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 

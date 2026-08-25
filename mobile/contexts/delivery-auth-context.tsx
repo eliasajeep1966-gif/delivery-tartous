@@ -461,6 +461,41 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
     });
   }, [applyState, clearQueryCache, getClient]);
 
+  const sessionUserId = state.session?.user.id ?? null;
+
+  useEffect(() => {
+    if (!sessionUserId) return;
+
+    let client: SupabaseClient;
+    try {
+      client = getClient();
+    } catch {
+      return;
+    }
+
+    let active = true;
+    const channel = client
+      .channel(`auth-profile:${sessionUserId}:${Date.now()}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${sessionUserId}`,
+        },
+        () => {
+          if (active) void refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      void client.removeChannel(channel);
+    };
+  }, [getClient, refresh, sessionUserId]);
+
   useEffect(() => {
     mountedRef.current = true;
     let client: SupabaseClient;
@@ -537,18 +572,23 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
     } catch {
       return;
     }
+    let previousAppState = AppState.currentState;
     const handleAppState = (nextAppState: AppStateStatus) => {
+      const returnedToForeground =
+        nextAppState === "active" && previousAppState !== "active";
       if (nextAppState === "active") {
         client.auth.startAutoRefresh();
+        if (returnedToForeground) void refresh();
       } else {
         client.auth.stopAutoRefresh();
       }
+      previousAppState = nextAppState;
     };
 
     handleAppState(AppState.currentState);
     const subscription = AppState.addEventListener("change", handleAppState);
     return () => subscription.remove();
-  }, [getClient]);
+  }, [getClient, refresh]);
 
   const value = useMemo<DeliveryAuthContextValue>(
     () => ({

@@ -2,6 +2,7 @@ import { createContext, type PropsWithChildren, useCallback, useContext, useEffe
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 import { webSupabase, type WebProfile } from '@/data/supabase/webSupabaseContract';
+import { getWebSupabaseClient } from '@/data/supabase/webSupabaseClient';
 import { withAuthRequestTimeout } from '@/lib/authRequest';
 
 export type WebAuthStatus =
@@ -283,6 +284,43 @@ export function WebAuthProvider({ children }: PropsWithChildren) {
       subscription.unsubscribe();
     };
   }, [handleAuthEvent, refresh]);
+
+  const sessionUserId = state.session?.user.id ?? null;
+
+  useEffect(() => {
+    if (!sessionUserId) return;
+
+    const client = getWebSupabaseClient();
+    let active = true;
+    const channel = client
+      .channel(`auth-profile:${sessionUserId}:${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${sessionUserId}`,
+        },
+        () => {
+          if (active) void refresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      void client.removeChannel(channel);
+    };
+  }, [refresh, sessionUserId]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => document.removeEventListener('visibilitychange', refreshWhenVisible);
+  }, [refresh]);
 
   const value = useMemo<WebAuthContextValue>(
     () => ({ ...state, refresh, retryProfile, signOut }),
