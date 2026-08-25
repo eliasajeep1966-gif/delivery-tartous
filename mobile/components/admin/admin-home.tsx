@@ -1,8 +1,9 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, useRouter } from "expo-router";
-import { type ComponentProps, useEffect, useState } from "react";
+import { type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   FlatList,
   Pressable,
   RefreshControl,
@@ -91,20 +92,41 @@ export function AdminHome() {
   const [createOpen, setCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const realtimeRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleRealtimeRefresh = useCallback(() => {
+    if (realtimeRefreshTimer.current !== null) return;
+    realtimeRefreshTimer.current = setTimeout(() => {
+      realtimeRefreshTimer.current = null;
+      void refetch();
+    }, 250);
+  }, [refetch]);
 
   useRealtimeOrders({
     enabled: isBackOffice,
-    onOrder: () => void refetch(),
-    onCaptain: () => void refetch(),
-    onProfile: () => void refetch(),
-    onActivity: () => void refetch(),
+    onOrder: scheduleRealtimeRefresh,
+    onCaptain: scheduleRealtimeRefresh,
+    onProfile: scheduleRealtimeRefresh,
+    onActivity: scheduleRealtimeRefresh,
   });
 
   useEffect(() => {
     if (!isBackOffice) return;
-    const polling = setInterval(() => void refetch(), 15_000);
-    return () => clearInterval(polling);
-  }, [isBackOffice, refetch]);
+    const fallbackTimer = setInterval(() => {
+      if (AppState.currentState === "active") void refetch();
+    }, 60_000);
+    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") scheduleRealtimeRefresh();
+    });
+    return () => {
+      clearInterval(fallbackTimer);
+      appStateSubscription.remove();
+      if (realtimeRefreshTimer.current !== null) {
+        clearTimeout(realtimeRefreshTimer.current);
+        realtimeRefreshTimer.current = null;
+      }
+    };
+  }, [isBackOffice, refetch, scheduleRealtimeRefresh]);
 
   if (!isBackOffice) {
     return (

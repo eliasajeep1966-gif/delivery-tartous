@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppState } from "react-native";
 
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
@@ -26,6 +27,7 @@ export function useNativeCaptainDashboard() {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [orderSaving, setOrderSaving] = useState(false);
   const mounted = useRef(true);
+  const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const reload = useCallback(
     async (silent = false) => {
@@ -34,8 +36,10 @@ export function useNativeCaptainDashboard() {
         return;
       }
       if (silent) setRefreshing(true);
-      else setLoading(true);
-      setError(null);
+      else {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const [nextMetrics, nextOrders] = await Promise.all([
           nativeCaptainContract.reads.homeMetrics(),
@@ -52,7 +56,7 @@ export function useNativeCaptainDashboard() {
         setOrders(nextOrders);
         setCurrentStops(stops);
       } catch (cause) {
-        if (mounted.current)
+        if (mounted.current && !silent)
           setError(
             cause instanceof Error ? cause.message : "تعذر تحميل حساب الكابتن.",
           );
@@ -66,6 +70,14 @@ export function useNativeCaptainDashboard() {
     [captainId],
   );
 
+  const scheduleRealtimeReload = useCallback(() => {
+    if (realtimeReloadTimer.current !== null) return;
+    realtimeReloadTimer.current = setTimeout(() => {
+      realtimeReloadTimer.current = null;
+      void reload(true);
+    }, 250);
+  }, [reload]);
+
   useEffect(() => {
     mounted.current = true;
     const initialLoadTimer = setTimeout(() => {
@@ -78,23 +90,29 @@ export function useNativeCaptainDashboard() {
       };
     }
 
-    const unsubscribe = () => undefined;
     const refreshTimer = setInterval(() => {
-      void reload(true);
-    }, 10_000);
+      if (AppState.currentState === "active") void reload(true);
+    }, 60_000);
+    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") void reload(true);
+    });
 
     return () => {
       mounted.current = false;
       clearTimeout(initialLoadTimer);
       clearInterval(refreshTimer);
-      unsubscribe();
+      appStateSubscription.remove();
+      if (realtimeReloadTimer.current !== null) {
+        clearTimeout(realtimeReloadTimer.current);
+        realtimeReloadTimer.current = null;
+      }
     };
   }, [captainId, reload]);
 
   useRealtimeOrders({
     enabled: Boolean(captainId),
     captainId,
-    onOrder: () => void reload(true),
+    onOrder: scheduleRealtimeReload,
     onCaptain: (payload) => {
       const row = payload.new as { availability?: CaptainAvailability };
       if (row.availability)

@@ -14,10 +14,17 @@ import {
 } from '@/data/supabase/webSupabaseContract';
 import type { HomeActivity, HomeCaptain, HomeMetric } from '@/features/admin/homeMappers';
 import { WebRequestTimeoutError, withWebRequestTimeout } from '@/lib/authRequest';
+import { useRealtimeRefresh } from '@/lib/useRealtimeRefresh';
 
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل لوحة الإدارة بعد 15 ثانية. حاول مرة أخرى.';
 const DAMASCUS_TIME_ZONE = 'Asia/Damascus';
 const ORDER_STATUSES: readonly WebOrderStatus[] = ['pending', 'assigned', 'received', 'in_delivery', 'completed', 'cancelled', 'false_order'];
+const BACKOFFICE_HOME_REALTIME_TARGETS = [
+  { table: 'orders' },
+  { table: 'captain_status' },
+  { table: 'profiles' },
+  { table: 'audit_logs', event: 'INSERT' },
+] as const;
 
 type ReloadOptions = {
   background?: boolean;
@@ -168,6 +175,15 @@ export function useAdminHomeData(): AdminHomeData {
       mounted.current = false;
     };
   }, [reload]);
+
+  const refreshFromRealtime = useCallback(() => reload({ background: true }), [reload]);
+
+  useRealtimeRefresh({
+    enabled: true,
+    channelName: 'backoffice-home',
+    targets: BACKOFFICE_HOME_REALTIME_TARGETS,
+    onRefresh: refreshFromRealtime,
+  });
 
   const metrics = useMemo<HomeMetric[]>(() => {
     const values = summary ?? {

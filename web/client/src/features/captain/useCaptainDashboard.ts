@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWebAuth } from '@/contexts/WebAuthContext';
 import { webSupabase, type WebCaptainAvailability, type WebCaptainHomeMetrics, type WebOrder, type WebOrderStop, type WebProfile } from '@/data/supabase/webSupabaseContract';
 import { withWebRequestTimeout } from '@/lib/authRequest';
+import { useRealtimeRefresh } from '@/lib/useRealtimeRefresh';
 
 const LOAD_TIMEOUT_MESSAGE = 'انتهت مهلة تحميل حساب الكابتن بعد 15 ثانية. حاول مرة أخرى.';
 const ACTION_TIMEOUT_MESSAGE = 'انتهت مهلة حفظ التحديث بعد 15 ثانية. تحقق من الحالة قبل إعادة المحاولة.';
@@ -27,7 +28,7 @@ export function useCaptainDashboard() {
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const mounted = useRef(true);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async ({ background = false }: { background?: boolean } = {}) => {
     if (!userId) {
       setHomeMetrics(null);
       setAvailability(null);
@@ -35,7 +36,7 @@ export function useCaptainDashboard() {
       return;
     }
 
-    setReadError(null);
+    if (!background) setReadError(null);
     try {
       const [nextProfile, nextMetrics, nextOrders] = await Promise.all([
         withWebRequestTimeout(webSupabase.reads.myProfile(userId), LOAD_TIMEOUT_MESSAGE),
@@ -52,7 +53,7 @@ export function useCaptainDashboard() {
       setOrders(nextOrders);
       setCurrentOrderStops(nextStops);
     } catch (error) {
-      if (mounted.current) setReadError(getErrorMessage(error, 'تعذر تحميل حساب الكابتن. حاول مرة أخرى.'));
+      if (mounted.current && !background) setReadError(getErrorMessage(error, 'تعذر تحميل حساب الكابتن. حاول مرة أخرى.'));
     } finally {
       if (mounted.current) setIsInitialLoading(false);
     }
@@ -63,6 +64,19 @@ export function useCaptainDashboard() {
     void reload();
     return () => { mounted.current = false; };
   }, [reload]);
+
+  const captainRealtimeTargets = useMemo(() => userId ? [
+    { table: 'orders' as const, filter: `assigned_captain_id=eq.${userId}` },
+    { table: 'captain_status' as const, filter: `captain_id=eq.${userId}` },
+  ] : [], [userId]);
+  const refreshFromRealtime = useCallback(() => reload({ background: true }), [reload]);
+
+  useRealtimeRefresh({
+    enabled: Boolean(userId),
+    channelName: 'captain-home',
+    targets: captainRealtimeTargets,
+    onRefresh: refreshFromRealtime,
+  });
 
   const updateAvailability = useCallback(async (nextAvailability: WebCaptainAvailability): Promise<boolean> => {
     if (updatingAvailability) return false;
