@@ -137,7 +137,10 @@ export const nativeCaptainContract = {
   },
   actions: {
     async setAvailability(availability: CaptainAvailability): Promise<{ availability: CaptainAvailability; captain_id: string; updated_at: string }> {
-      return first(await client().rpc("set_captain_availability", { new_availability: availability }) as Result<{ availability: CaptainAvailability; captain_id: string; updated_at: string }[]>, "تعذر تحديث حالة التوفر.");
+      return unwrap(
+        await client().rpc("set_captain_availability", { new_availability: availability }) as Result<{ availability: CaptainAvailability; captain_id: string; updated_at: string }>,
+        "تعذر تحديث حالة التوفر.",
+      );
     },
     async transitionOrder(orderId: string, nextStatus: Extract<CaptainOrderStatus, "received" | "in_delivery" | "completed" | "false_order">): Promise<CaptainOrder> {
       return unwrap(await client().rpc("transition_assigned_order", { p_order_id: orderId, p_next_status: nextStatus }) as Result<CaptainOrder>, "تعذر تحديث مرحلة الطلب.");
