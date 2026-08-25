@@ -192,8 +192,6 @@ export function AdminHome() {
     }
   };
 
-  const activeDeliveries =
-    snapshot?.metrics.find((metric) => metric.id === "in_delivery")?.value ?? 0;
   const availableCount = snapshot?.availableCaptains.length ?? 0;
 
   return (
@@ -265,19 +263,6 @@ export function AdminHome() {
                 <Text style={styles.heroSubtitle}>
                   راقب الحركة واتخذ الإجراء المناسب من مكان واحد.
                 </Text>
-                <View style={styles.heroStatsRow}>
-                  <HeroStat
-                    icon="two-wheeler"
-                    value={home.isPending ? "—" : String(activeDeliveries)}
-                    label="قيد التوصيل"
-                  />
-                  <View style={styles.heroDivider} />
-                  <HeroStat
-                    icon="person-pin-circle"
-                    value={home.isPending ? "—" : String(availableCount)}
-                    label="كابتن متاح"
-                  />
-                </View>
               </LinearGradient>
             </Animated.View>
 
@@ -452,28 +437,6 @@ export function AdminHome() {
         onSubmit={submitOrder}
       />
     </ScreenContainer>
-  );
-}
-
-function HeroStat({
-  icon,
-  value,
-  label,
-}: {
-  icon: IconName;
-  value: string;
-  label: string;
-}) {
-  return (
-    <View style={styles.heroStat}>
-      <View style={styles.heroStatIcon}>
-        <MaterialIcons name={icon} size={17} color="#126D9F" />
-      </View>
-      <View>
-        <Text style={styles.heroStatValue}>{value}</Text>
-        <Text style={styles.heroStatLabel}>{label}</Text>
-      </View>
-    </View>
   );
 }
 
@@ -755,22 +718,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  heroStatsRow: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.76)",
-    borderColor: "#DEEDF7",
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    marginTop: 17,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-  },
-  heroStat: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 8 },
-  heroStatIcon: { alignItems: "center", backgroundColor: "#E7F4FC", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },
-  heroStatValue: { color: "#154D71", fontSize: 18, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  heroStatLabel: { color: "#6B889C", fontSize: 10, fontWeight: "700", marginTop: 1, textAlign: "right", writingDirection: "rtl" },
-  heroDivider: { backgroundColor: "#DCEBF4", height: 30, width: 1 },
   errorCard: {
     alignItems: "center",
     backgroundColor: "#FFF5F5",
@@ -798,7 +745,7 @@ const styles = StyleSheet.create({
     borderColor: "#E6EEF4",
     borderRadius: 18,
     borderWidth: 1,
-    minHeight: 124,
+    minHeight: 104,
     overflow: "hidden",
     padding: 13,
     shadowColor: "#113D5B",
@@ -808,16 +755,16 @@ const styles = StyleSheet.create({
   },
   metricCardHighlight: { borderColor: "#0D6EA9", shadowColor: "#0D6EA9", shadowOpacity: 0.2, shadowRadius: 13 },
   metricTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
-  metricIcon: { alignItems: "center", borderRadius: 12, height: 36, justifyContent: "center", width: 36 },
-  metricValue: { color: "#164C70", fontSize: 28, fontWeight: "800", marginTop: 15, textAlign: "right", writingDirection: "rtl" },
+  metricIcon: { alignItems: "center", borderRadius: 11, height: 32, justifyContent: "center", width: 32 },
+  metricValue: { color: "#164C70", fontSize: 24, fontWeight: "800", marginTop: 10, textAlign: "right", writingDirection: "rtl" },
   metricValueHighlight: { color: "#FFFFFF" },
   metricLabel: { color: "#6A879A", fontSize: 11, fontWeight: "700", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   metricLabelHighlight: { color: "rgba(255,255,255,0.82)" },
   metricPressed: { opacity: 0.88, transform: [{ scale: 0.975 }] },
-  metricSkeleton: { backgroundColor: "#FFFFFF", borderColor: "#E6EEF4", borderRadius: 18, borderWidth: 1, minHeight: 124, overflow: "hidden", padding: 13, width: "48.5%" },
+  metricSkeleton: { backgroundColor: "#FFFFFF", borderColor: "#E6EEF4", borderRadius: 18, borderWidth: 1, minHeight: 104, overflow: "hidden", padding: 13, width: "48.5%" },
   skeletonIcon: { alignSelf: "flex-end", backgroundColor: "#EDF3F7", borderRadius: 12, height: 36, width: 36 },
-  skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 25, marginLeft: "auto", marginTop: 15, width: "36%" },
-  skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 10, marginLeft: "auto", marginTop: 8, width: "65%" },
+  skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 21, marginLeft: "auto", marginTop: 10, width: "36%" },
+  skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 9, marginLeft: "auto", marginTop: 7, width: "65%" },
   createCard: { borderRadius: 20, marginTop: 18, overflow: "hidden", shadowColor: "#0D6EA9", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.22, shadowRadius: 15 },
   createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, paddingHorizontal: 16, paddingVertical: 15 },
   createIconWrap: { alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 17, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
