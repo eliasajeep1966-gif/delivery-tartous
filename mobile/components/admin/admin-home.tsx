@@ -9,7 +9,7 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
+  Text as NativeText,
   View,
 } from "react-native";
 import Animated, { FadeInDown, Layout } from "react-native-reanimated";
@@ -37,6 +37,21 @@ import { notifyCaptainOfOrder } from "@/lib/notifications";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
 type IconName = ComponentProps<typeof MaterialIcons>["name"];
+
+function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
+  const flattened = StyleSheet.flatten(style);
+  const isBold =
+    flattened?.fontWeight === "700" ||
+    flattened?.fontWeight === "800" ||
+    flattened?.fontWeight === "bold";
+
+  return (
+    <NativeText
+      {...props}
+      style={[{ fontFamily: isBold ? "Cairo_700Bold" : "Cairo_400Regular" }, style]}
+    />
+  );
+}
 
 const statusStyle: Record<
   AdminOrderStatus,
@@ -199,18 +214,13 @@ export function AdminHome() {
 
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
-      <LinearGradient
-        colors={["#07488D", "#0872CC", "#0A86E7"]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <Pressable
           onPress={() => router.push("/account-settings" as Href)}
           style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
           accessibilityLabel="إعدادات الحساب"
         >
-          <MaterialIcons name="account-circle" size={24} color="#FFFFFF" />
+          <MaterialIcons name="account-circle" size={22} color="#0878D1" />
         </Pressable>
 
         <View style={styles.headerBrand}>
@@ -225,10 +235,11 @@ export function AdminHome() {
           style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
           accessibilityLabel="الإشعارات"
         >
-          <MaterialIcons name="notifications-none" size={21} color="#FFFFFF" />
+          <MaterialIcons name="notifications-none" size={20} color="#0878D1" />
           <View style={styles.notificationDot} />
         </Pressable>
-      </LinearGradient>
+      </View>
+      <View style={styles.neonDivider} />
 
       <FlatList
         data={snapshot?.activities ?? []}
@@ -623,63 +634,68 @@ function SectionHeading({
 const styles = StyleSheet.create({
   header: {
     alignItems: "center",
+    backgroundColor: "#F4F7FB",
     flexDirection: "row-reverse",
-    height: 72,
+    height: 56,
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    shadowColor: "#0A385D",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+  },
+  neonDivider: {
+    backgroundColor: "#15C8FF",
+    height: 2,
+    shadowColor: "#15C8FF",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
   },
   accountButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderColor: "rgba(255,255,255,0.20)",
-    borderRadius: 17,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D9EBF8",
+    borderRadius: 15,
     borderWidth: 1,
-    height: 38,
+    height: 34,
     justifyContent: "center",
-    width: 38,
+    width: 34,
   },
-  headerBrand: { alignItems: "center", flex: 1, paddingHorizontal: 12 },
+  headerBrand: { alignItems: "center", flex: 1, paddingHorizontal: 10 },
   headerEyebrow: {
-    color: "rgba(226,244,255,0.76)",
-    fontSize: 10,
+    color: "#6F8A9D",
+    fontSize: 9,
     fontWeight: "700",
     writingDirection: "rtl",
   },
   headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: "#07488D",
+    fontSize: 14,
     fontWeight: "800",
-    marginTop: 1,
+    marginTop: -1,
     writingDirection: "rtl",
   },
   headerRoundButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderColor: "rgba(255,255,255,0.20)",
-    borderRadius: 17,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D9EBF8",
+    borderRadius: 15,
     borderWidth: 1,
-    height: 38,
+    height: 34,
     justifyContent: "center",
     position: "relative",
-    width: 38,
+    width: 34,
   },
   notificationDot: {
-    backgroundColor: "#7DE1FF",
-    borderColor: "#0E5E91",
+    backgroundColor: "#15C8FF",
+    borderColor: "#F4F7FB",
     borderRadius: 5,
     borderWidth: 2,
     height: 10,
     position: "absolute",
-    right: 5,
-    top: 5,
+    right: 3,
+    top: 3,
     width: 10,
   },
   headerPressed: { opacity: 0.78, transform: [{ scale: 0.96 }] },
-  listContent: { paddingBottom: 34, paddingHorizontal: 16, paddingTop: 16 },
+  listContent: { paddingBottom: 34, paddingHorizontal: 16, paddingTop: 12 },
   heroCard: {
     borderColor: "#D8EBF7",
     borderRadius: 24,
