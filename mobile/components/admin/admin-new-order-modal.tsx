@@ -424,73 +424,78 @@ function LocationSection({
         />
       </View>
       {locations.map((location, index) => (
-        <View key={location.id} style={styles.locationCard}>
-          <View style={styles.locationCardHeading}>
-            {locations.length > 1 ? (
-              <Pressable
-                disabled={disabled}
-                onPress={() =>
-                  setLocations((current) =>
-                    current.filter((item) => item.id !== location.id),
-                  )
-                }
-              >
-                <MaterialIcons
-                  name="delete-outline"
-                  size={19}
-                  color="#BA1A1A"
-                />
-              </Pressable>
-            ) : (
-              <View />
-            )}
-            <Text style={styles.locationLabel}>
-              {index + 1}.{" "}
-              {type === "pickup" ? "مصدر الاستلام" : "وجهة التسليم"}
-            </Text>
-          </View>
-          <TextInput
-            editable={!disabled}
-            value={location.name}
-            onChangeText={(value) => update(location.id, "name", value)}
-            placeholder={
-              type === "pickup" ? "اسم المحل أو المصدر" : "اسم المستلم"
-            }
-            placeholderTextColor="#89939E"
-            style={styles.input}
-            textAlign="right"
-          />
-          <TextInput
-            editable={!disabled}
-            value={location.phone}
-            onChangeText={(value) => update(location.id, "phone", value)}
-            placeholder="رقم الهاتف"
-            placeholderTextColor="#89939E"
-            keyboardType="phone-pad"
-            style={styles.input}
-            textAlign="right"
-          />
-          <TextInput
-            editable={!disabled}
-            value={location.address}
-            onChangeText={(value) => update(location.id, "address", value)}
-            placeholder="العنوان التفصيلي"
-            placeholderTextColor="#89939E"
-            style={styles.input}
-            textAlign="right"
-          />
-          {type === "pickup" ? (
+        <View key={location.id} style={styles.locationCardRow}>
+          <View style={styles.locationCard}>
+            <View style={styles.locationCardHeading}>
+              {locations.length > 1 ? (
+                <Pressable
+                  disabled={disabled}
+                  onPress={() =>
+                    setLocations((current) =>
+                      current.filter((item) => item.id !== location.id),
+                    )
+                  }
+                >
+                  <MaterialIcons
+                    name="delete-outline"
+                    size={19}
+                    color="#BA1A1A"
+                  />
+                </Pressable>
+              ) : (
+                <View />
+              )}
+              <Text style={styles.locationLabel}>
+                {index + 1}.{" "}
+                {type === "pickup" ? "مصدر الاستلام" : "وجهة التوصيل"}
+              </Text>
+            </View>
             <TextInput
               editable={!disabled}
-              value={location.note}
-              onChangeText={(value) => update(location.id, "note", value)}
-              placeholder="ملاحظات المصدر (اختياري)"
+              value={location.name}
+              onChangeText={(value) => update(location.id, "name", value)}
+              placeholder={
+                type === "pickup" ? "اسم المحل أو المصدر" : "اسم المستلم"
+              }
               placeholderTextColor="#89939E"
-              multiline
-              style={[styles.input, styles.noteInput]}
+              style={styles.input}
               textAlign="right"
             />
-          ) : null}
+            <TextInput
+              editable={!disabled}
+              value={location.phone}
+              onChangeText={(value) => update(location.id, "phone", value)}
+              placeholder="رقم الهاتف"
+              placeholderTextColor="#89939E"
+              keyboardType="phone-pad"
+              style={styles.input}
+              textAlign="right"
+            />
+            <TextInput
+              editable={!disabled}
+              value={location.address}
+              onChangeText={(value) => update(location.id, "address", value)}
+              placeholder="العنوان التفصيلي"
+              placeholderTextColor="#89939E"
+              style={styles.input}
+              textAlign="right"
+            />
+            {type === "pickup" ? (
+              <TextInput
+                editable={!disabled}
+                value={location.note}
+                onChangeText={(value) => update(location.id, "note", value)}
+                placeholder="ملاحظات المصدر (اختياري)"
+                placeholderTextColor="#89939E"
+                multiline
+                style={[styles.input, styles.noteInput]}
+                textAlign="right"
+              />
+            ) : null}
+          </View>
+          <View pointerEvents="none" style={styles.scrollLane}>
+            <View style={styles.scrollLaneHint} />
+          </View>
         </View>
       ))}
     </View>
@@ -632,17 +637,25 @@ const styles = StyleSheet.create({
   content: { gap: 10, padding: 14, paddingBottom: 16 },
   formCard: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#E1EDF5",
+    borderColor: "rgba(22,206,255,0.58)",
     borderRadius: 18,
     borderWidth: 1,
     padding: 13,
+    shadowColor: "#16CEFF",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
   locationSection: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#DDECF7",
+    borderColor: "rgba(22,206,255,0.66)",
     borderRadius: 18,
     borderWidth: 1,
     padding: 13,
+    shadowColor: "#16CEFF",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
   locationHeading: {
     alignItems: "center",
@@ -653,11 +666,15 @@ const styles = StyleSheet.create({
   addButton: {
     alignItems: "center",
     backgroundColor: "#EEF8FF",
-    borderColor: "#A3DEFF",
+    borderColor: "#42D9FF",
     borderRadius: 11,
     borderWidth: 1,
     height: 34,
     justifyContent: "center",
+    shadowColor: "#16CEFF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
     width: 34,
   },
   sectionTitleRow: {
@@ -688,15 +705,22 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
+  locationCardRow: { alignItems: "stretch", flexDirection: "row-reverse", gap: 10, marginTop: 8 },
   locationCard: {
     backgroundColor: "#F9FCFF",
-    borderColor: "#E1EDF5",
+    borderColor: "rgba(22,206,255,0.82)",
     borderRadius: 14,
     borderWidth: 1,
     gap: 8,
-    marginTop: 8,
     padding: 11,
+    shadowColor: "#16CEFF",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    width: "64%",
   },
+  scrollLane: { alignItems: "center", flex: 1, justifyContent: "center" },
+  scrollLaneHint: { backgroundColor: "rgba(22,206,255,0.2)", borderRadius: 2, height: 34, width: 2 },
   locationCardHeading: {
     alignItems: "center",
     flexDirection: "row",
@@ -710,7 +734,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#D7E5EF",
+    borderColor: "rgba(68,217,255,0.64)",
     borderRadius: 10,
     borderWidth: 1,
     color: "#173D59",
