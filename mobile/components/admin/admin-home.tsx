@@ -1,4 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { LinearGradient } from "expo-linear-gradient";
 import { type Href, useRouter } from "expo-router";
 import { type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -11,6 +12,7 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 
 import {
   AdminNewOrderModal,
@@ -42,45 +44,45 @@ const statusStyle: Record<
 > = {
   pending: {
     label: "قيد الانتظار",
-    color: "#0060B8",
-    background: "#EFF6FF",
-    strip: "#0060B8",
+    color: "#255F94",
+    background: "#EAF4FF",
+    strip: "#2C81C5",
   },
   assigned: {
     label: "تم تعيين كابتن",
-    color: "#4338CA",
-    background: "#EEF2FF",
-    strip: "#6366F1",
+    color: "#4C43A8",
+    background: "#F0EEFF",
+    strip: "#7165E8",
   },
   received: {
     label: "تم الاستلام",
-    color: "#6D28D9",
-    background: "#F5F3FF",
-    strip: "#8B5CF6",
+    color: "#7037B7",
+    background: "#F6F0FF",
+    strip: "#9B63DF",
   },
   in_delivery: {
     label: "قيد التوصيل",
-    color: "#0E7490",
-    background: "#ECFEFF",
-    strip: "#06B6D4",
+    color: "#006F8E",
+    background: "#E8F9FC",
+    strip: "#12A9C8",
   },
   completed: {
     label: "مكتمل",
-    color: "#047857",
-    background: "#ECFDF5",
-    strip: "#10B981",
+    color: "#08755C",
+    background: "#EAF9F3",
+    strip: "#16B384",
   },
   cancelled: {
     label: "ملغى",
-    color: "#B91C1C",
-    background: "#FEF2F2",
-    strip: "#EF4444",
+    color: "#B33740",
+    background: "#FFF0F1",
+    strip: "#F06B72",
   },
   false_order: {
     label: "طلب كاذب",
-    color: "#B45309",
-    background: "#FFFBEB",
-    strip: "#F59E0B",
+    color: "#A46113",
+    background: "#FFF7E8",
+    strip: "#F4AA43",
   },
 };
 
@@ -136,6 +138,9 @@ export function AdminHome() {
     return (
       <ScreenContainer className="p-5">
         <View style={styles.roleNotice}>
+          <View style={styles.roleNoticeIcon}>
+            <MaterialIcons name="lock-outline" size={22} color="#9C3E44" />
+          </View>
           <Text style={styles.roleNoticeTitle}>لا تملك صلاحية لوحة العمل</Text>
           <Text style={styles.roleNoticeText}>
             هذه الواجهة مخصصة للأدمن والمشرف فقط.
@@ -190,129 +195,167 @@ export function AdminHome() {
     }
   };
 
+  const availableCount = snapshot?.availableCaptains.length ?? 0;
+
   return (
-    <ScreenContainer className="bg-[#F3FBFF]" containerClassName="bg-[#F3FBFF]">
-      <View style={styles.header}>
-        <View style={styles.headerSide}>
-          <Pressable
-            onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
-            style={({ pressed }) => [
-              styles.headerRoundButton,
-              pressed && styles.pressed,
-            ]}
-            accessibilityLabel="الإشعارات"
-          >
-            <MaterialIcons
-              name="notifications-none"
-              size={18}
-              color="#4D7D9F"
-            />
-            <View style={styles.notificationDot} />
-          </Pressable>
-        </View>
-        <Text style={styles.headerTitle}>دليفري طرطوس</Text>
+    <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
+      <LinearGradient
+        colors={["#07488D", "#0872CC", "#0A86E7"]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.header}
+      >
         <Pressable
           onPress={() => router.push("/account-settings" as Href)}
-          style={({ pressed }) => [
-            styles.supportButton,
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
           accessibilityLabel="إعدادات الحساب"
         >
-          <MaterialIcons name="account-circle" size={20} color="#FFFFFF" />
+          <MaterialIcons name="account-circle" size={24} color="#FFFFFF" />
         </Pressable>
-      </View>
+
+        <View style={styles.headerBrand}>
+          <Text style={styles.headerEyebrow}>
+            {profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
+          </Text>
+          <Text style={styles.headerTitle}>دليفري طرطوس</Text>
+        </View>
+
+        <Pressable
+          onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
+          style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
+          accessibilityLabel="الإشعارات"
+        >
+          <MaterialIcons name="notifications-none" size={21} color="#FFFFFF" />
+          <View style={styles.notificationDot} />
+        </Pressable>
+      </LinearGradient>
 
       <FlatList
         data={snapshot?.activities ?? []}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ActivityRow item={item} onPress={openOrders} />
+        renderItem={({ item, index }) => (
+          <ActivityRow item={item} onPress={openOrders} index={index} />
         )}
         refreshControl={
           <RefreshControl
             refreshing={home.isRefetching}
             onRefresh={() => void home.refetch()}
-            tintColor="#0060B8"
+            tintColor="#0878D1"
           />
         }
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <>
-            <View style={styles.welcomeCard}>
-              <Text style={styles.welcomeTitle}>
-                مرحباً، {profile.role === "supervisor" ? "المشرف" : "المدير"}
-              </Text>
-              <Text style={styles.welcomeSubtitle}>
-                إليك نظرة سريعة على حركة الطلبات اليوم
-              </Text>
-            </View>
+            <Animated.View entering={FadeInDown.duration(220)}>
+              <LinearGradient
+                  colors={["#EEF7FF", "#FFFFFF"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.heroCard}
+              >
+                <View style={styles.heroTopRow}>
+                  <View style={styles.livePill}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>تحديث مباشر</Text>
+                  </View>
+                  <Text style={styles.heroDate}>تشغيل اليوم</Text>
+                </View>
+                <Text style={styles.heroTitle}>
+                  أهلاً، {profile.role === "supervisor" ? "مشرف الفريق" : "مدير المكتب"}
+                </Text>
+                <Text style={styles.heroSubtitle}>
+                  راقب الحركة واتخذ الإجراء المناسب من مكان واحد.
+                </Text>
+              </LinearGradient>
+            </Animated.View>
 
             {home.error ? (
-              <View style={styles.errorCard}>
-                <Text style={styles.errorText}>
-                  {home.error instanceof Error
-                    ? home.error.message
-                    : "تعذر تحميل لوحة الإدارة."}
-                </Text>
+              <Animated.View entering={FadeInDown.delay(40).duration(200)} style={styles.errorCard}>
+                <View style={styles.errorIcon}>
+                  <MaterialIcons name="sync-problem" size={19} color="#B23D47" />
+                </View>
+                <View style={styles.errorCopy}>
+                  <Text style={styles.errorTitle}>تعذر تحديث الملخص</Text>
+                  <Text style={styles.errorText}>
+                    {home.error instanceof Error
+                      ? home.error.message
+                      : "تعذر تحميل لوحة الإدارة."}
+                  </Text>
+                </View>
                 <Pressable
                   onPress={() => void home.refetch()}
-                  style={({ pressed }) => [
-                    styles.retryButton,
-                    pressed && styles.pressed,
-                  ]}
+                  style={({ pressed }) => [styles.retryButton, pressed && styles.smallPressed]}
                 >
-                  <MaterialIcons name="refresh" size={14} color="#0060B8" />
-                  <Text style={styles.retryText}>إعادة المحاولة</Text>
+                  <MaterialIcons name="refresh" size={16} color="#0878D1" />
                 </Pressable>
-              </View>
+              </Animated.View>
             ) : null}
+
+            <View style={styles.metricsHeader}>
+              <View>
+                <Text style={styles.overline}>لقطة تشغيلية</Text>
+                <Text style={styles.metricsTitle}>حركة الطلبات اليوم</Text>
+              </View>
+              <Pressable
+                onPress={openOrders}
+                style={({ pressed }) => [styles.viewOrdersButton, pressed && styles.smallPressed]}
+              >
+                <Text style={styles.viewOrdersText}>كل الطلبات</Text>
+                <MaterialIcons name="arrow-back" size={14} color="#0878D1" />
+              </Pressable>
+            </View>
 
             <View style={styles.metricGrid}>
               {home.isPending || !snapshot ? (
                 <MetricSkeletons />
               ) : (
-                snapshot.metrics.map((metric) => (
+                snapshot.metrics.map((metric, index) => (
                   <MetricCard
                     key={metric.id}
                     metric={metric}
                     onPress={openOrders}
+                    index={index}
                   />
                 ))
               )}
             </View>
 
-            <Pressable
-              onPress={() => {
-                setCreateError(null);
-                setCreateOpen(true);
-              }}
-              style={({ pressed }) => [
-                styles.createCard,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View>
-                <Text style={styles.createTitle}>إنشاء طلب جديد</Text>
-                <Text style={styles.createSubtitle}>
-                  {home.isPending
-                    ? "جارٍ تحميل الكباتن..."
-                    : snapshot?.availableCaptains.length
-                      ? "أضف طلباً وعيّن كابتناً متاحاً"
-                      : "لا يوجد كابتن متاح حالياً"}
-                </Text>
-              </View>
-              <View style={styles.createPlus}>
-                <MaterialIcons
-                  name="add-circle-outline"
-                  size={24}
-                  color="#FFFFFF"
-                />
-              </View>
-            </Pressable>
+            <Animated.View entering={FadeInDown.delay(150).duration(220)}>
+              <Pressable
+                onPress={() => {
+                  setCreateError(null);
+                  setCreateOpen(true);
+                }}
+                style={({ pressed }) => [styles.createCard, pressed && styles.createPressed]}
+              >
+                <LinearGradient
+                  colors={["#07488D", "#0872CC", "#0A86E7"]}
+                  start={{ x: 1, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={styles.createGradient}
+                >
+                  <View style={styles.createIconWrap}>
+                    <MaterialIcons name="add" size={26} color="#0C679D" />
+                  </View>
+                  <View style={styles.createCopy}>
+                    <Text style={styles.createKicker}>إجراء سريع</Text>
+                    <Text style={styles.createTitle}>إنشاء طلب جديد</Text>
+                    <Text style={styles.createSubtitle}>
+                      {home.isPending
+                        ? "جارٍ تجهيز بيانات الكباتن..."
+                        : snapshot?.availableCaptains.length
+                          ? "أضف تفاصيل الطلب وعيّن كابتناً متاحاً"
+                          : "يمكنك إضافة الطلب ثم متابعته من قائمة الطلبات"}
+                    </Text>
+                  </View>
+                  <MaterialIcons name="arrow-back" size={21} color="rgba(255,255,255,0.88)" />
+                </LinearGradient>
+              </Pressable>
+            </Animated.View>
 
             <SectionHeading
-              title="آخر النشاطات"
+              title="أحدث النشاطات"
+              subtitle="تحديثات الطلبات الأخيرة"
               action="عرض الطلبات"
               onPress={openOrders}
             />
@@ -321,11 +364,18 @@ export function AdminHome() {
         ListEmptyComponent={
           home.isPending ? (
             <View style={styles.loadingActivity}>
+              <View style={styles.loadingIcon}>
+                <MaterialIcons name="history" size={20} color="#5A8FB1" />
+              </View>
               <Text style={styles.loadingText}>جارٍ تحميل النشاطات...</Text>
             </View>
           ) : (
             <View style={styles.emptyActivities}>
-              <Text style={styles.emptyText}>لا توجد نشاطات إدارية حديثة.</Text>
+              <View style={styles.emptyIcon}>
+                <MaterialIcons name="inbox" size={23} color="#6D9BB9" />
+              </View>
+              <Text style={styles.emptyTitle}>لا توجد نشاطات جديدة</Text>
+              <Text style={styles.emptyText}>ستظهر هنا آخر تحديثات حركة الطلبات.</Text>
             </View>
           )
         }
@@ -333,7 +383,8 @@ export function AdminHome() {
           <View style={styles.captainsSection}>
             <SectionHeading
               title="الكباتن المتاحون الآن"
-              action="عرض الكل"
+              subtitle={availableCount ? `${availableCount} جاهزون للاستلام` : "تتحدث حسب حالة الكابتن"}
+              action="إدارة الكباتن"
               onPress={() => router.push("/(tabs)/captains" as Href)}
             />
             <FlatList
@@ -343,30 +394,35 @@ export function AdminHome() {
               keyExtractor={(item) => item.id}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.captainsList}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => router.push("/(tabs)/captains" as Href)}
-                  style={({ pressed }) => [
-                    styles.captainItem,
-                    pressed && styles.pressed,
-                  ]}
+              renderItem={({ item, index }) => (
+                <Animated.View
+                  entering={FadeInDown.delay(Math.min(index * 35, 175)).duration(180)}
+                  layout={Layout.duration(180)}
                 >
-                  <View style={styles.captainAvatar}>
-                    <Text style={styles.captainInitial}>{item.initial}</Text>
-                    <View style={styles.availableDot} />
-                  </View>
-                  <Text numberOfLines={1} style={styles.captainName}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.captainAvailability}>متاح</Text>
-                </Pressable>
+                  <Pressable
+                    onPress={() => router.push("/(tabs)/captains" as Href)}
+                    style={({ pressed }) => [styles.captainItem, pressed && styles.captainPressed]}
+                  >
+                    <View style={styles.captainAvatar}>
+                      <Text style={styles.captainInitial}>{item.initial}</Text>
+                      <View style={styles.availableDot} />
+                    </View>
+                    <Text numberOfLines={1} style={styles.captainName}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.captainAvailability}>متاح الآن</Text>
+                  </Pressable>
+                </Animated.View>
               )}
               ListEmptyComponent={
-                <Text style={styles.emptyCaptainText}>
-                  {home.isPending
-                    ? "جارٍ التحميل..."
-                    : "لا يوجد كابتن متاح حالياً."}
-                </Text>
+                <View style={styles.emptyCaptainCard}>
+                  <MaterialIcons name="person-off" size={18} color="#7296AD" />
+                  <Text style={styles.emptyCaptainText}>
+                    {home.isPending
+                      ? "جارٍ التحميل..."
+                      : "لا يوجد كابتن متاح حالياً."}
+                  </Text>
+                </View>
               }
             />
           </View>
@@ -391,7 +447,11 @@ function MetricSkeletons() {
   return (
     <>
       {[0, 1, 2, 3].map((item) => (
-        <View key={item} style={styles.metricSkeleton} />
+        <View key={item} style={styles.metricSkeleton}>
+          <View style={styles.skeletonIcon} />
+          <View style={styles.skeletonNumber} />
+          <View style={styles.skeletonLabel} />
+        </View>
       ))}
     </>
   );
@@ -400,119 +460,161 @@ function MetricSkeletons() {
 function MetricCard({
   metric,
   onPress,
+  index,
 }: {
   metric: AdminHomeMetric;
   onPress: () => void;
+  index: number;
 }) {
   const highlighted = metric.id === "in_delivery";
-  const iconColors: Record<AdminHomeMetric["id"], string> = {
-    pending: "#1478BF",
-    in_delivery: "#FFFFFF",
-    completed_today: "#10B981",
-    cancelled_today: "#F87171",
+  const tone: Record<
+    AdminHomeMetric["id"],
+    { icon: IconName; accent: string; background: string; iconBackground: string }
+  > = {
+    pending: {
+      icon: "inventory-2",
+      accent: "#126FA7",
+      background: "#FFFFFF",
+      iconBackground: "#EAF5FC",
+    },
+    in_delivery: {
+      icon: "two-wheeler",
+      accent: "#FFFFFF",
+      background: "#0878D1",
+      iconBackground: "rgba(255,255,255,0.16)",
+    },
+    completed_today: {
+      icon: "check-circle-outline",
+      accent: "#0A8A67",
+      background: "#FFFFFF",
+      iconBackground: "#E8F8F2",
+    },
+    cancelled_today: {
+      icon: "cancel",
+      accent: "#D65760",
+      background: "#FFFFFF",
+      iconBackground: "#FFF0F2",
+    },
   };
+  const currentTone = tone[metric.id];
+
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.metricCard,
-        highlighted && styles.metricCardHighlight,
-        pressed && styles.pressed,
-      ]}
+    <Animated.View
+      entering={FadeInDown.delay(55 + index * 40).duration(190)}
+      layout={Layout.duration(180)}
+      style={styles.metricAnimatedWrap}
     >
-      <View style={styles.metricTop}>
-        <MaterialIcons
-          name={metric.icon as IconName}
-          size={19}
-          color={iconColors[metric.id]}
-        />
-        <Text
-          style={[
-            styles.metricValue,
-            highlighted && styles.metricValueHighlight,
-          ]}
-        >
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.metricCard,
+          { backgroundColor: currentTone.background },
+          highlighted && styles.metricCardHighlight,
+          pressed && styles.metricPressed,
+        ]}
+      >
+        <View style={styles.metricTop}>
+          <View style={[styles.metricIcon, { backgroundColor: currentTone.iconBackground }]}>
+            <MaterialIcons name={metric.icon as IconName} size={19} color={currentTone.accent} />
+          </View>
+          <MaterialIcons
+            name="arrow-back"
+            size={15}
+            color={highlighted ? "rgba(255,255,255,0.65)" : "#B1C6D5"}
+          />
+        </View>
+        <Text style={[styles.metricValue, highlighted && styles.metricValueHighlight]}>
           {metric.value}
         </Text>
-      </View>
-      <Text
-        style={[styles.metricLabel, highlighted && styles.metricLabelHighlight]}
-      >
-        {metric.label}
-      </Text>
-    </Pressable>
+        <Text style={[styles.metricLabel, highlighted && styles.metricLabelHighlight]}>
+          {metric.label}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 function ActivityRow({
   item,
   onPress,
+  index,
 }: {
   item: AdminHomeActivity;
   onPress: () => void;
+  index: number;
 }) {
   const meta = item.status ? statusStyle[item.status] : null;
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.activityCard,
-        pressed && styles.activityPressed,
-      ]}
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(80 + index * 35, 260)).duration(180)}
+      layout={Layout.duration(180)}
     >
-      <View
-        style={[
-          styles.activityStrip,
-          { backgroundColor: meta?.strip ?? "#4F8BB5" },
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.activityCard,
+          pressed && styles.activityPressed,
         ]}
-      />
-      <View style={styles.activityContent}>
-        <View style={styles.activityTop}>
-          <Text numberOfLines={1} style={styles.activityTitle}>
-            {item.title}
+      >
+        <View style={[styles.activityAccent, { backgroundColor: meta?.strip ?? "#4F90BB" }]} />
+        <View style={styles.activityIconWrap}>
+          <MaterialIcons
+            name={meta?.label === "مكتمل" ? "task-alt" : "local-shipping"}
+            size={18}
+            color={meta?.color ?? "#367CA7"}
+          />
+        </View>
+        <View style={styles.activityContent}>
+          <View style={styles.activityTop}>
+            <Text numberOfLines={1} style={styles.activityTitle}>
+              {item.title}
+            </Text>
+            {meta ? (
+              <View style={[styles.statusBadge, { backgroundColor: meta.background }]}>
+                <Text style={[styles.statusText, { color: meta.color }]}>
+                  {meta.label}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text numberOfLines={1} style={styles.activitySubtitle}>
+            {item.subtitle}
           </Text>
-          {meta ? (
-            <View
-              style={[styles.statusBadge, { backgroundColor: meta.background }]}
-            >
-              <Text style={[styles.statusText, { color: meta.color }]}>
-                {meta.label}
-              </Text>
-            </View>
-          ) : null}
+          <View style={styles.timeRow}>
+            <MaterialIcons name="schedule" size={12} color="#7692A5" />
+            <Text style={styles.timeText}>{item.timestamp}</Text>
+          </View>
         </View>
-        <Text numberOfLines={1} style={styles.activitySubtitle}>
-          {item.subtitle}
-        </Text>
-        <View style={styles.timeRow}>
-          <MaterialIcons name="schedule" size={11} color="#7590A2" />
-          <Text style={styles.timeText}>{item.timestamp}</Text>
-        </View>
-      </View>
-      <MaterialIcons
-        name="chevron-left"
-        size={18}
-        color="#88A0B0"
-        style={styles.activityChevron}
-      />
-    </Pressable>
+        <MaterialIcons name="chevron-left" size={19} color="#8EAABB" />
+      </Pressable>
+    </Animated.View>
   );
 }
 
 function SectionHeading({
   title,
+  subtitle,
   action,
   onPress,
 }: {
   title: string;
+  subtitle: string;
   action: string;
   onPress: () => void;
 }) {
   return (
     <View style={styles.sectionHeading}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Pressable onPress={onPress} hitSlop={8}>
-        <Text style={styles.sectionAction}>{action}</Text>
+      <View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      </View>
+      <Pressable
+        onPress={onPress}
+        hitSlop={8}
+        style={({ pressed }) => [styles.sectionAction, pressed && styles.smallPressed]}
+      >
+        <Text style={styles.sectionActionText}>{action}</Text>
+        <MaterialIcons name="arrow-back" size={13} color="#0878D1" />
       </Pressable>
     </View>
   );
@@ -521,365 +623,197 @@ function SectionHeading({
 const styles = StyleSheet.create({
   header: {
     alignItems: "center",
-    backgroundColor: "#F8FDFF",
-    borderBottomColor: "#E1F0F6",
-    borderBottomWidth: 1,
-    flexDirection: "row",
-    height: 56,
+    flexDirection: "row-reverse",
+    height: 72,
     justifyContent: "space-between",
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
+    shadowColor: "#0A385D",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
   },
-  headerSide: { flexDirection: "row", gap: 6 },
-  headerRoundButton: {
+  accountButton: {
     alignItems: "center",
-    backgroundColor: "#EEF8FC",
-    borderColor: "#D6E9F4",
-    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.20)",
+    borderRadius: 17,
     borderWidth: 1,
-    height: 32,
+    height: 38,
     justifyContent: "center",
-    position: "relative",
-    width: 32,
+    width: 38,
   },
-  notificationDot: {
-    backgroundColor: "#159ED8",
-    borderRadius: 4,
-    height: 7,
-    position: "absolute",
-    right: 4,
-    top: 5,
-    width: 7,
-  },
-  headerTitle: {
-    color: "#005BA8",
-    fontSize: 14,
-    fontWeight: "800",
+  headerBrand: { alignItems: "center", flex: 1, paddingHorizontal: 12 },
+  headerEyebrow: {
+    color: "rgba(226,244,255,0.76)",
+    fontSize: 10,
+    fontWeight: "700",
     writingDirection: "rtl",
   },
-  supportButton: {
-    alignItems: "center",
-    backgroundColor: "#075EAE",
-    borderRadius: 8,
-    elevation: 2,
-    height: 32,
-    justifyContent: "center",
-    shadowColor: "#0060B8",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 5,
-    width: 32,
-  },
-  listContent: { paddingBottom: 34, paddingHorizontal: 12, paddingTop: 12 },
-  welcomeCard: {
-    backgroundColor: "rgba(255,255,255,0.70)",
-    borderColor: "#E0F0F7",
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    shadowColor: "#0060B8",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 7,
-  },
-  welcomeTitle: {
-    color: "#155B8D",
+  headerTitle: {
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "800",
+    marginTop: 1,
+    writingDirection: "rtl",
+  },
+  headerRoundButton: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.20)",
+    borderRadius: 17,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: "center",
+    position: "relative",
+    width: 38,
+  },
+  notificationDot: {
+    backgroundColor: "#7DE1FF",
+    borderColor: "#0E5E91",
+    borderRadius: 5,
+    borderWidth: 2,
+    height: 10,
+    position: "absolute",
+    right: 5,
+    top: 5,
+    width: 10,
+  },
+  headerPressed: { opacity: 0.78, transform: [{ scale: 0.96 }] },
+  listContent: { paddingBottom: 34, paddingHorizontal: 16, paddingTop: 16 },
+  heroCard: {
+    borderColor: "#D8EBF7",
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 18,
+    overflow: "hidden",
+    padding: 17,
+    shadowColor: "#0C679D",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+  },
+  heroTopRow: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
+  livePill: {
+    alignItems: "center",
+    backgroundColor: "#E4F8EE",
+    borderRadius: 12,
+    flexDirection: "row-reverse",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  liveDot: { backgroundColor: "#19A778", borderRadius: 4, height: 7, width: 7 },
+  liveText: { color: "#08745A", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
+  heroDate: { color: "#6E90A6", fontSize: 11, fontWeight: "700", writingDirection: "rtl" },
+  heroTitle: {
+    color: "#123D60",
+    fontSize: 21,
+    fontWeight: "800",
+    marginTop: 17,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  welcomeSubtitle: {
-    color: "#658096",
-    fontSize: 11,
-    marginTop: 4,
+  heroSubtitle: {
+    color: "#608098",
+    fontSize: 12,
+    lineHeight: 20,
+    marginTop: 5,
     textAlign: "right",
     writingDirection: "rtl",
   },
   errorCard: {
     alignItems: "center",
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
-    borderRadius: 12,
+    backgroundColor: "#FFF5F5",
+    borderColor: "#F6D5D8",
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 12,
+    flexDirection: "row-reverse",
+    gap: 10,
+    marginBottom: 15,
     padding: 12,
   },
-  errorText: {
-    color: "#BA1A1A",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 19,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  retryButton: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    gap: 4,
-    marginTop: 8,
-  },
-  retryText: {
-    color: "#0060B8",
-    fontSize: 12,
-    fontWeight: "700",
-    writingDirection: "rtl",
-  },
-  metricGrid: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: 10,
-    justifyContent: "space-between",
-  },
+  errorIcon: { alignItems: "center", backgroundColor: "#FFE6E8", borderRadius: 11, height: 36, justifyContent: "center", width: 36 },
+  errorCopy: { flex: 1 },
+  errorTitle: { color: "#9C343D", fontSize: 12, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  errorText: { color: "#B35A61", fontSize: 10, lineHeight: 16, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  retryButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#F4CDD0", borderRadius: 10, borderWidth: 1, height: 34, justifyContent: "center", width: 34 },
+  metricsHeader: { alignItems: "flex-end", flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 11 },
+  overline: { color: "#7B9AAC", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  metricsTitle: { color: "#163E5C", fontSize: 17, fontWeight: "800", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  viewOrdersButton: { alignItems: "center", flexDirection: "row-reverse", gap: 3, paddingVertical: 5 },
+  viewOrdersText: { color: "#0878D1", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  metricGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, justifyContent: "space-between" },
+  metricAnimatedWrap: { width: "48.5%" },
   metricCard: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "rgba(255,255,255,0.92)",
-    borderRadius: 12,
+    borderColor: "#E6EEF4",
+    borderRadius: 16,
     borderWidth: 1,
-    minHeight: 104,
-    padding: 14,
-    shadowColor: "#0060B8",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    width: "48.5%",
+    minHeight: 90,
+    overflow: "hidden",
+    padding: 11,
+    shadowColor: "#113D5B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.055,
+    shadowRadius: 9,
   },
-  metricCardHighlight: {
-    backgroundColor: "#0060B8",
-    borderColor: "#086FC4",
-    shadowColor: "#0060B8",
-    shadowOpacity: 0.22,
-    shadowRadius: 13,
-  },
-  metricTop: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-  },
-  metricValue: { color: "#1B557E", fontSize: 25, fontWeight: "800" },
+  metricCardHighlight: { borderColor: "#0878D1", shadowColor: "#0878D1", shadowOpacity: 0.2, shadowRadius: 13 },
+  metricTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
+  metricIcon: { alignItems: "center", borderRadius: 10, height: 29, justifyContent: "center", width: 29 },
+  metricValue: { color: "#164C70", fontSize: 22, fontWeight: "800", marginTop: 8, textAlign: "right", writingDirection: "rtl" },
   metricValueHighlight: { color: "#FFFFFF" },
-  metricLabel: {
-    color: "#617B90",
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 12,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  metricLabelHighlight: { color: "rgba(255,255,255,0.92)" },
-  metricSkeleton: {
-    backgroundColor: "rgba(255,255,255,0.72)",
-    borderColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    minHeight: 104,
-    width: "48.5%",
-  },
-  createCard: {
-    alignItems: "center",
-    backgroundColor: "#0060B8",
-    borderRadius: 12,
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    marginTop: 14,
-    minHeight: 94,
-    overflow: "hidden",
-    paddingHorizontal: 14,
-    shadowColor: "#0060B8",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.23,
-    shadowRadius: 13,
-  },
-  createTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  createSubtitle: {
-    color: "rgba(255,255,255,0.82)",
-    fontSize: 11,
-    marginTop: 5,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  createPlus: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderRadius: 18,
-    height: 38,
-    justifyContent: "center",
-    width: 38,
-  },
-  sectionHeading: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    marginBottom: 10,
-    marginTop: 18,
-  },
-  sectionTitle: {
-    color: "#18547E",
-    fontSize: 14,
-    fontWeight: "800",
-    writingDirection: "rtl",
-  },
-  sectionAction: {
-    color: "#0877C2",
-    fontSize: 11,
-    fontWeight: "800",
-    writingDirection: "rtl",
-  },
-  activityCard: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderColor: "rgba(255,255,255,0.92)",
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-    minHeight: 86,
-    overflow: "hidden",
-    paddingBottom: 11,
-    paddingLeft: 30,
-    paddingRight: 14,
-    paddingTop: 11,
-    position: "relative",
-    shadowColor: "#0060B8",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.045,
-    shadowRadius: 7,
-  },
-  activityStrip: {
-    bottom: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
-    width: 4,
-  },
+  metricLabel: { color: "#6A879A", fontSize: 10, fontWeight: "700", marginTop: 1, textAlign: "right", writingDirection: "rtl" },
+  metricLabelHighlight: { color: "rgba(255,255,255,0.82)" },
+  metricPressed: { opacity: 0.88, transform: [{ scale: 0.975 }] },
+  metricSkeleton: { backgroundColor: "#FFFFFF", borderColor: "#E6EEF4", borderRadius: 16, borderWidth: 1, minHeight: 90, overflow: "hidden", padding: 11, width: "48.5%" },
+  skeletonIcon: { alignSelf: "flex-end", backgroundColor: "#EDF3F7", borderRadius: 10, height: 29, width: 29 },
+  skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 19, marginLeft: "auto", marginTop: 8, width: "36%" },
+  skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
+  createCard: { borderRadius: 20, marginTop: 18, overflow: "hidden", shadowColor: "#0878D1", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.22, shadowRadius: 15 },
+  createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, paddingHorizontal: 16, paddingVertical: 15 },
+  createIconWrap: { alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 17, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
+  createCopy: { flex: 1 },
+  createKicker: { color: "rgba(231,248,255,0.72)", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  createTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginTop: 3, textAlign: "right", writingDirection: "rtl" },
+  createSubtitle: { color: "rgba(235,249,255,0.86)", fontSize: 11, lineHeight: 17, marginTop: 4, textAlign: "right", writingDirection: "rtl" },
+  createPressed: { opacity: 0.92, transform: [{ scale: 0.985 }] },
+  sectionHeading: { alignItems: "flex-end", flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 11, marginTop: 24 },
+  sectionTitle: { color: "#163E5C", fontSize: 17, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  sectionSubtitle: { color: "#7894A7", fontSize: 10, fontWeight: "700", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  sectionAction: { alignItems: "center", flexDirection: "row-reverse", gap: 3, paddingVertical: 6 },
+  sectionActionText: { color: "#0878D1", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  activityCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E4EDF3", borderRadius: 18, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 9, minHeight: 94, overflow: "hidden", paddingHorizontal: 12, paddingVertical: 11, shadowColor: "#153C58", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.045, shadowRadius: 7 },
+  activityAccent: { bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
+  activityIconWrap: { alignItems: "center", backgroundColor: "#F3F8FB", borderRadius: 12, height: 38, justifyContent: "center", width: 38 },
   activityContent: { flex: 1 },
-  activityTop: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    gap: 8,
-    justifyContent: "space-between",
-  },
-  activityTitle: {
-    color: "#154F79",
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "800",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  statusBadge: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 3 },
+  activityTop: { alignItems: "center", flexDirection: "row-reverse", gap: 6, justifyContent: "space-between" },
+  activityTitle: { color: "#1A4868", flex: 1, fontSize: 12, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  statusBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4 },
   statusText: { fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
-  activitySubtitle: {
-    color: "#38586F",
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 6,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  timeRow: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    gap: 3,
-    marginTop: 5,
-  },
-  timeText: { color: "#7590A2", fontSize: 9, writingDirection: "rtl" },
-  activityChevron: { left: 8, position: "absolute", top: 33 },
-  activityPressed: { opacity: 0.78, transform: [{ scale: 0.99 }] },
-  loadingActivity: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
-    borderRadius: 12,
-    minHeight: 86,
-    justifyContent: "center",
-  },
-  loadingText: { color: "#638096", fontSize: 12, writingDirection: "rtl" },
-  emptyActivities: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.72)",
-    borderColor: "#C1DFEA",
-    borderRadius: 12,
-    borderStyle: "dashed",
-    borderWidth: 1,
-    justifyContent: "center",
-    minHeight: 86,
-    paddingHorizontal: 16,
-  },
-  emptyText: { color: "#587386", fontSize: 14, writingDirection: "rtl" },
+  activitySubtitle: { color: "#5E7C90", fontSize: 11, fontWeight: "700", marginTop: 5, textAlign: "right", writingDirection: "rtl" },
+  timeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 3, marginTop: 6 },
+  timeText: { color: "#7B96A8", fontSize: 10, writingDirection: "rtl" },
+  activityPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+  loadingActivity: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E3EDF4", borderRadius: 18, borderStyle: "dashed", borderWidth: 1, flexDirection: "row-reverse", gap: 8, justifyContent: "center", minHeight: 100 },
+  loadingIcon: { alignItems: "center", backgroundColor: "#EEF7FC", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },
+  loadingText: { color: "#5F8298", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
+  emptyActivities: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#D9E8F0", borderRadius: 18, borderStyle: "dashed", borderWidth: 1, justifyContent: "center", minHeight: 135, paddingHorizontal: 16 },
+  emptyIcon: { alignItems: "center", backgroundColor: "#EDF6FB", borderRadius: 15, height: 46, justifyContent: "center", width: 46 },
+  emptyTitle: { color: "#315F7C", fontSize: 13, fontWeight: "800", marginTop: 9, writingDirection: "rtl" },
+  emptyText: { color: "#7892A4", fontSize: 11, marginTop: 3, textAlign: "center", writingDirection: "rtl" },
   captainsSection: { marginTop: 2 },
-  captainsList: { gap: 14, paddingBottom: 6 },
-  captainItem: { alignItems: "center", maxWidth: 70, minWidth: 58 },
-  captainAvatar: {
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    height: 44,
-    justifyContent: "center",
-    position: "relative",
-    shadowColor: "#0060B8",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 7,
-    width: 44,
-  },
-  captainInitial: {
-    color: "#477188",
-    fontSize: 15,
-    fontWeight: "800",
-    writingDirection: "rtl",
-  },
-  availableDot: {
-    backgroundColor: "#10B981",
-    borderColor: "#D9EFF9",
-    borderRadius: 7,
-    borderWidth: 2,
-    bottom: 0,
-    height: 13,
-    position: "absolute",
-    right: 0,
-    width: 13,
-  },
-  captainName: {
-    color: "#335872",
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 4,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  captainAvailability: {
-    color: "#55788E",
-    fontSize: 9,
-    marginTop: 1,
-    writingDirection: "rtl",
-  },
-  emptyCaptainText: { color: "#638096", fontSize: 12, writingDirection: "rtl" },
-  pressed: { opacity: 0.74, transform: [{ scale: 0.98 }] },
-  roleNotice: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#D8E5F1",
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 20,
-  },
-  roleNoticeTitle: {
-    color: "#17364D",
-    fontSize: 18,
-    fontWeight: "800",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  roleNoticeText: {
-    color: "#52616B",
-    fontSize: 14,
-    lineHeight: 22,
-    marginTop: 8,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
+  captainsList: { gap: 10, paddingBottom: 8 },
+  captainItem: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E5EDF3", borderRadius: 16, borderWidth: 1, minHeight: 105, paddingHorizontal: 8, paddingVertical: 10, shadowColor: "#143D5B", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.04, shadowRadius: 6, width: 82 },
+  captainAvatar: { alignItems: "center", backgroundColor: "#EAF6FC", borderColor: "#D5EAF5", borderRadius: 22, borderWidth: 1, height: 44, justifyContent: "center", position: "relative", width: 44 },
+  captainInitial: { color: "#21678F", fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
+  availableDot: { backgroundColor: "#18A877", borderColor: "#FFFFFF", borderRadius: 7, borderWidth: 2, bottom: -2, height: 14, position: "absolute", right: -1, width: 14 },
+  captainName: { color: "#315B77", fontSize: 10, fontWeight: "800", marginTop: 7, textAlign: "center", writingDirection: "rtl" },
+  captainAvailability: { color: "#15916C", fontSize: 9, fontWeight: "700", marginTop: 2, writingDirection: "rtl" },
+  captainPressed: { opacity: 0.78, transform: [{ scale: 0.97 }] },
+  emptyCaptainCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E0EAF0", borderRadius: 14, borderWidth: 1, flexDirection: "row-reverse", gap: 7, paddingHorizontal: 12, paddingVertical: 12 },
+  emptyCaptainText: { color: "#638399", fontSize: 11, fontWeight: "700", writingDirection: "rtl" },
+  smallPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
+  roleNotice: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E8D6D8", borderRadius: 22, borderWidth: 1, padding: 24 },
+  roleNoticeIcon: { alignItems: "center", backgroundColor: "#FFF1F2", borderRadius: 18, height: 48, justifyContent: "center", width: 48 },
+  roleNoticeTitle: { color: "#4E2B31", fontSize: 18, fontWeight: "800", marginTop: 12, textAlign: "right", writingDirection: "rtl" },
+  roleNoticeText: { color: "#79646A", fontSize: 13, lineHeight: 21, marginTop: 6, textAlign: "center", writingDirection: "rtl" },
 });
