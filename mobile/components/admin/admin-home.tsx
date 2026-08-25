@@ -16,7 +16,6 @@ import {
 import Animated, {
   Easing,
   FadeInDown,
-  interpolate,
   Layout,
   useAnimatedStyle,
   useSharedValue,

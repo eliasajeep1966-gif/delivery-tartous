@@ -1,4 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { LinearGradient } from "expo-linear-gradient";
 import { type Dispatch, type SetStateAction, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -120,23 +121,34 @@ export function AdminNewOrderModal({
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Pressable
-              disabled={isSubmitting}
-              onPress={close}
-              style={styles.closeButton}
-            >
-              <MaterialIcons name="close" size={22} color="#52616B" />
-            </Pressable>
-            <View style={styles.headerText}>
-              <Text style={styles.title}>إنشاء طلب جديد</Text>
-              <Text style={styles.subtitle}>
-                أضف المصادر والوجهات، ثم اختر كابتناً متاحاً.
-              </Text>
-            </View>
+                  <View style={styles.header}>
+          <View style={styles.headerAccent} />
+          <Pressable
+            disabled={isSubmitting}
+            onPress={close}
+            style={styles.closeButton}
+          >
+            <MaterialIcons name="close" size={20} color="#0878D1" />
+          </Pressable>
+          <View style={styles.headerText}>
+            <Text style={styles.headerEyebrow}>طلب جديد</Text>
+            <Text style={styles.title}>إنشاء رحلة توصيل</Text>
+            <Text style={styles.subtitle}>
+              أدخل المحطات، حدّد الأجرة، ثم عيّن الكابتن.
+            </Text>
           </View>
+        </View>
 
-          <ScrollView
+        <View style={styles.routeSteps}>
+          <RouteStep number="1" label="الاستلام" active />
+          <View style={styles.routeConnector} />
+          <RouteStep number="2" label="التوصيل" />
+          <View style={styles.routeConnector} />
+          <RouteStep number="3" label="التعيين" />
+        </View>
+
+        <ScrollView
+
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -160,11 +172,11 @@ export function AdminNewOrderModal({
               nextId={() => `delivery-${sequence.current++}`}
             />
 
-            <View style={styles.section}>
+            <View style={styles.formCard}>
               <SectionTitle
                 icon="payments"
                 color="#A16207"
-                background="#FEF3C7"
+                background="#FFF4D9"
                 title="أجرة الطلب كاملة"
                 subtitle="الأجرة الإجمالية للطلب بالكامل"
               />
@@ -183,59 +195,63 @@ export function AdminNewOrderModal({
               </View>
             </View>
 
-            <View style={styles.section}>
+            <View style={styles.formCard}>
               <SectionTitle
                 icon="person"
                 color="#047857"
-                background="#D1FAE5"
+                background="#E0FAEF"
                 title="اختيار الكابتن"
                 subtitle="تظهر الكباتن المفعّلة والمتاحة فقط"
               />
               {captains.length ? (
-                captains.map((captain) => (
-                  <Pressable
-                    key={captain.id}
-                    disabled={isSubmitting}
-                    onPress={() => setCaptainId(captain.id)}
-                    style={[
-                      styles.captain,
-                      captainId === captain.id && styles.captainSelected,
-                    ]}
-                  >
-                    <View style={styles.captainTextRow}>
-                      <View style={styles.availableDot} />
-                      <Text
-                        style={[
-                          styles.captainText,
-                          captainId === captain.id &&
-                            styles.captainTextSelected,
-                        ]}
-                      >
-                        {captain.name}
-                      </Text>
-                    </View>
-                    <MaterialIcons
-                      name={
-                        captainId === captain.id
-                          ? "radio-button-checked"
-                          : "radio-button-unchecked"
-                      }
-                      size={20}
-                      color={captainId === captain.id ? "#0060B8" : "#9BAAB5"}
-                    />
-                  </Pressable>
-                ))
+                <View style={styles.captainGrid}>
+                  {captains.map((captain) => (
+                    <Pressable
+                      key={captain.id}
+                      disabled={isSubmitting}
+                      onPress={() => setCaptainId(captain.id)}
+                      style={[
+                        styles.captain,
+                        captainId === captain.id && styles.captainSelected,
+                      ]}
+                    >
+                      <View style={styles.captainTextRow}>
+                        <View style={styles.availableDot} />
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.captainText,
+                            captainId === captain.id &&
+                              styles.captainTextSelected,
+                          ]}
+                        >
+                          {captain.name}
+                        </Text>
+                      </View>
+                      <MaterialIcons
+                        name={
+                          captainId === captain.id
+                            ? "check-circle"
+                            : "radio-button-unchecked"
+                        }
+                        size={19}
+                        color={captainId === captain.id ? "#0878D1" : "#A2B5C3"}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
               ) : (
                 <Text style={styles.empty}>لا يوجد كابتن متاح حالياً.</Text>
               )}
             </View>
+          </ScrollView>
 
+          <View style={styles.footer}>
             {validationError || errorMessage ? (
               <Text style={styles.error}>
                 {validationError ?? errorMessage}
               </Text>
             ) : null}
-
             <Pressable
               disabled={isSubmitting || captains.length === 0}
               onPress={() => void submit()}
@@ -244,12 +260,20 @@ export function AdminNewOrderModal({
                 (isSubmitting || captains.length === 0) && styles.disabled,
               ]}
             >
-              <MaterialIcons name="send" size={18} color="#FFFFFF" />
-              <Text style={styles.submitText}>
-                {isSubmitting ? "جارٍ إنشاء الطلب..." : "إرسال الطلبية"}
-              </Text>
+              <LinearGradient
+                colors={["#063B78", "#0878D1", "#0CBDF2"]}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.submitGradient}
+              >
+                <MaterialIcons name="send" size={18} color="#FFFFFF" />
+                <Text style={styles.submitText}>
+                  {isSubmitting ? "جارٍ إنشاء الطلب..." : "إرسال الطلبية"}
+                </Text>
+                <MaterialIcons name="arrow-back" size={17} color="rgba(255,255,255,0.8)" />
+              </LinearGradient>
             </Pressable>
-          </ScrollView>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -402,6 +426,27 @@ function LocationSection({
   );
 }
 
+function RouteStep({
+  number,
+  label,
+  active = false,
+}: {
+  number: string;
+  label: string;
+  active?: boolean;
+}) {
+  return (
+    <View style={styles.routeStep}>
+      <View style={[styles.routeNumber, active && styles.routeNumberActive]}>
+        <Text style={[styles.routeNumberText, active && styles.routeNumberTextActive]}>
+          {number}
+        </Text>
+      </View>
+      <Text style={[styles.routeLabel, active && styles.routeLabelActive]}>{label}</Text>
+    </View>
+  );
+}
+
 function SectionTitle({
   icon,
   color,
@@ -430,62 +475,78 @@ function SectionTitle({
 
 const styles = StyleSheet.create({
   overlay: {
-    backgroundColor: "rgba(10,32,50,0.44)",
+    backgroundColor: "rgba(6,31,57,0.42)",
     flex: 1,
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#F0F7FF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "92%",
+    backgroundColor: "#F4F7FB",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: "94%",
     overflow: "hidden",
   },
   header: {
     alignItems: "flex-start",
     backgroundColor: "#FFFFFF",
-    borderBottomColor: "#DBE7F2",
+    borderBottomColor: "#E0EDF6",
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+    position: "relative",
   },
+  headerAccent: { backgroundColor: "#16CEFF", bottom: 0, height: 2, left: 18, position: "absolute", right: 18 },
   closeButton: {
     alignItems: "center",
-    backgroundColor: "#F4F8FB",
-    borderRadius: 16,
-    height: 32,
+    backgroundColor: "#F2F8FD",
+    borderColor: "#D8EAF8",
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 34,
     justifyContent: "center",
-    width: 32,
+    width: 34,
   },
   headerText: { alignItems: "flex-end", flex: 1, marginLeft: 12 },
+  headerEyebrow: { color: "#0878D1", fontFamily: "Cairo_700Bold", fontSize: 10, textAlign: "right", writingDirection: "rtl" },
   title: {
-    color: "#1C1B1B",
+    color: "#073D70",
     fontFamily: "Cairo_700Bold",
-    fontSize: 18,
+    fontSize: 19,
+    marginTop: 1,
     textAlign: "right",
     writingDirection: "rtl",
   },
   subtitle: {
-    color: "#58616B",
+    color: "#6A8598",
     fontFamily: "Cairo_400Regular",
-    fontSize: 11,
-    marginTop: 3,
+    fontSize: 10,
+    marginTop: 2,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  content: { gap: 12, padding: 14, paddingBottom: 34 },
-  section: {
+  routeSteps: { alignItems: "center", backgroundColor: "#FFFFFF", flexDirection: "row-reverse", justifyContent: "center", paddingBottom: 12, paddingHorizontal: 18, paddingTop: 9 },
+  routeStep: { alignItems: "center", gap: 3 },
+  routeNumber: { alignItems: "center", backgroundColor: "#EDF4F8", borderRadius: 10, height: 20, justifyContent: "center", width: 20 },
+  routeNumberActive: { backgroundColor: "#0878D1" },
+  routeNumberText: { color: "#6D8799", fontFamily: "Cairo_700Bold", fontSize: 10 },
+  routeNumberTextActive: { color: "#FFFFFF" },
+  routeLabel: { color: "#8399A8", fontFamily: "Cairo_700Bold", fontSize: 9, writingDirection: "rtl" },
+  routeLabelActive: { color: "#0878D1" },
+  routeConnector: { backgroundColor: "#D8E8F2", height: 1, marginBottom: 16, marginHorizontal: 8, width: 46 },
+  content: { gap: 10, padding: 14, paddingBottom: 16 },
+  formCard: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#DBE7F2",
-    borderRadius: 16,
+    borderColor: "#E1EDF5",
+    borderRadius: 18,
     borderWidth: 1,
     padding: 13,
   },
   locationSection: {
-    backgroundColor: "#F7FBFF",
-    borderColor: "#DBE7F2",
-    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#DDECF7",
+    borderRadius: 18,
     borderWidth: 1,
     padding: 13,
   },
@@ -497,13 +558,13 @@ const styles = StyleSheet.create({
   },
   addButton: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#A8C8FF",
-    borderRadius: 10,
+    backgroundColor: "#EEF8FF",
+    borderColor: "#A3DEFF",
+    borderRadius: 11,
     borderWidth: 1,
-    height: 36,
+    height: 34,
     justifyContent: "center",
-    width: 36,
+    width: 34,
   },
   sectionTitleRow: {
     alignItems: "center",
@@ -534,9 +595,9 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   locationCard: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E4EDF5",
-    borderRadius: 12,
+    backgroundColor: "#F9FCFF",
+    borderColor: "#E1EDF5",
+    borderRadius: 14,
     borderWidth: 1,
     gap: 8,
     marginTop: 8,
@@ -554,11 +615,11 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   input: {
-    backgroundColor: "#FBFDFF",
-    borderColor: "#D1DCE6",
-    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D7E5EF",
+    borderRadius: 10,
     borderWidth: 1,
-    color: "#1C1B1B",
+    color: "#173D59",
     fontFamily: "Cairo_400Regular",
     fontSize: 12,
     minHeight: 42,
@@ -566,42 +627,34 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   noteInput: { minHeight: 70, paddingTop: 10, textAlignVertical: "top" },
-  moneyInputWrap: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    marginTop: 10,
-  },
+  moneyInputWrap: { alignItems: "center", flexDirection: "row-reverse", marginTop: 10 },
   moneyInput: {
-    backgroundColor: "#FBFDFF",
-    borderColor: "#C9D9E7",
-    borderRadius: 11,
+    backgroundColor: "#FFFDF8",
+    borderColor: "#F4D99B",
+    borderRadius: 12,
     borderWidth: 1,
-    color: "#1C1B1B",
+    color: "#714600",
     flex: 1,
-    fontFamily: "Cairo_600SemiBold",
-    fontSize: 13,
-    height: 46,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    height: 48,
     paddingHorizontal: 12,
     writingDirection: "rtl",
   },
-  currency: {
-    color: "#58616B",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 11,
-    marginRight: 9,
-  },
+  currency: { color: "#9B6507", fontFamily: "Cairo_700Bold", fontSize: 11, marginRight: 9 },
+  captainGrid: { gap: 8, marginTop: 10 },
   captain: {
     alignItems: "center",
-    borderColor: "#DBE7F2",
-    borderRadius: 10,
+    backgroundColor: "#FBFDFF",
+    borderColor: "#DDEAF2",
+    borderRadius: 13,
     borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 9,
-    minHeight: 44,
+    minHeight: 46,
     paddingHorizontal: 11,
   },
-  captainSelected: { backgroundColor: "#EAF4FF", borderColor: "#0060B8" },
+  captainSelected: { backgroundColor: "#EDF8FF", borderColor: "#0878D1", shadowColor: "#16CEFF", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.16, shadowRadius: 5 },
   captainTextRow: { alignItems: "center", flexDirection: "row-reverse" },
   captainText: {
     color: "#1C1B1B",
@@ -644,15 +697,9 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  submit: {
-    alignItems: "center",
-    backgroundColor: "#0060B8",
-    borderRadius: 12,
-    flexDirection: "row-reverse",
-    gap: 7,
-    height: 50,
-    justifyContent: "center",
-  },
+  footer: { backgroundColor: "#FFFFFF", borderTopColor: "#E0EDF6", borderTopWidth: 1, gap: 8, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 14 },
+  submit: { borderRadius: 15, overflow: "hidden" },
+  submitGradient: { alignItems: "center", borderColor: "rgba(133,239,255,0.65)", borderRadius: 15, borderWidth: 1, flexDirection: "row-reverse", gap: 8, height: 52, justifyContent: "center" },
   submitText: {
     color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
