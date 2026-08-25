@@ -52,6 +52,9 @@ const config: ExpoConfig = {
   extra: {
     supabaseUrl,
     supabasePublishableKey,
+    eas: {
+      projectId: "50bd336a-0524-45a8-a8e5-337b02b1828d",
+    },
   },
   ios: {
     supportsTablet: true,
