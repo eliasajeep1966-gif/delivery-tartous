@@ -309,18 +309,14 @@ export function AdminOfficeExpenses() {
               ]}>{item.label}</Text>
             </Pressable>
           ))}
+          <MotionPressable
+            accessibilityLabel="تحديد تاريخ سجل المصاريف"
+            onPress={() => setIsDatePickerOpen(true)}
+            style={styles.calendarIconButton}
+          >
+            <MaterialIcons name="event" size={20} color={BLUE} />
+          </MotionPressable>
         </View>
-
-        <MotionPressable
-          onPress={() => setIsDatePickerOpen(true)}
-          style={styles.datePickerButton}
-        >
-          <MaterialIcons name="event" size={19} color={BLUE} />
-          <View style={styles.datePickerCopy}>
-            <Text style={styles.datePickerKicker}>تحديد تاريخ</Text>
-            <Text style={styles.datePickerValue}>{dateLabel(browserAnchor)}</Text>
-          </View>
-        </MotionPressable>
 
         <View style={styles.periodNavigator}>
           <Pressable
@@ -523,10 +519,7 @@ const styles = StyleSheet.create({
   periodButtonActive: { backgroundColor: "#E8F3FF", borderColor: BLUE },
   periodButtonText: { color: "#526F82", fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
   periodButtonTextActive: { color: BLUE },
-  datePickerButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#C8DCEB", borderRadius: 13, borderWidth: 1, flexDirection: "row-reverse", gap: 9, minHeight: 52, paddingHorizontal: 12 },
-  datePickerCopy: { alignItems: "flex-end", flex: 1 },
-  datePickerKicker: { color: "#527086", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
-  datePickerValue: { color: "#173B54", fontFamily: "Cairo_400Regular", fontSize: 11, marginTop: 1, writingDirection: "rtl" },
+  calendarIconButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#C8DCEB", borderRadius: 11, borderWidth: 1, justifyContent: "center", minHeight: 41, width: 43 },
   periodNavigator: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#D3E3F0", borderRadius: 14, borderWidth: 1, flexDirection: "row-reverse", justifyContent: "space-between", minHeight: 48, paddingHorizontal: 6 },
   navigatorButton: { alignItems: "center", flexDirection: "row-reverse", gap: 1, minHeight: 36, paddingHorizontal: 5 },
   navigatorButtonDisabled: { opacity: 0.32 },
