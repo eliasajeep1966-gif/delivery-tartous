@@ -138,6 +138,13 @@ export const nativeAdminContract = {
             if (active) onChange();
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "office_expenses" },
+          () => {
+            if (active) onChange();
+          },
+        )
         .subscribe();
 
       return () => {

@@ -484,6 +484,29 @@ export function AdminWages() {
           </View>
         </MotionPressable>
 
+        <MotionPressable
+          accessibilityLabel="فتح واجهة مصاريف المكتب"
+          onPress={() => router.push("/office-expenses" as never)}
+          style={({ pressed }) => [
+            styles.expenseCard,
+            pressed && styles.companyCardPressed,
+          ]}
+        >
+          <View style={styles.expenseIcon}>
+            <MaterialIcons name="receipt-long" size={21} color="#B54708" />
+          </View>
+          <View style={styles.companyTextBlock}>
+            <Text style={styles.expenseTitle}>مصاريف المكتب</Text>
+            <Text style={styles.companySubtitle}>
+              سجل المصاريف واطرحها من حصة الشركة يوميًا وأسبوعيًا وشهريًا
+            </Text>
+          </View>
+          <View style={styles.expenseAction}>
+            <Text style={styles.expenseActionText}>فتح</Text>
+            <MaterialIcons name="arrow-back" size={16} color="#B54708" />
+          </View>
+        </MotionPressable>
+
         <View style={styles.periodHeading}>
           <View>
             <Text style={styles.periodTitle}>نطاق كشف الأجور</Text>
@@ -1423,6 +1446,47 @@ const styles = StyleSheet.create({
     shadowRadius: 9,
   },
   companyCardPressed: { opacity: 0.9, transform: [{ scale: 0.97 }] },
+  expenseCard: {
+    alignItems: "center",
+    backgroundColor: "#FFF8F1",
+    borderColor: "#F6C99E",
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    minHeight: 66,
+    paddingHorizontal: 13,
+  },
+  expenseIcon: {
+    alignItems: "center",
+    backgroundColor: "#FFE7D1",
+    borderRadius: 12,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  expenseTitle: {
+    color: "#9A4506",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  expenseAction: {
+    alignItems: "center",
+    backgroundColor: "#FFE7D1",
+    borderRadius: 11,
+    flexDirection: "row-reverse",
+    gap: 4,
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: 9,
+  },
+  expenseActionText: {
+    color: "#9A4506",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
   companyIcon: {
     alignItems: "center",
     backgroundColor: BLUE,

@@ -279,3 +279,116 @@ export function useNativeCaptainWageDetails(captainId: string | null) {
     retry: 1,
   });
 }
+
+
+export type NativeOfficeExpense = {
+  id: string;
+  title: string;
+  amount: number;
+  expense_date: string;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+};
+
+export type NativeCompanyExpensePeriodRow = {
+  period_start: string;
+  period_end: string;
+  company_gross_total: number;
+  expense_total: number;
+  net_company_total: number;
+};
+
+export const nativeOfficeExpensesContract = {
+  reads: {
+    async periods(period: Exclude<NativeFinancePeriod, "annual">): Promise<NativeCompanyExpensePeriodRow[]> {
+      return unwrap(
+        (await getNativeSupabaseClient().rpc("get_company_expense_period_summary", {
+          p_period: period,
+          p_limit: 100,
+        })) as RpcResult<NativeCompanyExpensePeriodRow[]>,
+        "تعذر تحميل ملخص مصاريف المكتب.",
+      );
+    },
+    async list(): Promise<NativeOfficeExpense[]> {
+      return unwrap(
+        (await getNativeSupabaseClient().rpc("list_office_expenses", {
+          p_limit: 100,
+        })) as RpcResult<NativeOfficeExpense[]>,
+        "تعذر تحميل سجل مصاريف المكتب.",
+      );
+    },
+  },
+  actions: {
+    async create(input: {
+      title: string;
+      amount: number;
+      expenseDate: string;
+      notes?: string;
+    }): Promise<NativeOfficeExpense> {
+      return first(
+        (await getNativeSupabaseClient().rpc("create_office_expense", {
+          p_title: input.title.trim(),
+          p_amount: Number(input.amount.toFixed(2)),
+          p_expense_date: input.expenseDate,
+          p_notes: input.notes?.trim() || undefined,
+        })) as RpcResult<NativeOfficeExpense[]>,
+        "تعذر تسجيل مصروف المكتب.",
+      );
+    },
+    async remove(id: string): Promise<boolean> {
+      return unwrap(
+        (await getNativeSupabaseClient().rpc("delete_office_expense", {
+          p_id: id,
+        })) as RpcResult<boolean>,
+        "تعذر حذف المصروف.",
+      );
+    },
+  },
+} as const;
+
+export function useNativeOfficeExpensePeriods(period: Exclude<NativeFinancePeriod, "annual">) {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["admin-office-expense-periods", period],
+    queryFn: () => nativeOfficeExpensesContract.reads.periods(period),
+    staleTime: 20_000,
+    retry: 1,
+  });
+  useEffect(() => {
+    const unsubscribe = nativeAdminContract.realtime.subscribe(() => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+  return query;
+}
+
+export function useNativeOfficeExpenses() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["admin-office-expenses"],
+    queryFn: () => nativeOfficeExpensesContract.reads.list(),
+    staleTime: 20_000,
+    retry: 1,
+  });
+  const createExpense = async (input: {
+    title: string;
+    amount: number;
+    expenseDate: string;
+    notes?: string;
+  }) => {
+    const result = await nativeOfficeExpensesContract.actions.create(input);
+    await queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
+    await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
+    return result;
+  };
+  const deleteExpense = async (id: string) => {
+    const result = await nativeOfficeExpensesContract.actions.remove(id);
+    await queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
+    await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
+    return result;
+  };
+  return { ...query, createExpense, deleteExpense };
+}
