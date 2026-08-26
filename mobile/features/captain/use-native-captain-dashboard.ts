@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 
+import { deriveDeliveryTiming, type DeliveryTiming } from "@/lib/admin/delivery-duration";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -9,10 +10,69 @@ import {
   type CaptainAvailability,
   type CaptainHomeMetrics,
   type CaptainOrder,
+  type CaptainOrderStatusEvent,
   type CaptainOrderStop,
 } from "@/lib/supabase/native-captain-contract";
 
 const activeStatuses = new Set(["assigned", "received", "in_delivery"]);
+
+export type CaptainOrderWithTiming = CaptainOrder & {
+  deliveryTiming: DeliveryTiming | null;
+};
+
+function canShowDeliveryTiming(
+  status: CaptainOrder["status"],
+): status is "received" | "in_delivery" | "completed" {
+  return status === "received" || status === "in_delivery" || status === "completed";
+}
+
+function groupHistoryByOrder(
+  history: readonly CaptainOrderStatusEvent[],
+): Map<string, { status: string; timestamp: string }[]> {
+  const eventsByOrder = new Map<string, { status: string; timestamp: string }[]>();
+  for (const event of history) {
+    if (
+      typeof event.order_id !== "string" ||
+      typeof event.next_status !== "string" ||
+      typeof event.changed_at !== "string"
+    )
+      continue;
+    const events = eventsByOrder.get(event.order_id) ?? [];
+    events.push({ status: event.next_status, timestamp: event.changed_at });
+    eventsByOrder.set(event.order_id, events);
+  }
+  return eventsByOrder;
+}
+
+async function enrichCaptainOrdersWithDeliveryTiming(
+  orders: readonly CaptainOrder[],
+): Promise<CaptainOrderWithTiming[]> {
+  const candidates = orders.filter((order) => canShowDeliveryTiming(order.status));
+  if (!candidates.length) return orders.map((order) => ({ ...order, deliveryTiming: null }));
+
+  let history: CaptainOrderStatusEvent[];
+  try {
+    history = await nativeCaptainContract.reads.orderStatusHistory(
+      candidates.map((order) => order.id),
+    );
+  } catch {
+    return orders.map((order) => ({ ...order, deliveryTiming: null }));
+  }
+
+  const eventsByOrder = groupHistoryByOrder(history);
+  return orders.map((order) => {
+    if (!canShowDeliveryTiming(order.status)) return { ...order, deliveryTiming: null };
+    const statusAt = order.status === "completed" ? order.completed_at ?? order.updated_at : order.updated_at;
+    return {
+      ...order,
+      deliveryTiming: deriveDeliveryTiming(
+        order.status,
+        statusAt,
+        eventsByOrder.get(order.id) ?? [],
+      ),
+    };
+  });
+}
 
 export function useNativeCaptainDashboard() {
   const { profile, session } = useDeliveryAuth();
@@ -248,7 +308,7 @@ export function useNativeCaptainOrders() {
   const { profile, session } = useDeliveryAuth();
   const captainId = session?.user.id ?? profile?.id ?? null;
   const [page, setPage] = useState(0);
-  const [orders, setOrders] = useState<CaptainOrder[]>([]);
+  const [orders, setOrders] = useState<CaptainOrderWithTiming[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -299,7 +359,12 @@ export function useNativeCaptainOrders() {
           return;
         }
 
-        setOrders(result.orders);
+        const ordersWithTiming = await enrichCaptainOrdersWithDeliveryTiming(
+          result.orders,
+        );
+        if (!mounted.current || requestVersion !== reloadVersion.current) return;
+
+        setOrders(ordersWithTiming);
         setTotal(result.total);
       } catch (cause) {
         if (mounted.current && requestVersion === reloadVersion.current) {

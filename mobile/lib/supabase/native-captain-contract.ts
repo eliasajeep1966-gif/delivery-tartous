@@ -25,6 +25,12 @@ export type CaptainOrdersPage = {
   total: number;
 };
 
+export type CaptainOrderStatusEvent = {
+  order_id: string;
+  next_status: string;
+  changed_at: string;
+};
+
 export type CaptainOrderStop = {
   id: string;
   order_id: string;
@@ -164,6 +170,22 @@ export const nativeCaptainContract = {
     async orderStops(orderId: string): Promise<CaptainOrderStop[]> {
       const result = await client().from("order_stops").select("*").eq("order_id", orderId).order("stop_type", { ascending: true }).order("sequence", { ascending: true });
       return unwrap(result as Result<CaptainOrderStop[]>, "تعذر تحميل نقاط الطلب.");
+    },
+    async orderStatusHistory(orderIds: readonly string[]): Promise<CaptainOrderStatusEvent[]> {
+      const uniqueOrderIds = Array.from(
+        new Set(orderIds.filter((orderId) => typeof orderId === "string" && orderId.trim())),
+      );
+      if (!uniqueOrderIds.length) return [];
+
+      const result = await client()
+        .from("order_status_history")
+        .select("order_id,next_status,changed_at")
+        .in("order_id", uniqueOrderIds)
+        .in("next_status", ["received", "completed"]);
+      return unwrap(
+        result as Result<CaptainOrderStatusEvent[]>,
+        "تعذر تحميل أوقات الاستلام والتوصيل.",
+      );
     },
     async wages(captainId: string): Promise<CaptainWageRow[]> {
       return unwrap(await client().rpc("get_captain_wage_details_v2", { p_captain_id: captainId }) as Result<CaptainWageRow[]>, "تعذر تحميل أجورك.");

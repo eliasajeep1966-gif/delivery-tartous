@@ -19,6 +19,7 @@ import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   CAPTAIN_ORDERS_PAGE_SIZE,
   useNativeCaptainOrders,
+  type CaptainOrderWithTiming,
 } from "@/features/captain/use-native-captain-dashboard";
 import {
   CAPTAIN_WAGES_PAGE_SIZE,
@@ -28,6 +29,10 @@ import {
   nativeCaptainContract,
   type CaptainCustody,
 } from "@/lib/supabase/native-captain-contract";
+import {
+  presentDeliveryTiming,
+  type DeliveryTiming,
+} from "@/lib/admin/delivery-duration";
 
 const DEEP_BLUE = "#063B78";
 const BLUE = "#0878D1";
@@ -101,6 +106,10 @@ export function CaptainOrders() {
               <View style={styles.divider} />
               <Text style={styles.line}>المصدر: {order.pickup_address}</Text>
               <Text style={styles.line}>الوجهة: {order.delivery_address}</Text>
+              <OrderDeliveryTiming
+                status={order.status}
+                timing={order.deliveryTiming}
+              />
               <Text style={styles.muted}>{date(order.updated_at)}</Text>
             </Animated.View>
           ))}
@@ -141,6 +150,59 @@ export function CaptainOrders() {
         <Message text="لا توجد طلبات مسندة إلى حسابك حالياً." />
       )}
     </Page>
+  );
+}
+
+function OrderDeliveryTiming({
+  status,
+  timing,
+}: {
+  status: CaptainOrderWithTiming["status"];
+  timing: DeliveryTiming | null;
+}) {
+  const presentation = timing ? presentDeliveryTiming(timing) : null;
+  if (!presentation) return null;
+
+  if (presentation.mode !== "completed") {
+    const text = status === "received"
+      ? `تم الاستلام ${presentation.receivedTime}`
+      : `قيد التوصيل · ${presentation.label}`;
+    return (
+      <View style={styles.deliveryProgressLine}>
+        <MaterialIcons
+          name={status === "received" ? "inventory-2" : "two-wheeler"}
+          size={13}
+          color={BLUE}
+        />
+        <Text style={styles.deliveryProgressText}>{text}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.deliveryJourney}>
+      <View style={styles.deliveryJourneyTop}>
+        <Text style={styles.deliveryJourneyLabel}>زمن التوصيل</Text>
+        <View style={styles.deliveryDurationBadge}>
+          <MaterialIcons name="timer" size={12} color="#08755C" />
+          <Text style={styles.deliveryDurationText}>{presentation.label}</Text>
+        </View>
+      </View>
+      <View style={styles.deliveryJourneyTrack}>
+        <View style={styles.deliveryJourneyMoment}>
+          <Text style={styles.deliveryJourneyMomentLabel}>استلام</Text>
+          <Text style={styles.deliveryJourneyMomentTime}>{presentation.receivedTime}</Text>
+        </View>
+        <View style={styles.deliveryJourneyConnector}>
+          <View style={styles.deliveryJourneyLine} />
+          <MaterialIcons name="arrow-back" size={13} color="#41A78C" />
+        </View>
+        <View style={styles.deliveryJourneyMoment}>
+          <Text style={styles.deliveryJourneyMomentLabel}>توصيل</Text>
+          <Text style={styles.deliveryJourneyMomentTime}>{presentation.completedTime}</Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -830,6 +892,42 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   divider: { borderTopColor: "#DCEBF3", borderTopWidth: 1, marginVertical: 2 },
+  deliveryProgressLine: {
+    alignItems: "center",
+    backgroundColor: "#F1FAFE",
+    borderColor: "#D6EEF8",
+    borderRadius: 9,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 5,
+    marginTop: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  deliveryProgressText: {
+    color: "#08719A",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
+  deliveryJourney: {
+    backgroundColor: "#F4FBF8",
+    borderColor: "#D9EFE6",
+    borderRadius: 11,
+    borderWidth: 1,
+    marginTop: 4,
+    padding: 8,
+  },
+  deliveryJourneyTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
+  deliveryJourneyLabel: { color: "#4F7281", fontFamily: "Cairo_700Bold", fontSize: 9, writingDirection: "rtl" },
+  deliveryDurationBadge: { alignItems: "center", backgroundColor: "#E3F7EE", borderRadius: 8, flexDirection: "row-reverse", gap: 3, paddingHorizontal: 6, paddingVertical: 3 },
+  deliveryDurationText: { color: "#08755C", fontFamily: "Cairo_700Bold", fontSize: 9, writingDirection: "rtl" },
+  deliveryJourneyTrack: { alignItems: "center", flexDirection: "row-reverse", marginTop: 7 },
+  deliveryJourneyMoment: { alignItems: "flex-start", flex: 1 },
+  deliveryJourneyMomentLabel: { color: "#7895A4", fontFamily: "Cairo_400Regular", fontSize: 8, writingDirection: "rtl" },
+  deliveryJourneyMomentTime: { color: "#285B73", fontFamily: "Cairo_700Bold", fontSize: 10, marginTop: 1, writingDirection: "rtl" },
+  deliveryJourneyConnector: { alignItems: "center", flexDirection: "row", width: 38 },
+  deliveryJourneyLine: { backgroundColor: "#A8D8C6", flex: 1, height: 1 },
   line: {
     color: "#54778D",
     fontFamily: "Cairo_400Regular",
