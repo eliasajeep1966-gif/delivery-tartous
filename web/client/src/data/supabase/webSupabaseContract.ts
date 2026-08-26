@@ -27,13 +27,13 @@ export type WebWageTotals = WebRpcRow<'get_wage_totals'>;
 export type WebCaptainWageSummary = WebRpcRow<'get_captain_wage_summary'>;
 export type WebCaptainWageDetailV2 = WebRpcRow<'get_captain_wage_details_v2'>;
 export type WebCaptainWagePeriodSummaryRow = WebRpcRow<'get_captain_wage_period_summary'>;
-export type CaptainWagePeriod = 'daily' | 'weekly' | 'monthly';
+export type CaptainWagePeriod = 'daily' | 'weekly' | 'monthly' | 'annual';
 export type CaptainWagePeriodSummaryInput = Database['public']['Functions']['get_captain_wage_period_summary']['Args'];
 export type WebBackofficeHomeSummary = WebRpcRow<'get_backoffice_home_summary'>;
 export type WebCaptainHomeMetrics = WebRpcRow<'get_captain_home_metrics'>;
 export type WebCompanyProfitHistoryRow = WebRpcRow<'get_company_profit_history'>;
 export type WebCompanyProfitPeriodHistoryRow = WebRpcRow<'get_company_profit_period_history'>;
-export type CompanyProfitPeriod = 'daily' | 'weekly' | 'monthly';
+export type CompanyProfitPeriod = 'daily' | 'weekly' | 'monthly' | 'annual';
 export type WebCompanyProfitDayDetailRow = WebRpcRow<'get_company_profit_day_details'>;
 export type WebCaptainPayout = WebRpcReturn<'create_captain_partial_payout'>;
 

@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { nativeAdminContract } from "@/lib/supabase/native-admin-contract";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 
-export type NativeFinancePeriod = "daily" | "weekly" | "monthly";
+export type NativeFinancePeriod = "daily" | "weekly" | "monthly" | "annual";
 
 export type NativeCaptainWagePeriodRow = {
   captain_id: string;

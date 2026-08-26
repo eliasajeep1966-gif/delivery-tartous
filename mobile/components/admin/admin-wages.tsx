@@ -42,8 +42,15 @@ function periodLabel(
     year: "numeric",
   });
   if (period === "daily") return formatter.format(start);
-  if (period === "weekly")
+  if (period === "weekly") {
     return `من ${formatter.format(start)} إلى ${formatter.format(end)}`;
+  }
+  if (period === "annual") {
+    return new Intl.DateTimeFormat("ar-SY", {
+      timeZone: "Asia/Damascus",
+      year: "numeric",
+    }).format(start);
+  }
   return new Intl.DateTimeFormat("ar-SY", {
     timeZone: "Asia/Damascus",
     month: "long",
@@ -201,8 +208,12 @@ export function AdminWages() {
             </Text>
           </View>
         </View>
+        <View style={styles.periodHeading}>
+          <Text style={styles.periodTitle}>عرض الأجور حسب</Text>
+          <Text style={styles.periodHint}>اختر الفترة</Text>
+        </View>
         <View style={styles.periods}>
-          {(["daily", "weekly", "monthly"] as const).map((value) => (
+          {(["daily", "monthly", "annual"] as const).map((value) => (
             <MotionPressable
               key={value}
               onPress={() => wagePeriods.changePeriod(value)}
@@ -219,9 +230,9 @@ export function AdminWages() {
               >
                 {value === "daily"
                   ? "يومي"
-                  : value === "weekly"
-                    ? "أسبوعي"
-                    : "شهري"}
+                  : value === "monthly"
+                    ? "شهري"
+                    : "سنوي"}
               </Text>
             </MotionPressable>
           ))}
@@ -287,19 +298,23 @@ export function AdminWages() {
           />
         </View>
         <MotionPressable
+          accessibilityLabel="فتح أجور الشركة"
           onPress={() => router.push("/company-wages" as never)}
           style={styles.companyCard}
         >
           <View style={styles.companyIcon}>
-            <MaterialIcons name="store" size={22} color="#FFFFFF" />
+            <MaterialIcons name="account-balance" size={21} color="#FFFFFF" />
           </View>
           <View style={styles.companyTextBlock}>
-            <Text style={styles.companyTitle}>واجهة أجور الشركة</Text>
+            <Text style={styles.companyTitle}>أجور الشركة</Text>
             <Text style={styles.companySubtitle}>
-              كشف كامل بالتاريخ، الأجور الكلية، وصافي الربح
+              الربح، الحصة، وإجمالي الأجور حسب الفترة
             </Text>
           </View>
-          <MaterialIcons name="arrow-back" size={21} color={BLUE} />
+          <View style={styles.companyAction}>
+            <Text style={styles.companyActionText}>فتح الحساب</Text>
+            <MaterialIcons name="arrow-back" size={16} color="#FFFFFF" />
+          </View>
         </MotionPressable>
         <View style={styles.sectionHeading}>
           <Text style={styles.sectionTitle}>
@@ -335,16 +350,10 @@ export function AdminWages() {
               <MaterialIcons name="chevron-left" size={22} color="#75818E" />
             </MotionPressable>
             <View style={styles.amountGrid}>
-              <Amount label="مجموع الأجور" value={captain.gross_total} />
               <Amount
-                label="صافي الكابتن (70%)"
+                label="صافي الكابتن"
                 value={captain.captain_net_total}
                 color="#047857"
-              />
-              <Amount
-                label="حصة الشركة (30%)"
-                value={captain.gross_total - captain.captain_net_total}
-                color={BLUE}
               />
               <Amount
                 label="المدفوع"
@@ -352,7 +361,7 @@ export function AdminWages() {
                 color="#B45309"
               />
               <Amount
-                label="المتبقي"
+                label={captain.unpaid_total > 0 ? "المتبقي للتسليم" : "تم التسليم"}
                 value={captain.unpaid_total}
                 color={captain.unpaid_total > 0 ? "#B91C1C" : "#047857"}
               />
@@ -607,6 +616,24 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
+  periodHeading: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  periodTitle: {
+    color: "#27506B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
+  periodHint: {
+    color: "#7A96AA",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
   periods: {
     backgroundColor: "#FFFFFF",
     borderColor: "#DCEBF5",
@@ -623,8 +650,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 38,
   },
-  periodActive: { backgroundColor: "#0878D1", shadowColor: "#0878D1", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-  periodText: { color: "#668498", fontFamily: "Cairo_700Bold", fontSize: 10 },
+  periodActive: {
+    backgroundColor: "#0878D1",
+    shadowColor: "#0878D1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  periodText: {
+    color: "#668498",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    writingDirection: "rtl",
+  },
   periodTextActive: { color: "#FFFFFF" },
   dateOptions: { flexDirection: "row-reverse", gap: 8 },
   dateChip: {
@@ -692,6 +730,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     overflow: "hidden",
+    shadowColor: "#0C679D",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.045,
+    shadowRadius: 8,
   },
   captainHeader: {
     alignItems: "center",
@@ -720,11 +762,15 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  amountGrid: { flexDirection: "row-reverse", flexWrap: "wrap" },
+  amountGrid: {
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row-reverse",
+  },
   amountCell: {
-    borderBottomColor: "#E8F0F5",
-    borderBottomWidth: 1,
-    padding: 10,
+    borderLeftColor: "#E8F0F5",
+    borderLeftWidth: 1,
+    paddingHorizontal: 11,
+    paddingVertical: 11,
     width: "33.33%",
   },
   amountText: {
@@ -746,6 +792,8 @@ const styles = StyleSheet.create({
   paymentRow: {
     alignItems: "center",
     backgroundColor: "#F9FCFF",
+    borderTopColor: "#E8F0F5",
+    borderTopWidth: 1,
     flexDirection: "row-reverse",
     gap: 8,
     padding: 11,
@@ -790,16 +838,16 @@ const styles = StyleSheet.create({
   loadMoreText: { color: BLUE, fontSize: 12, fontWeight: "800" },
   companyCard: {
     alignItems: "center",
-    backgroundColor: "#EDF9FF",
-    borderColor: "#A7E7FF",
+    backgroundColor: "#F1FAFF",
+    borderColor: "#9DDEFF",
     borderRadius: 18,
     borderWidth: 1,
     flexDirection: "row-reverse",
-    minHeight: 66,
+    minHeight: 74,
     paddingHorizontal: 13,
     shadowColor: "#0878D1",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.09,
     shadowRadius: 9,
   },
   companyIcon: {
@@ -824,6 +872,22 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 2,
     textAlign: "right",
+    writingDirection: "rtl",
+  },
+  companyAction: {
+    alignItems: "center",
+    backgroundColor: BLUE,
+    borderRadius: 11,
+    flexDirection: "row-reverse",
+    gap: 4,
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: 9,
+  },
+  companyActionText: {
+    color: "#FFFFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
     writingDirection: "rtl",
   },
   detailPanel: {

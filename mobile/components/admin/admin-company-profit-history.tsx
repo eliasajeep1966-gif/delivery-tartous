@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { MotionPressable } from "@/components/ui/motion-pressable";
 import {
   type NativeCompanyProfitPeriodRow,
   type NativeFinancePeriod,
@@ -41,6 +41,12 @@ function periodLabel(
   if (period === "weekly") {
     return `من ${formatter.format(start)} إلى ${formatter.format(end)}`;
   }
+  if (period === "annual") {
+    return new Intl.DateTimeFormat("ar-SY", {
+      timeZone: "Asia/Damascus",
+      year: "numeric",
+    }).format(start);
+  }
   return new Intl.DateTimeFormat("ar-SY", {
     timeZone: "Asia/Damascus",
     month: "long",
@@ -50,8 +56,9 @@ function periodLabel(
 
 function periodButtonLabel(period: NativeFinancePeriod) {
   if (period === "daily") return "يومي";
-  if (period === "weekly") return "أسبوعي";
-  return "شهري";
+  if (period === "monthly") return "شهري";
+  if (period === "annual") return "سنوي";
+  return "أسبوعي";
 }
 
 export function AdminCompanyProfitHistory() {
@@ -104,8 +111,8 @@ export function AdminCompanyProfitHistory() {
       </View>
 
       <View style={styles.periods}>
-        {(["daily", "weekly", "monthly"] as const).map((period) => (
-          <Pressable
+        {(["daily", "monthly", "annual"] as const).map((period) => (
+          <MotionPressable
             key={period}
             onPress={() => history.changePeriod(period)}
             style={[
@@ -121,7 +128,7 @@ export function AdminCompanyProfitHistory() {
             >
               {periodButtonLabel(period)}
             </Text>
-          </Pressable>
+          </MotionPressable>
         ))}
       </View>
 
@@ -135,17 +142,17 @@ export function AdminCompanyProfitHistory() {
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <View style={styles.header}>
-        <Pressable
+        <MotionPressable
           accessibilityLabel="العودة إلى أرباح الشركة"
           onPress={() =>
             router.canGoBack()
               ? router.back()
               : router.replace("/company-wages" as never)
           }
-          style={({ pressed }) => [styles.back, pressed && styles.pressed]}
+          style={styles.back}
         >
           <MaterialIcons name="arrow-forward" size={22} color="#FFF" />
-        </Pressable>
+        </MotionPressable>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>الأجور وحساب الشركة</Text>
           <Text style={styles.headerTitle}>السجل الكامل</Text>
@@ -203,16 +210,13 @@ export function AdminCompanyProfitHistory() {
                 </View>
               ) : null}
               {history.hasMore ? (
-                <Pressable
+                <MotionPressable
                   onPress={history.loadMore}
-                  style={({ pressed }) => [
-                    styles.loadMore,
-                    pressed && styles.pressed,
-                  ]}
+                  style={styles.loadMore}
                 >
                   <MaterialIcons name="expand-more" size={19} color={BLUE} />
                   <Text style={styles.loadMoreText}>تحميل فترات أقدم</Text>
-                </Pressable>
+                </MotionPressable>
               ) : (
                 <Text style={styles.endText}>
                   وصلت إلى أقدم الفترات المتاحة.
@@ -268,9 +272,9 @@ function StatusCard({
       {loading ? <ActivityIndicator size="small" color={BLUE} /> : null}
       <Text style={styles.statusText}>{text}</Text>
       {actionLabel && onAction ? (
-        <Pressable onPress={onAction} style={styles.retryButton}>
+        <MotionPressable onPress={onAction} style={styles.retryButton}>
           <Text style={styles.retryText}>{actionLabel}</Text>
-        </Pressable>
+        </MotionPressable>
       ) : null}
     </View>
   );
@@ -293,10 +297,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 40,
   },
-  pressed: { opacity: 0.75, transform: [{ scale: 0.97 }] },
   headerText: { alignItems: "flex-end", flex: 1, marginHorizontal: 12 },
-  eyebrow: { color: "#DBEAFF", fontSize: 11 },
-  headerTitle: { color: "#FFF", fontSize: 19, fontWeight: "800" },
+  eyebrow: { color: "#DBEAFF", fontFamily: "Cairo_600SemiBold", fontSize: 10, writingDirection: "rtl" },
+  headerTitle: { color: "#FFF", fontFamily: "Cairo_700Bold", fontSize: 18, writingDirection: "rtl" },
   icon: {
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,.15)",
@@ -327,11 +330,12 @@ const styles = StyleSheet.create({
   heroText: { flex: 1 },
   heroTitle: {
     color: "#1C1B1B",
-    fontSize: 18,
-    fontWeight: "800",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 16,
     textAlign: "right",
+    writingDirection: "rtl",
   },
-  muted: { color: "#66727E", fontSize: 10, marginTop: 3, textAlign: "right" },
+  muted: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 10, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
   metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 },
   metric: {
     backgroundColor: "#FFF",
@@ -342,7 +346,7 @@ const styles = StyleSheet.create({
     padding: 12,
     width: "48.5%",
   },
-  metricValue: { fontSize: 15, fontWeight: "800", textAlign: "right" },
+  metricValue: { fontFamily: "Cairo_700Bold", fontSize: 14, textAlign: "right", writingDirection: "rtl" },
   periods: {
     backgroundColor: "#FFF",
     borderColor: "#D3E3F0",
@@ -360,7 +364,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   activePeriod: { backgroundColor: BLUE },
-  periodText: { color: "#5C7C90", fontSize: 11, fontWeight: "700" },
+  periodText: { color: "#5C7C90", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   activePeriodText: { color: "#FFF" },
   heading: {
     alignItems: "center",
@@ -368,13 +372,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 4,
   },
-  title: { color: "#1C1B1B", fontSize: 15, fontWeight: "800" },
+  title: { color: "#1C1B1B", fontFamily: "Cairo_700Bold", fontSize: 14, writingDirection: "rtl" },
   badge: {
     backgroundColor: "#EAE8FF",
     borderRadius: 14,
     color: VIOLET,
-    fontSize: 10,
-    fontWeight: "800",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    overflow: "hidden",
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
@@ -390,14 +395,15 @@ const styles = StyleSheet.create({
   rowStart: { flex: 1, marginLeft: 12 },
   rowTitle: {
     color: "#1C1B1B",
-    fontSize: 13,
-    fontWeight: "800",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
     textAlign: "right",
+    writingDirection: "rtl",
   },
   rowEnd: { alignItems: "flex-end" },
-  company: { color: VIOLET, fontSize: 13, fontWeight: "800" },
-  rowCaption: { color: "#66727E", fontSize: 10, marginTop: 3 },
-  amount: { color: "#1C1B1B", fontSize: 11, fontWeight: "700", marginTop: 3 },
+  company: { color: VIOLET, fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
+  rowCaption: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 9, marginTop: 3, writingDirection: "rtl" },
+  amount: { color: "#1C1B1B", fontFamily: "Cairo_600SemiBold", fontSize: 10, marginTop: 3, writingDirection: "rtl" },
   footer: { gap: 10, paddingTop: 4 },
   loadingMore: {
     alignItems: "center",
@@ -408,7 +414,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 12,
   },
-  loadingMoreText: { color: BLUE, fontSize: 11, fontWeight: "700" },
+  loadingMoreText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   loadMore: {
     alignItems: "center",
     backgroundColor: "#FFF",
@@ -420,8 +426,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 44,
   },
-  loadMoreText: { color: BLUE, fontSize: 12, fontWeight: "800" },
-  endText: { color: "#75818E", fontSize: 11, textAlign: "center" },
+  loadMoreText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
+  endText: { color: "#75818E", fontFamily: "Cairo_400Regular", fontSize: 10, textAlign: "center", writingDirection: "rtl" },
   statusCard: {
     alignItems: "center",
     backgroundColor: "#FFF",
@@ -436,9 +442,10 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: "#58616B",
-    fontSize: 12,
-    fontWeight: "700",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
     textAlign: "center",
+    writingDirection: "rtl",
   },
   retryButton: {
     backgroundColor: "#EAF4FF",
@@ -446,5 +453,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
-  retryText: { color: BLUE, fontSize: 11, fontWeight: "800" },
+  retryText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
 });

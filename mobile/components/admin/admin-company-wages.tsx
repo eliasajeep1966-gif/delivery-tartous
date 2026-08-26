@@ -2,7 +2,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { MotionPressable } from "@/components/ui/motion-pressable";
 import {
   useNativeCompanyProfitHistory,
   type NativeFinancePeriod,
@@ -24,6 +24,20 @@ const day = (value: string) =>
     timeZone: "Asia/Damascus",
     dateStyle: "medium",
   }).format(new Date(`${value}T12:00:00Z`));
+const year = (value: string) =>
+  new Intl.DateTimeFormat("ar-SY", {
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00Z`));
+function periodLabel(
+  period: NativeFinancePeriod,
+  periodStart: string,
+  periodEnd: string,
+) {
+  if (period === "daily") return day(periodStart);
+  if (period === "annual") return `سنة ${year(periodStart)}`;
+  return `من ${day(periodStart)} إلى ${day(periodEnd)}`;
+}
 
 export function AdminCompanyWages() {
   const router = useRouter();
@@ -42,12 +56,12 @@ export function AdminCompanyWages() {
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <View style={styles.header}>
-        <Pressable
+        <MotionPressable
           onPress={() => router.replace("/(tabs)/wages")}
           style={styles.back}
         >
           <MaterialIcons name="arrow-forward" size={22} color="#FFF" />
-        </Pressable>
+        </MotionPressable>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>الأجور وحساب الشركة</Text>
           <Text style={styles.headerTitle}>أجور الشركة</Text>
@@ -96,9 +110,13 @@ export function AdminCompanyWages() {
             </View>
           ))}
         </View>
+        <View style={styles.periodHeading}>
+          <Text style={styles.periodTitle}>عرض حساب الشركة حسب</Text>
+          <Text style={styles.periodHint}>اختر الفترة</Text>
+        </View>
         <View style={styles.periods}>
-          {(["daily", "weekly", "monthly"] as const).map((value) => (
-            <Pressable
+          {(["daily", "monthly", "annual"] as const).map((value) => (
+            <MotionPressable
               key={value}
               onPress={() => setPeriod(value)}
               style={[styles.period, period === value && styles.active]}
@@ -111,24 +129,21 @@ export function AdminCompanyWages() {
               >
                 {value === "daily"
                   ? "يومي"
-                  : value === "weekly"
-                    ? "أسبوعي"
-                    : "شهري"}
+                  : value === "monthly"
+                    ? "شهري"
+                    : "سنوي"}
               </Text>
-            </Pressable>
+            </MotionPressable>
           ))}
         </View>
         <View style={styles.heading}>
           <Text style={styles.title}>سجل الأرباح حسب التاريخ</Text>
           <Text style={styles.badge}>{rows.length} فترات</Text>
         </View>
-        <Pressable
+        <MotionPressable
           accessibilityLabel="فتح سجل أرباح الشركة الكامل"
           onPress={() => router.push("/company-profit-history" as never)}
-          style={({ pressed }) => [
-            styles.fullHistoryButton,
-            pressed && styles.pressed,
-          ]}
+          style={styles.fullHistoryButton}
         >
           <View style={styles.fullHistoryCopy}>
             <Text style={styles.fullHistoryTitle}>عرض السجل الكامل</Text>
@@ -140,7 +155,7 @@ export function AdminCompanyWages() {
             <MaterialIcons name="history" size={19} color={BLUE} />
           </View>
           <MaterialIcons name="arrow-back" size={19} color={BLUE} />
-        </Pressable>
+        </MotionPressable>
         {history.isPending ? (
           <Message text="جارٍ تحميل سجل الأرباح..." />
         ) : history.error ? (
@@ -156,9 +171,7 @@ export function AdminCompanyWages() {
             <View key={row.period_start} style={styles.row}>
               <View>
                 <Text style={styles.rowTitle}>
-                  {period === "daily"
-                    ? day(row.period_start)
-                    : `من ${day(row.period_start)} إلى ${day(row.period_end)}`}
+                  {periodLabel(period, row.period_start, row.period_end)}
                 </Text>
                 <Text style={styles.muted}>{row.order_count} طلبات</Text>
               </View>
@@ -199,8 +212,8 @@ const styles = StyleSheet.create({
     width: 40,
   },
   headerText: { alignItems: "flex-end", flex: 1, marginHorizontal: 12 },
-  eyebrow: { color: "#DBEAFF", fontSize: 11 },
-  headerTitle: { color: "#FFF", fontSize: 19, fontWeight: "800" },
+  eyebrow: { color: "#DBEAFF", fontFamily: "Cairo_600SemiBold", fontSize: 10, writingDirection: "rtl" },
+  headerTitle: { color: "#FFF", fontFamily: "Cairo_700Bold", fontSize: 18, writingDirection: "rtl" },
   icon: {
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,.15)",
@@ -231,11 +244,12 @@ const styles = StyleSheet.create({
   heroText: { flex: 1 },
   heroTitle: {
     color: "#1C1B1B",
-    fontSize: 18,
-    fontWeight: "800",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 16,
     textAlign: "right",
+    writingDirection: "rtl",
   },
-  muted: { color: "#66727E", fontSize: 10, marginTop: 3, textAlign: "right" },
+  muted: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 10, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
   metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 },
   metric: {
     backgroundColor: "#FFF",
@@ -246,10 +260,15 @@ const styles = StyleSheet.create({
     padding: 12,
     width: "48.5%",
   },
-  metricValue: { fontSize: 15, fontWeight: "800", textAlign: "right" },
+  metricValue: { fontFamily: "Cairo_700Bold", fontSize: 14, textAlign: "right", writingDirection: "rtl" },
+  periodHeading: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 2 },
+  periodTitle: { color: "#27506B", fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
+  periodHint: { color: "#7A96AA", fontFamily: "Cairo_400Regular", fontSize: 9, writingDirection: "rtl" },
   periods: {
     backgroundColor: "#FFF",
+    borderColor: "#D3E3F0",
     borderRadius: 15,
+    borderWidth: 1,
     flexDirection: "row-reverse",
     gap: 5,
     padding: 5,
@@ -262,20 +281,21 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   active: { backgroundColor: BLUE },
-  periodText: { color: "#5C7C90", fontSize: 11, fontWeight: "700" },
+  periodText: { color: "#5C7C90", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   activeText: { color: "#FFF" },
   heading: {
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
   },
-  title: { color: "#1C1B1B", fontSize: 15, fontWeight: "800" },
+  title: { color: "#1C1B1B", fontFamily: "Cairo_700Bold", fontSize: 14, writingDirection: "rtl" },
   badge: {
     backgroundColor: "#EAE8FF",
     borderRadius: 14,
     color: "#6D28D9",
-    fontSize: 10,
-    fontWeight: "800",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    overflow: "hidden",
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
@@ -299,14 +319,15 @@ const styles = StyleSheet.create({
     width: 36,
   },
   fullHistoryCopy: { alignItems: "flex-end", flex: 1 },
-  fullHistoryTitle: { color: "#00569F", fontSize: 13, fontWeight: "800" },
+  fullHistoryTitle: { color: "#00569F", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
   fullHistoryText: {
     color: "#51728A",
-    fontSize: 10,
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
     marginTop: 3,
     textAlign: "right",
+    writingDirection: "rtl",
   },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   row: {
     backgroundColor: "#FFF",
     borderColor: "#D3E3F0",
@@ -318,13 +339,14 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     color: "#1C1B1B",
-    fontSize: 13,
-    fontWeight: "800",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
     textAlign: "right",
+    writingDirection: "rtl",
   },
   end: { alignItems: "flex-end" },
-  company: { color: "#6D28D9", fontSize: 13, fontWeight: "800" },
-  amount: { color: "#1C1B1B", fontSize: 11, fontWeight: "700", marginTop: 3 },
+  company: { color: "#6D28D9", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
+  amount: { color: "#1C1B1B", fontFamily: "Cairo_600SemiBold", fontSize: 10, marginTop: 3, writingDirection: "rtl" },
   message: {
     alignItems: "center",
     backgroundColor: "#FFF",
@@ -338,8 +360,9 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: "#58616B",
-    fontSize: 12,
-    fontWeight: "700",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
     textAlign: "center",
+    writingDirection: "rtl",
   },
 });
