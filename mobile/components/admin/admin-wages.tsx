@@ -3,13 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import Animated, {
@@ -22,7 +20,6 @@ import Animated, {
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
-import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   nativeAdminFinanceContract,
@@ -161,7 +158,6 @@ function dateLabel(value: string) {
 
 export function AdminWages() {
   const { profile } = useDeliveryAuth();
-  const { showToast } = useAppToast();
   const router = useRouter();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
@@ -174,10 +170,6 @@ export function AdminWages() {
   const [selectedCaptainId, setSelectedCaptainId] = useState<string | null>(
     null,
   );
-  const [paymentInputs, setPaymentInputs] = useState<Record<string, string>>(
-    {},
-  );
-  const [payingCaptainId, setPayingCaptainId] = useState<string | null>(null);
   const details = useNativeCaptainWageDetails(selectedCaptainId);
   const expensePeriod: NativeFinancePeriod =
     dashboardFilter === "custom" ? "daily" : dashboardFilter;
@@ -241,10 +233,8 @@ export function AdminWages() {
       company: sum.company + row.company_total,
       gross: sum.gross + row.gross_total,
       orders: sum.orders + row.order_count,
-      paid: sum.paid + row.paid_total,
-      unpaid: sum.unpaid + row.unpaid_total,
     }),
-    { captain: 0, company: 0, gross: 0, orders: 0, paid: 0, unpaid: 0 },
+    { captain: 0, company: 0, gross: 0, orders: 0 },
   );
   const selectedExpenseTotal =
     officeExpenses.data?.find(
@@ -380,39 +370,6 @@ export function AdminWages() {
       </ScreenContainer>
     );
   }
-
-  const registerPayout = async (captain: NativeCaptainWagePeriodRow) => {
-    const amount = Number(paymentInputs[captain.captain_id] ?? "");
-    if (!Number.isFinite(amount) || amount <= 0) {
-      Alert.alert("بيانات الدفعة", "أدخل مبلغ دفعة موجباً.");
-      return;
-    }
-    if (amount > captain.unpaid_total) {
-      Alert.alert("بيانات الدفعة", "قيمة الدفعة أكبر من صافي الأجر المتبقي.");
-      return;
-    }
-    setPayingCaptainId(captain.captain_id);
-    try {
-      await nativeAdminFinanceContract.actions.recordPartialPayout(
-        captain.captain_id,
-        amount,
-      );
-      setPaymentInputs((current) => ({ ...current, [captain.captain_id]: "" }));
-      showToast({ message: `تم تسجيل دفعة بقيمة ${money(amount)}.` });
-      if (dashboardFilter === "custom") {
-        await customDateRows.refetch();
-      } else {
-        await wagePeriods.refetch();
-      }
-    } catch (cause) {
-      Alert.alert(
-        "تعذر تسجيل الدفعة",
-        cause instanceof Error ? cause.message : "تعذر تسجيل دفعة الكابتن.",
-      );
-    } finally {
-      setPayingCaptainId(null);
-    }
-  };
 
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
@@ -611,23 +568,18 @@ export function AdminWages() {
         <Animated.View style={dataAnimatedStyle}>
           <View style={styles.metrics}>
             <Metric
-              label="صافي الكباتن"
+              label="الإجمالي"
+              value={money(totals.gross)}
+              color="#164C70"
+            />
+            <Metric
+              label="صافي أجور الكباتن"
               value={money(totals.captain)}
               color="#047857"
             />
             <Metric
-              label="دفعات مسلّمة"
-              value={money(totals.paid)}
-              color="#B45309"
-            />
-            <Metric
-              label="المتبقي للكباتن"
-              value={money(totals.unpaid)}
-              color="#B91C1C"
-            />
-            <Metric
-              label="طلبات الفترة"
-              value={String(totals.orders)}
+              label="حصة الشركة"
+              value={money(totals.company)}
               color={BLUE}
             />
           </View>
@@ -684,84 +636,6 @@ export function AdminWages() {
                   value={captain.company_total}
                   color={BLUE}
                 />
-                <CaptainLedgerCell
-                  label="تم تسليمه"
-                  value={captain.paid_total}
-                  color="#A56112"
-                />
-                <CaptainLedgerCell
-                  label={
-                    captain.unpaid_total > 0 ? "المتبقي للتسليم" : "تم التسليم"
-                  }
-                  value={captain.unpaid_total}
-                  color={captain.unpaid_total > 0 ? "#B83C48" : "#08755C"}
-                />
-              </View>
-              <View
-                style={[
-                  styles.captainSettlementState,
-                  captain.unpaid_total > 0
-                    ? styles.captainSettlementPending
-                    : styles.captainSettlementComplete,
-                ]}
-              >
-                <MaterialIcons
-                  name={captain.unpaid_total > 0 ? "schedule" : "task-alt"}
-                  size={15}
-                  color={captain.unpaid_total > 0 ? "#B83C48" : "#08755C"}
-                />
-                <Text
-                  style={[
-                    styles.captainSettlementText,
-                    captain.unpaid_total > 0
-                      ? styles.captainSettlementPendingText
-                      : styles.captainSettlementCompleteText,
-                  ]}
-                >
-                  {captain.unpaid_total > 0
-                    ? `بانتظار تسليم ${money(captain.unpaid_total)}`
-                    : "تم تسليم أجر الكابتن بالكامل"}
-                </Text>
-              </View>
-              <View style={styles.paymentRow}>
-                <TextInput
-                  value={paymentInputs[captain.captain_id] ?? ""}
-                  onChangeText={(value) =>
-                    setPaymentInputs((current) => ({
-                      ...current,
-                      [captain.captain_id]: value,
-                    }))
-                  }
-                  placeholder="مبلغ الدفعة"
-                  placeholderTextColor="#8A98A6"
-                  keyboardType="decimal-pad"
-                  editable={
-                    captain.unpaid_total > 0 &&
-                    payingCaptainId !== captain.captain_id
-                  }
-                  style={styles.paymentInput}
-                  textAlign="right"
-                />
-                <MotionPressable
-                  disabled={
-                    captain.unpaid_total <= 0 ||
-                    payingCaptainId === captain.captain_id
-                  }
-                  onPress={() => void registerPayout(captain)}
-                  style={({ pressed }) => [
-                    styles.paymentButton,
-                    (captain.unpaid_total <= 0 ||
-                      payingCaptainId === captain.captain_id) &&
-                      styles.disabled,
-                    pressed && styles.paymentButtonPressed,
-                  ]}
-                >
-                  <Text style={styles.paymentButtonText}>
-                    {payingCaptainId === captain.captain_id
-                      ? "جارٍ التسجيل..."
-                      : "تسليم دفعة"}
-                  </Text>
-                </MotionPressable>
               </View>
             </View>
           ))}
@@ -928,8 +802,6 @@ function WageDetails({
     completed_at: string;
     captain_amount: number;
     company_amount: number;
-    unpaid_amount: number;
-    is_fully_paid: boolean;
   }[];
   loading: boolean;
   onClose: () => void;
@@ -961,11 +833,6 @@ function WageDetails({
               </Text>
               <Text style={styles.companyText}>
                 الشركة: {money(row.company_amount)}
-              </Text>
-              <Text style={row.is_fully_paid ? styles.paid : styles.unpaid}>
-                {row.is_fully_paid
-                  ? "تم تسليم الأجر"
-                  : `متبقي ${money(row.unpaid_amount)}`}
               </Text>
             </View>
           </View>
