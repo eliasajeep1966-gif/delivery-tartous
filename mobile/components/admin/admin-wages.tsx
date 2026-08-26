@@ -35,10 +35,10 @@ import {
 
 const BLUE = "#0878D1";
 const FILTER_OPTIONS = [
-  { id: "daily", label: "اليوم" },
-  { id: "weekly", label: "أسبوعي" },
-  { id: "monthly", label: "شهري" },
-  { id: "custom", label: "تاريخ مخصص" },
+  { id: "daily", label: "اليوم", icon: "today" },
+  { id: "weekly", label: "أسبوعي", icon: "date-range" },
+  { id: "monthly", label: "شهري", icon: "calendar-view-month" },
+  { id: "custom", label: "مخصص", icon: "event" },
 ] as const;
 
 type WageDashboardFilter = (typeof FILTER_OPTIONS)[number]["id"];
@@ -528,27 +528,34 @@ export function AdminWages() {
           </MotionPressable>
         </View>
         <View style={styles.rangeQuickFilters}>
-          {FILTER_OPTIONS.map((option) => (
+          {FILTER_OPTIONS.map((option) => {
+            const selected = dashboardFilter === option.id;
+            return (
             <MotionPressable
               key={option.id}
               onPress={() => chooseFilter(option.id)}
               style={({ pressed }) => [
                 styles.rangeQuickFilter,
-                dashboardFilter === option.id && styles.rangeQuickFilterActive,
+                selected && styles.rangeQuickFilterActive,
                 pressed && styles.smallPressed,
               ]}
             >
+              <MaterialIcons
+                name={option.icon}
+                size={15}
+                color={selected ? "#FFFFFF" : "#6A8799"}
+              />
               <Text
                 style={[
                   styles.rangeQuickFilterText,
-                  dashboardFilter === option.id &&
-                    styles.rangeQuickFilterTextActive,
+                  selected && styles.rangeQuickFilterTextActive,
                 ]}
               >
                 {option.label}
               </Text>
             </MotionPressable>
-          ))}
+            );
+          })}
         </View>
         {isPeriodPending ? <Message text="جارٍ تحميل الأجور..." /> : null}
         {periodError ? (
@@ -561,7 +568,11 @@ export function AdminWages() {
           />
         ) : null}
         <Animated.View style={dataAnimatedStyle}>
-          <View style={styles.metrics}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.metrics}
+          >
             <Metric
               label="الإجمالي"
               value={money(totals.gross)}
@@ -577,7 +588,7 @@ export function AdminWages() {
               value={money(totals.company)}
               color={BLUE}
             />
-          </View>
+          </ScrollView>
           <View style={styles.sectionHeading}>
             <Text style={styles.sectionTitle}>
               سجلات الكباتن — {selectedLabel}
@@ -1062,23 +1073,32 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   rangeQuickFilters: {
+    backgroundColor: "#E9F1F6",
+    borderRadius: 16,
     flexDirection: "row-reverse",
-    gap: 7,
+    gap: 4,
+    padding: 4,
   },
   rangeQuickFilter: {
     alignItems: "center",
-    backgroundColor: "#F4F9FC",
-    borderColor: "#D9E9F2",
-    borderRadius: 11,
+    borderColor: "transparent",
+    borderRadius: 12,
     borderWidth: 1,
     flex: 1,
+    flexDirection: "row-reverse",
+    gap: 4,
     justifyContent: "center",
-    minHeight: 35,
-    paddingHorizontal: 4,
+    minHeight: 40,
+    paddingHorizontal: 3,
   },
   rangeQuickFilterActive: {
     backgroundColor: "#0878D1",
-    borderColor: "#0878D1",
+    borderColor: "#42C5F5",
+    elevation: 2,
+    shadowColor: "#0878D1",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 7,
   },
   rangeQuickFilterText: {
     color: "#638297",
@@ -1087,26 +1107,28 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   rangeQuickFilterTextActive: { color: "#FFFFFF" },
-  metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 9 },
+  metrics: { flexDirection: "row-reverse", gap: 9, paddingRight: 1 },
   metric: {
     backgroundColor: "#FFFFFF",
     borderColor: "#DDEAF2",
-    borderRadius: 16,
+    borderRadius: 15,
     borderWidth: 1,
-    minHeight: 74,
-    padding: 11,
-    width: "48.5%",
+    justifyContent: "center",
+    minHeight: 82,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    width: 174,
   },
   metricValue: {
     fontFamily: "Cairo_700Bold",
-    fontSize: 14,
+    fontSize: 13,
     textAlign: "right",
     writingDirection: "rtl",
   },
   muted: {
     color: "#70899A",
     fontFamily: "Cairo_400Regular",
-    fontSize: 9,
+    fontSize: 10,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -1513,6 +1535,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginTop: 9,
     textAlign: "right",
+    width: "100%",
     writingDirection: "rtl",
   },
   profitAmount: {
@@ -1522,6 +1545,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginTop: 2,
     textAlign: "right",
+    width: "100%",
     writingDirection: "ltr",
   },
   profitFooter: {

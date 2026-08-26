@@ -268,17 +268,18 @@ const COMPANY_PROFIT_HISTORY_PAGE_SIZE = 30;
 
 export function useNativeFullCompanyProfitHistory() {
   const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
+  const [customDate, setCustomDate] = useState<string | null>(null);
   const query = useInfiniteQuery({
-    queryKey: ["admin-company-profit-full-history", period],
+    queryKey: ["admin-company-profit-full-history", period, customDate],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       nativeAdminFinanceContract.reads.companyProfitPeriodHistory({
-        period,
-        beforePeriodStart: pageParam,
+        period: customDate ? "daily" : period,
+        beforePeriodStart: customDate ? nextDateKey(customDate) : pageParam,
         limit: COMPANY_PROFIT_HISTORY_PAGE_SIZE,
       }),
     getNextPageParam: (lastPage) => {
-      if (lastPage.length !== COMPANY_PROFIT_HISTORY_PAGE_SIZE) {
+      if (customDate || lastPage.length !== COMPANY_PROFIT_HISTORY_PAGE_SIZE) {
         return undefined;
       }
       return lastPage.at(-1)?.period_start;
@@ -288,22 +289,39 @@ export function useNativeFullCompanyProfitHistory() {
   });
 
   const changePeriod = useCallback((next: NativeFinancePeriod) => {
+    setCustomDate(null);
     setPeriod(next);
   }, []);
+  const selectCustomDate = useCallback((date: string) => {
+    setCustomDate(date);
+  }, []);
   const loadMore = useCallback(() => {
-    if (query.hasNextPage && !query.isFetchingNextPage) {
+    if (!customDate && query.hasNextPage && !query.isFetchingNextPage) {
       void query.fetchNextPage();
     }
-  }, [query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
+  }, [customDate, query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
 
   return {
     ...query,
-    data: query.data?.pages.flat() ?? [],
-    period,
+    data: customDate
+      ? (query.data?.pages.flat() ?? []).filter(
+          (row) => row.period_start === customDate,
+        )
+      : query.data?.pages.flat() ?? [],
+    period: customDate ? "daily" : period,
+    customDate,
     changePeriod,
+    selectCustomDate,
     loadMore,
-    hasMore: Boolean(query.hasNextPage),
+    hasMore: customDate ? false : Boolean(query.hasNextPage),
   };
+}
+
+function nextDateKey(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + 1, 12))
+    .toISOString()
+    .slice(0, 10);
 }
 
 export function useNativeCaptainWageDetails(captainId: string | null) {
