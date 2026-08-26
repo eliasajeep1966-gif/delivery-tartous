@@ -34,15 +34,11 @@ Deno.serve(async (req: Request) => {
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) throw new Error("Unauthorized");
 
-    const { data: requester, error: requesterError } = await admin
-      .from("profiles")
-      .select("role,is_active")
-      .eq("id", userData.user.id)
-      .maybeSingle();
-    if (requesterError) {
-      throw new Error(`Requester lookup failed: ${requesterError.message}`);
+    const { data: canSend, error: permissionError } = await userClient.rpc("can_send_order_push");
+    if (permissionError) {
+      throw new Error(`Push permission check failed: ${permissionError.message}`);
     }
-    if (!requester?.is_active || !["admin", "supervisor"].includes(requester.role)) {
+    if (canSend !== true) {
       throw new Error("Only active administrators can send assignment notifications");
     }
 
@@ -72,7 +68,7 @@ Deno.serve(async (req: Request) => {
       body: `تم إسناد الطلب #${order.order_number} إليك`,
       data: { orderId: order.id, type: "assigned_order" },
       priority: "high",
-      channelId: "orders-v3",
+      channelId: "orders-v2",
     }));
 
     if (messages.length) {
