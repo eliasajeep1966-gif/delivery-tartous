@@ -48,6 +48,14 @@ export type CaptainHomeMetrics = {
   completed_gross: number;
 };
 
+export type CaptainDashboard = {
+  metrics: CaptainHomeMetrics;
+  order_count: number;
+  active_order: CaptainOrder | null;
+  active_stops: CaptainOrderStop[];
+  recent_orders: CaptainOrder[];
+};
+
 export type CaptainWagePeriod = "daily" | "weekly" | "monthly";
 
 export type CaptainWageTotals = {
@@ -113,6 +121,12 @@ function first<T>(result: Result<T[]>, fallback: string): T {
 
 export const nativeCaptainContract = {
   reads: {
+    async dashboard(): Promise<CaptainDashboard> {
+      return unwrap(
+        await client().rpc("get_my_captain_dashboard") as Result<CaptainDashboard>,
+        "تعذر تحميل حساب الكابتن.",
+      );
+    },
     async homeMetrics(captainId: string): Promise<CaptainHomeMetrics> {
       const supabase = client();
       const [statusResult, completedResult] = await Promise.all([

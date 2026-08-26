@@ -272,9 +272,9 @@ export function CaptainHome() {
             <Animated.View entering={FadeInDown.delay(150).duration(210)}>
               <View style={styles.sectionHeading}>
                 <Text style={styles.sectionTitle}>آخر الطلبات</Text>
-                <Text style={styles.link}>{dashboard.orders.length} طلبات</Text>
+                <Text style={styles.link}>{dashboard.orderCount} طلبات</Text>
               </View>
-              {dashboard.recentOrders.slice(0, 4).map((order, index) => (
+              {dashboard.recentOrders.map((order, index) => (
                 <Animated.View
                   entering={FadeInDown.delay(180 + index * 35).duration(190)}
                   key={order.id}
