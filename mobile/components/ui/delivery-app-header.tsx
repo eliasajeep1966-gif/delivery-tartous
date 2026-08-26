@@ -47,7 +47,6 @@ function HeaderActionButton({ action }: { action?: HeaderAction }) {
 
 /** Shared glass header for operational screens. It preserves each screen's actions. */
 export function DeliveryAppHeader({
-  contextLabel,
   leadingAction,
   trailingAction,
 }: DeliveryAppHeaderProps) {
@@ -63,9 +62,15 @@ export function DeliveryAppHeader({
     >
       <View style={styles.content}>
         <HeaderActionButton action={leadingAction} />
-        <View style={styles.brand}>
-          <Text style={styles.contextLabel}>{contextLabel}</Text>
-          <Text style={styles.brandName}>Delivery Tartous</Text>
+        <View pointerEvents="none" style={styles.brand}>
+          <Text
+            allowFontScaling={false}
+            ellipsizeMode="clip"
+            numberOfLines={1}
+            style={styles.brandName}
+          >
+            Delivery Tartous
+          </Text>
         </View>
         <HeaderActionButton action={trailingAction} />
       </View>
@@ -81,13 +86,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
+    overflow: "visible",
   },
   content: {
     alignItems: "center",
     flexDirection: "row-reverse",
     height: 60,
     justifyContent: "space-between",
+    overflow: "visible",
     paddingHorizontal: 16,
+    position: "relative",
   },
   actionButton: {
     alignItems: "center",
@@ -102,13 +110,23 @@ const styles = StyleSheet.create({
   actionContent: { alignItems: "center", justifyContent: "center", position: "relative" },
   actionPlaceholder: { height: 34, width: 34 },
   actionPressed: { opacity: 0.75, transform: [{ scale: 0.97 }] },
-  brand: { alignItems: "center", flex: 1, paddingHorizontal: 10 },
+  brand: {
+    alignItems: "center",
+    bottom: 0,
+    justifyContent: "center",
+    left: 58,
+    overflow: "visible",
+    position: "absolute",
+    right: 58,
+    top: 0,
+  },
   brandName: {
     color: "#063B78",
     fontFamily: "Parisienne_400Regular",
-    fontSize: 25,
-    lineHeight: 29,
-    marginTop: -4,
+    fontSize: 27,
+    lineHeight: 36,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   notificationDot: {
     backgroundColor: "#15C8FF",
@@ -120,12 +138,5 @@ const styles = StyleSheet.create({
     right: -7,
     top: -6,
     width: 10,
-  },
-  contextLabel: {
-    color: "#5C8296",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 8,
-    lineHeight: 12,
-    writingDirection: "rtl",
   },
 });
