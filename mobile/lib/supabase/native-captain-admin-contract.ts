@@ -71,11 +71,11 @@ export const nativeCaptainAdminContract = {
   async list(): Promise<NativeCaptain[]> {
     const client = getNativeSupabaseClient();
     const [profilesResult, statusesResult, custodyResult] = await Promise.all([
-      client
-        .from("profiles")
-        .select("id,email,full_name,is_active,role")
-        .eq("role", "captain")
-        .order("created_at", { ascending: false }),
+      client.rpc("list_visible_profiles", {
+        p_limit: 100,
+        p_before_created_at: null,
+        p_before_id: null,
+      }),
       client
         .from("captain_status")
         .select("captain_id,availability")
