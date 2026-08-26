@@ -618,18 +618,18 @@ export function AdminWages() {
                   </Text>
                 </View>
                 <View style={styles.captainNetSummary}>
-                  <Text style={styles.captainNetLabel}>صافي الأجر</Text>
+                  <Text style={styles.captainNetLabel}>إجمالي الأجور</Text>
                   <Text style={styles.captainNetValue}>
-                    {money(captain.captain_net_total)}
+                    {money(captain.gross_total)}
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-left" size={21} color="#7592A5" />
               </MotionPressable>
               <View style={styles.captainLedgerGrid}>
                 <CaptainLedgerCell
-                  label="إجمالي الأجور"
-                  value={captain.gross_total}
-                  color="#164C70"
+                  label="صافي الأجر"
+                  value={captain.captain_net_total}
+                  color="#047857"
                 />
                 <CaptainLedgerCell
                   label="حصة الشركة"
