@@ -78,6 +78,7 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
+    googleServicesFile: "./google-services.json",
     permissions: ["POST_NOTIFICATIONS"],
     intentFilters: [
       {

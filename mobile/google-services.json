@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "111792650628",
+    "project_id": "delivery-tartous",
+    "storage_bucket": "delivery-tartous.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111792650628:android:f171240ab7c360921945d1",
+        "android_client_info": {
+          "package_name": "com.app.deliverytartousmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2l1i7-cbROb7bQHdjrtwEfpz2Rm2C52M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
