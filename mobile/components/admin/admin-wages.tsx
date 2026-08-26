@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   type LayoutChangeEvent,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -70,11 +71,54 @@ function customDateLabel(value: Date) {
   }).format(value);
 }
 
+const WEEKDAY_LABELS = ["أحد", "اثن", "ثلا", "أرب", "خمي", "جمع", "سبت"];
+
 function nextDateKey(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + 1, 12))
     .toISOString()
     .slice(0, 10);
+}
+
+function monthStart(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), 1, 12));
+}
+
+function shiftMonth(value: Date, amount: number) {
+  return new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + amount, 1, 12),
+  );
+}
+
+function calendarDays(value: Date) {
+  const firstDay = monthStart(value);
+  const leadingEmptyDays = firstDay.getUTCDay();
+  const dayCount = new Date(
+    Date.UTC(firstDay.getUTCFullYear(), firstDay.getUTCMonth() + 1, 0, 12),
+  ).getUTCDate();
+  return [
+    ...Array.from({ length: leadingEmptyDays }, () => null),
+    ...Array.from(
+      { length: dayCount },
+      (_, index) =>
+        new Date(
+          Date.UTC(
+            firstDay.getUTCFullYear(),
+            firstDay.getUTCMonth(),
+            index + 1,
+            12,
+          ),
+        ),
+    ),
+  ];
+}
+
+function calendarMonthLabel(value: Date) {
+  return new Intl.DateTimeFormat("ar-SY-u-nu-latn", {
+    month: "long",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).format(value);
 }
 
 function periodLabel(
@@ -125,7 +169,7 @@ export function AdminWages() {
     useState<WageDashboardFilter>("daily");
   const [selectedPeriodStart, setSelectedPeriodStart] = useState("");
   const [customDate, setCustomDate] = useState(() => new Date());
-  const [isCustomDateMenuOpen, setIsCustomDateMenuOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [filterTrackWidth, setFilterTrackWidth] = useState(0);
   const [selectedCaptainId, setSelectedCaptainId] = useState<string | null>(
     null,
@@ -171,14 +215,6 @@ export function AdminWages() {
       return true;
     });
   }, [activeRows]);
-  const availableCustomDates = useMemo(() => {
-    const seen = new Set<string>();
-    return periodRows.filter((row) => {
-      if (seen.has(row.period_start)) return false;
-      seen.add(row.period_start);
-      return true;
-    });
-  }, [periodRows]);
   const selectedKey =
     dashboardFilter === "custom"
       ? customDateKey
@@ -274,7 +310,7 @@ export function AdminWages() {
       setDashboardFilter(next);
       setSelectedPeriodStart("");
       if (next === "custom") {
-        setIsCustomDateMenuOpen(true);
+        setIsDatePickerOpen(true);
         wagePeriods.changePeriod("daily");
         return;
       }
@@ -289,7 +325,7 @@ export function AdminWages() {
         withTiming(0.42, { duration: 90, easing: Easing.out(Easing.cubic) }),
       );
       setCustomDate(new Date(`${dateKey}T12:00:00Z`));
-      setIsCustomDateMenuOpen(false);
+      setIsDatePickerOpen(false);
     },
     [dataOpacity],
   );
@@ -479,55 +515,15 @@ export function AdminWages() {
               </Text>
             </View>
             <MotionPressable
-              onPress={() => setIsCustomDateMenuOpen((current) => !current)}
+              onPress={() => setIsDatePickerOpen(true)}
               style={({ pressed }) => [
                 styles.datePickerButton,
                 pressed && styles.smallPressed,
               ]}
             >
               <MaterialIcons name="calendar-month" size={17} color={BLUE} />
-              <Text style={styles.datePickerButtonText}>اختيار يوم</Text>
+              <Text style={styles.datePickerButtonText}>اختيار التاريخ</Text>
             </MotionPressable>
-          </View>
-        ) : null}
-        {dashboardFilter === "custom" && isCustomDateMenuOpen ? (
-          <View style={styles.datePickerPanel}>
-            <View style={styles.datePickerHeading}>
-              <Text style={styles.datePickerTitle}>اختر من الأيام المسجلة</Text>
-              <Text style={styles.datePickerHint}>تُعرض تواريخ الأجور المتاحة فقط</Text>
-            </View>
-            {availableCustomDates.length ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.customDateOptions}
-              >
-                {availableCustomDates.map((row) => (
-                  <MotionPressable
-                    key={row.period_start}
-                    onPress={() => selectCustomDate(row.period_start)}
-                    style={({ pressed }) => [
-                      styles.customDateChip,
-                      row.period_start === customDateKey && styles.customDateChipActive,
-                      pressed && styles.smallPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.customDateChipText,
-                        row.period_start === customDateKey && styles.customDateChipTextActive,
-                      ]}
-                    >
-                      {periodLabel("daily", row)}
-                    </Text>
-                  </MotionPressable>
-                ))}
-              </ScrollView>
-            ) : (
-              <Text style={styles.customDateEmpty}>
-                لا توجد تواريخ أجور متاحة ضمن السجل المحمّل.
-              </Text>
-            )}
           </View>
         ) : null}
         {dashboardFilter !== "custom" && options.length > 0 ? (
@@ -618,7 +614,10 @@ export function AdminWages() {
                     params: { captainId: captain.captain_id },
                   } as never)
                 }
-                style={styles.captainHeader}
+                style={({ pressed }) => [
+                  styles.captainHeader,
+                  pressed && styles.captainHeaderPressed,
+                ]}
               >
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>
@@ -627,30 +626,67 @@ export function AdminWages() {
                 </View>
                 <View style={styles.captainIdentity}>
                   <Text style={styles.captainName}>{captain.captain_name}</Text>
-                  <Text style={styles.muted}>
+                  <Text style={styles.captainMeta}>
                     {captain.order_count} طلبات في هذه الفترة
                   </Text>
                 </View>
-                <MaterialIcons name="chevron-left" size={22} color="#75818E" />
+                <View style={styles.captainNetSummary}>
+                  <Text style={styles.captainNetLabel}>صافي الأجر</Text>
+                  <Text style={styles.captainNetValue}>
+                    {money(captain.captain_net_total)}
+                  </Text>
+                </View>
+                <MaterialIcons name="chevron-left" size={21} color="#7592A5" />
               </MotionPressable>
-              <View style={styles.amountGrid}>
-                <Amount
-                  label="صافي الكابتن"
-                  value={captain.captain_net_total}
-                  color="#047857"
+              <View style={styles.captainLedgerGrid}>
+                <CaptainLedgerCell
+                  label="إجمالي الأجور"
+                  value={captain.gross_total}
+                  color="#164C70"
                 />
-                <Amount
-                  label="المدفوع"
+                <CaptainLedgerCell
+                  label="حصة الشركة"
+                  value={captain.settlement_total}
+                  color={BLUE}
+                />
+                <CaptainLedgerCell
+                  label="تم تسليمه"
                   value={captain.paid_total}
-                  color="#B45309"
+                  color="#A56112"
                 />
-                <Amount
+                <CaptainLedgerCell
                   label={
                     captain.unpaid_total > 0 ? "المتبقي للتسليم" : "تم التسليم"
                   }
                   value={captain.unpaid_total}
-                  color={captain.unpaid_total > 0 ? "#B91C1C" : "#047857"}
+                  color={captain.unpaid_total > 0 ? "#B83C48" : "#08755C"}
                 />
+              </View>
+              <View
+                style={[
+                  styles.captainSettlementState,
+                  captain.unpaid_total > 0
+                    ? styles.captainSettlementPending
+                    : styles.captainSettlementComplete,
+                ]}
+              >
+                <MaterialIcons
+                  name={captain.unpaid_total > 0 ? "schedule" : "task-alt"}
+                  size={15}
+                  color={captain.unpaid_total > 0 ? "#B83C48" : "#08755C"}
+                />
+                <Text
+                  style={[
+                    styles.captainSettlementText,
+                    captain.unpaid_total > 0
+                      ? styles.captainSettlementPendingText
+                      : styles.captainSettlementCompleteText,
+                  ]}
+                >
+                  {captain.unpaid_total > 0
+                    ? `بانتظار تسليم ${money(captain.unpaid_total)}`
+                    : "تم تسليم أجر الكابتن بالكامل"}
+                </Text>
               </View>
               <View style={styles.paymentRow}>
                 <TextInput
@@ -677,11 +713,12 @@ export function AdminWages() {
                     payingCaptainId === captain.captain_id
                   }
                   onPress={() => void registerPayout(captain)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.paymentButton,
                     (captain.unpaid_total <= 0 ||
                       payingCaptainId === captain.captain_id) &&
                       styles.disabled,
+                    pressed && styles.paymentButtonPressed,
                   ]}
                 >
                   <Text style={styles.paymentButtonText}>
@@ -704,6 +741,14 @@ export function AdminWages() {
           ) : null}
         </Animated.View>
       </ScrollView>
+      {isDatePickerOpen ? (
+        <FinancialDatePicker
+          onClose={() => setIsDatePickerOpen(false)}
+          onSelect={(date) => selectCustomDate(damascusDateKey(date))}
+          value={customDate}
+          visible
+        />
+      ) : null}
       <WageDetails
         captain={selectedCaptain}
         details={details.data ?? []}
@@ -711,6 +756,128 @@ export function AdminWages() {
         onClose={() => setSelectedCaptainId(null)}
       />
     </ScreenContainer>
+  );
+}
+
+function FinancialDatePicker({
+  visible,
+  value,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  value: Date;
+  onSelect: (date: Date) => void;
+  onClose: () => void;
+}) {
+  const [displayMonth, setDisplayMonth] = useState(() => monthStart(value));
+  const monthDays = useMemo(() => calendarDays(displayMonth), [displayMonth]);
+  const todayKey = damascusDateKey(new Date());
+  const latestMonth = monthStart(new Date());
+  const canAdvanceMonth = displayMonth.getTime() < latestMonth.getTime();
+
+  return (
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      transparent
+      visible={visible}
+    >
+      <View style={styles.dateModalBackdrop}>
+        <View style={styles.dateModalCard}>
+          <View style={styles.dateModalHeader}>
+            <MotionPressable
+              accessibilityLabel="إغلاق التقويم"
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.dateModalClose,
+                pressed && styles.smallPressed,
+              ]}
+            >
+              <MaterialIcons name="close" size={19} color="#496B81" />
+            </MotionPressable>
+            <Text style={styles.dateModalTitle}>اختيار تاريخ الأجور</Text>
+            <View style={styles.dateModalHeaderSpace} />
+          </View>
+          <View style={styles.calendarMonthRow}>
+            <MotionPressable
+              accessibilityLabel="الشهر السابق"
+              onPress={() =>
+                setDisplayMonth((current) => shiftMonth(current, -1))
+              }
+              style={({ pressed }) => [
+                styles.calendarNavigation,
+                pressed && styles.smallPressed,
+              ]}
+            >
+              <MaterialIcons name="chevron-right" size={22} color={BLUE} />
+            </MotionPressable>
+            <Text style={styles.calendarMonthTitle}>
+              {calendarMonthLabel(displayMonth)}
+            </Text>
+            <MotionPressable
+              accessibilityLabel="الشهر التالي"
+              disabled={!canAdvanceMonth}
+              onPress={() =>
+                setDisplayMonth((current) => shiftMonth(current, 1))
+              }
+              style={({ pressed }) => [
+                styles.calendarNavigation,
+                !canAdvanceMonth && styles.calendarNavigationDisabled,
+                pressed && styles.smallPressed,
+              ]}
+            >
+              <MaterialIcons name="chevron-left" size={22} color={BLUE} />
+            </MotionPressable>
+          </View>
+          <View style={styles.calendarWeekdays}>
+            {WEEKDAY_LABELS.map((label) => (
+              <Text key={label} style={styles.calendarWeekday}>
+                {label}
+              </Text>
+            ))}
+          </View>
+          <View style={styles.calendarGrid}>
+            {monthDays.map((day, index) => {
+              if (!day)
+                return (
+                  <View key={`empty-${index}`} style={styles.calendarDaySlot} />
+                );
+              const dayKey = damascusDateKey(day);
+              const isFuture = dayKey > todayKey;
+              const selected = dayKey === damascusDateKey(value);
+              return (
+                <View key={dayKey} style={styles.calendarDaySlot}>
+                  <MotionPressable
+                    disabled={isFuture}
+                    onPress={() => onSelect(day)}
+                    style={({ pressed }) => [
+                      styles.calendarDay,
+                      selected && styles.calendarDaySelected,
+                      isFuture && styles.calendarDayDisabled,
+                      pressed && styles.calendarDayPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.calendarDayText,
+                        selected && styles.calendarDayTextSelected,
+                        isFuture && styles.calendarDayTextDisabled,
+                      ]}
+                    >
+                      {new Intl.NumberFormat("en-US").format(day.getUTCDate())}
+                    </Text>
+                  </MotionPressable>
+                </View>
+              );
+            })}
+          </View>
+          <Text style={styles.dateModalHint}>
+            اختر يومًا لتحديث سجل الأجور باستخدام البيانات المسجلة فعليًا.
+          </Text>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -789,19 +956,19 @@ function Metric({
     </View>
   );
 }
-function Amount({
+function CaptainLedgerCell({
   label,
   value,
-  color = "#1C1B1B",
+  color,
 }: {
   label: string;
   value: number;
-  color?: string;
+  color: string;
 }) {
   return (
-    <View style={styles.amountCell}>
-      <Text style={styles.muted}>{label}</Text>
-      <Text style={[styles.amountText, { color }]}>{money(value)}</Text>
+    <View style={styles.captainLedgerCell}>
+      <Text style={styles.captainLedgerLabel}>{label}</Text>
+      <Text style={[styles.captainLedgerValue, { color }]}>{money(value)}</Text>
     </View>
   );
 }
@@ -947,6 +1114,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     bottom: 5,
+    elevation: 0,
     position: "absolute",
     right: 5,
     shadowColor: "#4D79A0",
@@ -954,16 +1122,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 4,
     top: 5,
+    zIndex: 0,
   },
-  periodSlot: { flex: 1, zIndex: 1 },
+  periodSlot: { elevation: 2, flex: 1, zIndex: 2 },
   period: {
     alignItems: "center",
     borderRadius: 12,
     flex: 1,
     justifyContent: "center",
     minHeight: 34,
+    elevation: 3,
     paddingHorizontal: 2,
-    zIndex: 1,
+    zIndex: 3,
   },
   periodPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
   periodActive: {
@@ -979,7 +1149,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     writingDirection: "rtl",
   },
-  periodTextActive: { color: "#FFFFFF" },
+  periodTextActive: { color: "#063B78" },
   dateOptions: { flexDirection: "row-reverse", gap: 8 },
   dateChip: {
     backgroundColor: "#FFFFFF",
@@ -1042,34 +1212,36 @@ const styles = StyleSheet.create({
   },
   captainCard: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#DDEAF2",
-    borderRadius: 18,
+    borderColor: "#D7E8F2",
+    borderRadius: 20,
     borderWidth: 1,
     overflow: "hidden",
     shadowColor: "#0C679D",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.045,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.065,
+    shadowRadius: 11,
   },
   captainHeader: {
     alignItems: "center",
-    backgroundColor: "#F9FCFF",
-    borderBottomColor: "#E1EDF4",
+    backgroundColor: "#F8FCFF",
+    borderBottomColor: "#E3EFF5",
     borderBottomWidth: 1,
     flexDirection: "row-reverse",
-    padding: 13,
+    paddingHorizontal: 13,
+    paddingVertical: 12,
   },
+  captainHeaderPressed: { backgroundColor: "#EEF8FD" },
   avatar: {
     alignItems: "center",
-    backgroundColor: "#EAF8FF",
-    borderColor: "#B8E9FF",
-    borderRadius: 19,
+    backgroundColor: "#DFF4FD",
+    borderColor: "#B5E4F7",
+    borderRadius: 18,
     borderWidth: 1,
-    height: 38,
+    height: 40,
     justifyContent: "center",
-    width: 38,
+    width: 40,
   },
-  avatarText: { color: "#0878D1", fontFamily: "Cairo_700Bold", fontSize: 13 },
+  avatarText: { color: "#0878D1", fontFamily: "Cairo_700Bold", fontSize: 14 },
   captainIdentity: { flex: 1, marginHorizontal: 10 },
   captainName: {
     color: "#073D70",
@@ -1078,17 +1250,77 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  amountGrid: {
+  captainMeta: {
+    color: "#7893A4",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  captainNetSummary: { alignItems: "flex-end", marginLeft: 7 },
+  captainNetLabel: {
+    color: "#6D8A9C",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 8,
+    writingDirection: "rtl",
+  },
+  captainNetValue: {
+    color: "#08755C",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    marginTop: 1,
+    writingDirection: "ltr",
+  },
+  captainLedgerGrid: {
     backgroundColor: "#FFFFFF",
     flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    paddingHorizontal: 5,
+    paddingVertical: 6,
   },
-  amountCell: {
-    borderLeftColor: "#E8F0F5",
-    borderLeftWidth: 1,
-    paddingHorizontal: 11,
-    paddingVertical: 11,
-    width: "33.33%",
+  captainLedgerCell: {
+    borderColor: "#E7F0F5",
+    borderRadius: 12,
+    borderWidth: 1,
+    margin: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+    width: "47.5%",
   },
+  captainLedgerLabel: {
+    color: "#728FA1",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 8,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  captainLedgerValue: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: "right",
+    writingDirection: "ltr",
+  },
+  captainSettlementState: {
+    alignItems: "center",
+    borderRadius: 11,
+    flexDirection: "row-reverse",
+    gap: 5,
+    marginHorizontal: 10,
+    marginTop: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  captainSettlementPending: { backgroundColor: "#FFF5F5" },
+  captainSettlementComplete: { backgroundColor: "#EEF9F4" },
+  captainSettlementText: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
+  captainSettlementPendingText: { color: "#B83C48" },
+  captainSettlementCompleteText: { color: "#08755C" },
   amountText: {
     color: "#173D59",
     fontFamily: "Cairo_700Bold",
@@ -1107,12 +1339,13 @@ const styles = StyleSheet.create({
   },
   paymentRow: {
     alignItems: "center",
-    backgroundColor: "#F9FCFF",
-    borderTopColor: "#E8F0F5",
+    backgroundColor: "#F8FCFF",
+    borderTopColor: "#E5EFF4",
     borderTopWidth: 1,
     flexDirection: "row-reverse",
     gap: 8,
-    padding: 11,
+    marginTop: 9,
+    padding: 10,
   },
   paymentInput: {
     backgroundColor: "#FFFFFF",
@@ -1142,6 +1375,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     writingDirection: "rtl",
   },
+  paymentButtonPressed: { opacity: 0.9, transform: [{ scale: 0.97 }] },
   disabled: { opacity: 0.5 },
   loadMore: {
     alignItems: "center",
@@ -1447,6 +1681,126 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 17,
     marginTop: 9,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  dateModalBackdrop: {
+    alignItems: "center",
+    backgroundColor: "rgba(5, 31, 53, 0.42)",
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+  dateModalCard: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#CBE8F5",
+    borderRadius: 22,
+    borderWidth: 1,
+    maxWidth: 440,
+    padding: 16,
+    shadowColor: "#05233E",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    width: "100%",
+  },
+  dateModalHeader: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+  },
+  dateModalClose: {
+    alignItems: "center",
+    backgroundColor: "#F0F7FB",
+    borderRadius: 11,
+    height: 34,
+    justifyContent: "center",
+    width: 34,
+  },
+  dateModalHeaderSpace: { height: 34, width: 34 },
+  dateModalTitle: {
+    color: "#063B78",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 15,
+    writingDirection: "rtl",
+  },
+  calendarMonthRow: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginTop: 17,
+  },
+  calendarNavigation: {
+    alignItems: "center",
+    backgroundColor: "#EAF7FD",
+    borderRadius: 11,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  calendarNavigationDisabled: { opacity: 0.35 },
+  calendarMonthTitle: {
+    color: "#174B70",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    writingDirection: "rtl",
+  },
+  calendarWeekdays: {
+    flexDirection: "row-reverse",
+    marginTop: 14,
+  },
+  calendarWeekday: {
+    color: "#7A97A8",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    textAlign: "center",
+    width: "14.2857%",
+    writingDirection: "rtl",
+  },
+  calendarGrid: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    marginTop: 8,
+  },
+  calendarDaySlot: {
+    alignItems: "center",
+    height: 42,
+    justifyContent: "center",
+    width: "14.2857%",
+  },
+  calendarDay: {
+    alignItems: "center",
+    borderRadius: 12,
+    height: 35,
+    justifyContent: "center",
+    width: 35,
+  },
+  calendarDaySelected: {
+    backgroundColor: "#0878D1",
+    shadowColor: "#0878D1",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  calendarDayDisabled: { opacity: 0.28 },
+  calendarDayPressed: {
+    backgroundColor: "#E3F5FE",
+    transform: [{ scale: 0.96 }],
+  },
+  calendarDayText: {
+    color: "#315F7C",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    writingDirection: "ltr",
+  },
+  calendarDayTextSelected: { color: "#FFFFFF" },
+  calendarDayTextDisabled: { color: "#91A6B2" },
+  dateModalHint: {
+    color: "#6E8C9E",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    lineHeight: 16,
+    marginTop: 12,
     textAlign: "right",
     writingDirection: "rtl",
   },
