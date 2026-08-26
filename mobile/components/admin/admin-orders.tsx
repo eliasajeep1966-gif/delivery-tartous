@@ -481,90 +481,70 @@ function OrderRow({
           <Text style={styles.orderFee}>{formatMoney(item.fee)}</Text>
         </View>
         <View style={styles.routeRow}>
-          <MaterialIcons name="storefront" size={14} color="#0878D1" />
+          <MaterialIcons name="storefront" size={13} color="#0878D1" />
           <Text numberOfLines={1} style={styles.routeText}>{item.pickupAddress}</Text>
-          <MaterialIcons name="arrow-back" size={13} color="#91A8B8" />
-          <MaterialIcons name="location-on" size={14} color="#16A879" />
+          <MaterialIcons name="arrow-back" size={12} color="#91A8B8" />
+          <MaterialIcons name="location-on" size={13} color="#16A879" />
           <Text numberOfLines={1} style={styles.routeText}>{item.deliveryAddress}</Text>
         </View>
         <View style={styles.captainRow}>
-          <MaterialIcons name="two-wheeler" size={13} color={item.assignedCaptainName ? "#0878D1" : "#7E95A5"} />
+          <MaterialIcons name="two-wheeler" size={14} color={item.assignedCaptainName ? "#0878D1" : "#7E95A5"} />
           <Text numberOfLines={1} style={[styles.captainText, !item.assignedCaptainName && styles.captainTextMuted]}>
             {item.assignedCaptainName ?? "بانتظار تعيين كابتن"}
           </Text>
         </View>
-        <OrderDeliveryJourney status={item.status} timing={item.deliveryTiming} />
+        <OrderDeliveryJourney timing={item.deliveryTiming} />
       </View>
       <MaterialIcons name="chevron-left" size={19} color="#91A8B8" style={styles.orderArrow} />
     </Pressable>
   );
 }
 
-function OrderDeliveryJourney({
-  status,
-  timing,
-}: {
-  status: AdminOrderStatus;
-  timing: DeliveryTiming | null;
-}) {
+function OrderDeliveryJourney({ timing }: { timing: DeliveryTiming | null }) {
   const presentation = timing ? presentDeliveryTiming(timing) : null;
   if (!presentation) return null;
 
-  if (presentation.mode === "received") {
-    return (
-      <View style={styles.orderJourneyActive}>
-        <View style={styles.orderJourneyActiveIcon}>
-          <MaterialIcons name="inventory-2" size={14} color="#6D28D9" />
-        </View>
-        <View style={styles.orderJourneyActiveCopy}>
-          <Text style={styles.orderJourneyActiveLabel}>تم الاستلام</Text>
-          <Text style={styles.orderJourneyActiveTime}>{presentation.receivedTime}</Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (presentation.mode === "in_delivery") {
-    return (
-      <View style={styles.orderJourneyActive}>
-        <View style={styles.orderJourneyActiveIcon}>
-          <MaterialIcons name="two-wheeler" size={14} color="#0878D1" />
-        </View>
-        <View style={styles.orderJourneyActiveCopy}>
-          <Text style={styles.orderJourneyActiveLabel}>
-            تم الاستلام {presentation.receivedTime} · قيد التوصيل {presentation.inDeliveryTime}
-          </Text>
-          <Text style={styles.orderJourneyActiveTime}>{presentation.label}</Text>
-        </View>
-      </View>
-    );
-  }
+  const moments = [
+    { label: "استلام", time: presentation.receivedTime },
+    presentation.inDeliveryTime
+      ? { label: "بدء التوصيل", time: presentation.inDeliveryTime }
+      : null,
+    presentation.completedTime
+      ? { label: "تم التوصيل", time: presentation.completedTime }
+      : null,
+  ].filter((moment): moment is { label: string; time: string } => Boolean(moment));
+  const durationLabel = presentation.label
+    ? presentation.mode === "completed"
+      ? `المدة ${presentation.label}`
+      : presentation.label
+    : null;
 
   return (
     <View style={styles.orderJourney}>
-      <View style={styles.orderJourneyTop}>
-        <Text style={styles.orderJourneyTitle}>رحلة التوصيل</Text>
-        <View style={styles.orderDurationBadge}>
-          <MaterialIcons name="timer" size={12} color="#08755C" />
-          <Text style={styles.orderDurationText}>{presentation.label}</Text>
+      {durationLabel ? (
+        <View style={styles.orderDurationRow}>
+          <View style={styles.orderDurationBadge}>
+            <MaterialIcons name="timer" size={14} color="#08755C" />
+            <Text style={styles.orderDurationText}>{durationLabel}</Text>
+          </View>
         </View>
+      ) : null}
+      <View
+        style={[
+          styles.orderJourneyTrack,
+          !durationLabel && styles.orderJourneyTrackWithoutDuration,
+        ]}
+      >
+        {moments.map((moment, index) => (
+          <View key={moment.label} style={styles.orderJourneyStep}>
+            <View style={styles.orderJourneyMoment}>
+              <Text numberOfLines={1} style={styles.orderJourneyMomentLabel}>{moment.label}</Text>
+              <Text style={styles.orderJourneyMomentTime}>{moment.time}</Text>
+            </View>
+            {index < moments.length - 1 ? <JourneyConnector /> : null}
+          </View>
+        ))}
       </View>
-      <View style={styles.orderJourneyTrack}>
-        <JourneyMoment label="استلام" time={presentation.receivedTime} />
-        <JourneyConnector />
-        <JourneyMoment label="قيد التوصيل" time={presentation.inDeliveryTime!} />
-        <JourneyConnector />
-        <JourneyMoment label="تم التوصيل" time={presentation.completedTime!} />
-      </View>
-    </View>
-  );
-}
-
-function JourneyMoment({ label, time }: { label: string; time: string }) {
-  return (
-    <View style={styles.orderJourneyMoment}>
-      <Text numberOfLines={1} style={styles.orderJourneyMomentLabel}>{label}</Text>
-      <Text style={styles.orderJourneyMomentTime}>{time}</Text>
     </View>
   );
 }
@@ -1114,20 +1094,20 @@ const styles = StyleSheet.create({
   orderCard: {
     backgroundColor: "#FFFFFF",
     borderColor: "#E2EBF1",
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 10,
-    minHeight: 122,
+    marginBottom: 7,
+    minHeight: 104,
     overflow: "hidden",
-    paddingBottom: 12,
-    paddingLeft: 31,
-    paddingRight: 15,
-    paddingTop: 11,
+    paddingBottom: 9,
+    paddingLeft: 29,
+    paddingRight: 11,
+    paddingTop: 9,
     position: "relative",
     shadowColor: "#164865",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowRadius: 5,
   },
   orderStrip: { bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
   orderBody: { flex: 1 },
@@ -1137,95 +1117,50 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   orderIdentity: { alignItems: "center", flexDirection: "row-reverse", gap: 7 },
-  orderNumber: { color: "#163E5C", fontSize: 15, fontWeight: "800", writingDirection: "rtl" },
+  orderNumber: { color: "#163E5C", fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
   statusBadge: { borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 },
-  statusText: { fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
+  statusText: { fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
   orderCustomerRow: {
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    marginTop: 7,
+    marginTop: 5,
   },
-  customerNameRow: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 4, marginLeft: 12 },
+  customerNameRow: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 4, marginLeft: 10 },
   orderCustomer: { color: "#234B66", flexShrink: 1, fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
   orderFee: {
     color: "#163E5C",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     writingDirection: "rtl",
   },
-  routeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 7 },
+  routeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 3, marginTop: 5 },
   routeText: { color: "#5A7487", flex: 1, fontSize: 10, fontWeight: "700", textAlign: "right", writingDirection: "rtl" },
-  captainRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 6 },
-  captainText: { color: "#0878D1", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
+  captainRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 5 },
+  captainText: { color: "#0878D1", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
   captainTextMuted: { color: "#8096A6" },
-  orderJourneyActive: {
-    alignItems: "center",
-    backgroundColor: "#F1F8FC",
-    borderColor: "#D6EAF4",
-    borderRadius: 10,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 7,
-    marginTop: 9,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-  },
-  orderJourneyActiveIcon: {
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    height: 25,
-    justifyContent: "center",
-    width: 25,
-  },
-  orderJourneyActiveCopy: { alignItems: "flex-end", flex: 1 },
-  orderJourneyActiveLabel: {
-    color: "#285C79",
-    fontSize: 10,
-    fontWeight: "800",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  orderJourneyActiveTime: {
-    color: "#0878D1",
-    fontSize: 10,
-    fontWeight: "800",
-    marginTop: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
   orderJourney: {
     backgroundColor: "#F4FBF8",
     borderColor: "#D8EEE5",
-    borderRadius: 11,
+    borderRadius: 10,
     borderWidth: 1,
-    marginTop: 9,
-    padding: 9,
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
   },
-  orderJourneyTop: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-  },
-  orderJourneyTitle: {
-    color: "#286451",
-    fontSize: 10,
-    fontWeight: "800",
-    writingDirection: "rtl",
-  },
+  orderDurationRow: { alignItems: "flex-end", flexDirection: "row-reverse" },
   orderDurationBadge: {
     alignItems: "center",
     backgroundColor: "#E3F6EF",
-    borderRadius: 10,
+    borderRadius: 8,
     flexDirection: "row-reverse",
     gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   orderDurationText: {
     color: "#08755C",
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "800",
     writingDirection: "rtl",
   },
@@ -1233,32 +1168,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    marginTop: 8,
+    marginTop: 7,
   },
-  orderJourneyMoment: { alignItems: "center", flex: 1 },
+  orderJourneyTrackWithoutDuration: { marginTop: 0 },
+  orderJourneyStep: { alignItems: "center", flex: 1, flexDirection: "row-reverse" },
+  orderJourneyMoment: { alignItems: "flex-end" },
   orderJourneyMomentLabel: {
     color: "#527666",
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "700",
-    textAlign: "center",
+    textAlign: "right",
     writingDirection: "rtl",
   },
   orderJourneyMomentTime: {
     color: "#146549",
-    fontSize: 9,
+    fontSize: 13,
     fontWeight: "800",
-    marginTop: 2,
-    textAlign: "center",
+    marginTop: 1,
+    textAlign: "right",
     writingDirection: "rtl",
   },
   orderJourneyConnector: {
     alignItems: "center",
+    flex: 1,
     flexDirection: "row",
-    width: 27,
+    justifyContent: "center",
+    marginHorizontal: 4,
   },
-  orderJourneyLine: { backgroundColor: "#9CD4BF", flex: 1, height: 1 },
-  orderDate: { color: "#7892A4", fontSize: 9, writingDirection: "rtl" },
-  orderArrow: { left: 8, position: "absolute", top: 46 },
+  orderJourneyLine: { backgroundColor: "#9CD4BF", flex: 1, height: 1, maxWidth: 24 },
+  orderDate: { color: "#7892A4", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
+  orderArrow: { left: 7, position: "absolute", top: 42 },
   orderPressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },
   skeletonWrap: { gap: 12 },
   skeleton: { backgroundColor: "#FFFFFF", borderRadius: 15, height: 112 },
