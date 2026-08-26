@@ -159,6 +159,20 @@ export function AdminCompanyWages() {
           </View>
           <MaterialIcons name="arrow-back" size={19} color={BLUE} />
         </MotionPressable>
+        <MotionPressable
+          accessibilityLabel="فتح سجل مصاريف المكتب"
+          onPress={() => router.push("/office-expenses" as never)}
+          style={styles.expenseHistoryButton}
+        >
+          <View style={styles.fullHistoryCopy}>
+            <Text style={styles.fullHistoryTitle}>سجل مصاريف المكتب</Text>
+            <Text style={styles.fullHistoryText}>عرض كل المصاريف وإضافة مصروف جديد.</Text>
+          </View>
+          <View style={styles.fullHistoryIcon}>
+            <MaterialIcons name="receipt-long" size={19} color="#B54708" />
+          </View>
+          <MaterialIcons name="arrow-back" size={19} color="#B54708" />
+        </MotionPressable>
         {history.isPending || expenseHistory.isPending ? (
           <Message text="جارٍ تحميل سجل الأرباح والمصاريف..." />
         ) : history.error || expenseHistory.error ? (
@@ -305,6 +319,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 9,
     paddingVertical: 5,
+  },
+  expenseHistoryButton: {
+    alignItems: "center",
+    backgroundColor: "#FFF8F1",
+    borderColor: "#F6C99E",
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 10,
+    minHeight: 64,
+    paddingHorizontal: 13,
   },
   fullHistoryButton: {
     alignItems: "center",
