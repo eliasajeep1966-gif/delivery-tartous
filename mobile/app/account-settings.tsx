@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { KeyRound, Mail, Save, ShieldCheck, UserRound } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
@@ -79,7 +80,7 @@ export default function AccountSettingsScreen() {
           accessibilityLabel: "العودة",
           icon: "arrow-forward",
           onPress: () =>
-            router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+            goBackOrReplace(router),
         }}
         trailingAction={{ accessibilityLabel: "إدارة الحساب", icon: "shield" }}
       />

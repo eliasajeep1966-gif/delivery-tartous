@@ -20,6 +20,7 @@ import {
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -107,7 +108,7 @@ export default function AdminReportsScreen() {
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",
-          onPress: () => router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+          onPress: () => goBackOrReplace(router),
         }}
         trailingAction={{ accessibilityLabel: "التقارير", icon: "bar-chart" }}
       />

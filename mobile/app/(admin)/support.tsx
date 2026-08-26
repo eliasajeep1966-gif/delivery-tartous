@@ -18,6 +18,7 @@ import {
   Smartphone,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
@@ -96,7 +97,7 @@ export default function AdminSupportScreen() {
           accessibilityLabel: "العودة",
           icon: "arrow-forward",
           onPress: () =>
-            router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+            goBackOrReplace(router),
         }}
         trailingAction={{ accessibilityLabel: "المساعدة والدعم", icon: "headset-mic" }}
       />

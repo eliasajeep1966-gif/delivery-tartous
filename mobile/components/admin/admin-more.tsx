@@ -76,8 +76,8 @@ export function AdminMore() {
     >
       <DeliveryAppHeader
         leadingAction={{
-          accessibilityLabel: "العودة للرئيسية",
-          icon: "arrow-back",
+          accessibilityLabel: "الرئيسية",
+          icon: "home",
           onPress: () => router.replace("/(tabs)" as Href),
         }}
         trailingAction={{ accessibilityLabel: "المزيد", icon: "menu" }}

@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useState } from "react";
 import {
   RefreshControl,
@@ -64,7 +65,7 @@ export function AdminCompanyWages() {
         leadingAction={{
           accessibilityLabel: "العودة إلى أجور الكباتن",
           icon: "arrow-forward",
-          onPress: () => router.replace("/(tabs)/wages"),
+          onPress: () => goBackOrReplace(router, "/(tabs)/wages"),
         }}
         trailingAction={{ accessibilityLabel: "أجور الشركة", icon: "store" }}
       />

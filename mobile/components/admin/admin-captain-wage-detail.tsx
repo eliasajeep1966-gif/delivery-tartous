@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useState } from "react";
 import {
   Alert,
@@ -108,7 +109,7 @@ export function AdminCaptainWageDetail() {
         leadingAction={{
           accessibilityLabel: "العودة إلى أجور الكباتن",
           icon: "arrow-forward",
-          onPress: () => router.replace("/(tabs)/wages"),
+          onPress: () => goBackOrReplace(router, "/(tabs)/wages"),
         }}
         trailingAction={{
           accessibilityLabel: "كشف حساب الكابتن",

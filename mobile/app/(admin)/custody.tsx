@@ -1,5 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
+
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useMemo, useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
@@ -124,7 +126,7 @@ export default function AdminCustodyScreen() {
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",
-          onPress: () => router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+          onPress: () => goBackOrReplace(router),
         }}
         trailingAction={{ accessibilityLabel: "إدارة الأمانات", icon: "inventory-2" }}
       />

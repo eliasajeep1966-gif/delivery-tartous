@@ -499,8 +499,8 @@ export function AdminCaptainsScreen() {
     <ScreenContainer className="bg-[#F3FBFF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
         leadingAction={{
-          accessibilityLabel: "العودة للرئيسية",
-          icon: "arrow-forward",
+          accessibilityLabel: "الرئيسية",
+          icon: "home",
           onPress: () => router.replace("/(tabs)"),
         }}
         trailingAction={{ accessibilityLabel: "الكباتن", icon: "two-wheeler" }}

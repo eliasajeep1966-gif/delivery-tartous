@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { CheckCircle2, ClipboardList, Clock3, Package, Search, ShieldCheck, Trash2, Truck, UserPlus, WalletCards, XCircle } from "lucide-react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -21,7 +22,7 @@ export default function ActivityLogsScreen() {
         accessibilityLabel: "العودة",
         icon: "arrow-forward",
         onPress: () =>
-          router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+          goBackOrReplace(router),
       }}
       trailingAction={{ accessibilityLabel: "سجل الحركات", icon: "assignment" }}
     />

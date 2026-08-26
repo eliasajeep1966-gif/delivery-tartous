@@ -1,6 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { type ComponentProps, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -284,7 +285,7 @@ export function AdminOrders() {
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",
-          onPress: () => router.back(),
+          onPress: () => goBackOrReplace(router),
         }}
         trailingAction={{ accessibilityLabel: "جدولة الطلبات", icon: "schedule" }}
       />

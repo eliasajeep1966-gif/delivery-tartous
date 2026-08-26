@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -61,7 +62,7 @@ export function AdminOfficeExpenses() {
         leadingAction={{
           accessibilityLabel: "العودة إلى أرباح الشركة",
           icon: "arrow-forward",
-          onPress: () => router.replace("/company-wages"),
+          onPress: () => goBackOrReplace(router, "/company-wages"),
         }}
         trailingAction={{ accessibilityLabel: "مصاريف المكتب", icon: "receipt-long" }}
       />

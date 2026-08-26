@@ -1,6 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Modal,
@@ -377,13 +378,7 @@ export function AdminWages() {
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",
-          onPress: () => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace("/(tabs)");
-            }
-          },
+          onPress: () => goBackOrReplace(router),
         }}
         trailingAction={{
           accessibilityLabel: "أجور الكباتن",

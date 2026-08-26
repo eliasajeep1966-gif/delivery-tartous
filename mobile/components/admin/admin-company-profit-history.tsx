@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
+import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -146,10 +147,7 @@ export function AdminCompanyProfitHistory() {
         leadingAction={{
           accessibilityLabel: "العودة إلى أرباح الشركة",
           icon: "arrow-forward",
-          onPress: () =>
-            router.canGoBack()
-              ? router.back()
-              : router.replace("/company-wages" as never),
+          onPress: () => goBackOrReplace(router, "/company-wages"),
         }}
         trailingAction={{
           accessibilityLabel: "السجل الكامل",
