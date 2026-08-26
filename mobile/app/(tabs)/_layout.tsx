@@ -22,8 +22,12 @@ function DeliveryTabBackdrop() {
 export default function TabLayout() {
   const colors = useColors();
   const { profile } = useDeliveryAuth();
-  const isCaptain = profile?.role === "captain";
   const insets = useSafeAreaInsets();
+
+  // Never render the admin tab layout as a fallback while the session profile is still loading.
+  if (!profile) return null;
+
+  const isCaptain = profile.role === "captain";
   const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
   const tabBarHeight = 64 + bottomPadding;
 

@@ -4,5 +4,7 @@ import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 
 export default function WagesScreen() {
   const { profile } = useDeliveryAuth();
-  return profile?.role === "captain" ? <CaptainWages /> : <AdminWages />;
+
+  if (!profile) return null;
+  return profile.role === "captain" ? <CaptainWages /> : <AdminWages />;
 }

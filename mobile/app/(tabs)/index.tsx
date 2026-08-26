@@ -5,5 +5,6 @@ import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 export default function HomeScreen() {
   const { profile } = useDeliveryAuth();
 
-  return profile?.role === "captain" ? <CaptainHome /> : <AdminHome />;
+  if (!profile) return null;
+  return profile.role === "captain" ? <CaptainHome /> : <AdminHome />;
 }

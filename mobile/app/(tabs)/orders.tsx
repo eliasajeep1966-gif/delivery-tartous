@@ -4,5 +4,7 @@ import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 
 export default function OrdersScreen() {
   const { profile } = useDeliveryAuth();
-  return profile?.role === "captain" ? <CaptainOrders /> : <AdminOrders />;
+
+  if (!profile) return null;
+  return profile.role === "captain" ? <CaptainOrders /> : <AdminOrders />;
 }
