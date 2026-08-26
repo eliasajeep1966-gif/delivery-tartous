@@ -91,6 +91,13 @@ export const nativeAdminUsersContract = {
     const result = await withTimeout(getNativeSupabaseClient().rpc("set_user_role", { p_user_id: userId, p_role: nextRole }), "انتهت مهلة تغيير الدور.");
     unwrap(result, "تعذر تغيير دور المستخدم.");
   },
+  async deleteManagedUser(userId: string): Promise<void> {
+    const result = await withTimeout(
+      getNativeSupabaseClient().rpc("delete_managed_user", { p_user_id: userId }),
+      "انتهت مهلة حذف الحساب. راجع القائمة قبل إعادة المحاولة.",
+    );
+    unwrap(result, "تعذر حذف الحساب.");
+  },
   subscribe(onChange: () => void): () => void {
     const client = getNativeSupabaseClient();
     let active = true;

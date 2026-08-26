@@ -2,7 +2,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -23,6 +22,7 @@ import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useAdminUsers } from "@/features/admin/use-admin-users";
 import {
   type NativeAppRole,
+  type NativePendingAccount,
   type NativeUser,
 } from "@/lib/supabase/native-admin-users-contract";
 
@@ -34,6 +34,11 @@ const roleLabels: Record<NativeAppRole | "all", string> = {
   captain: "كابتن",
 };
 
+type UserManagementConfirmation =
+  | { type: "active"; user: NativeUser }
+  | { type: "delete"; user: NativeUser }
+  | { type: "cancel"; pending: NativePendingAccount };
+
 export function AdminUsers() {
   const router = useRouter();
   const { profile, refresh } = useDeliveryAuth();
@@ -42,6 +47,7 @@ export function AdminUsers() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<NativeAppRole | "all">("all");
   const [roleUser, setRoleUser] = useState<NativeUser | null>(null);
+  const [confirmation, setConfirmation] = useState<UserManagementConfirmation | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const isAdmin = profile?.role === "admin";
 
@@ -82,31 +88,42 @@ export function AdminUsers() {
       if (input.type === "role" && input.userId === profile?.id) await refresh();
       return true;
     } catch (error) {
-      Alert.alert(
-        "تعذر تنفيذ العملية",
-        error instanceof Error ? error.message : "حاول مرة أخرى.",
-      );
+      showToast({
+        message: error instanceof Error ? error.message : "حاول مرة أخرى.",
+        tone: "error",
+        durationMs: 4_000,
+      });
       return false;
     }
   };
 
-  const toggle = (user: NativeUser) => {
-    const action = user.isActive ? "تعطيل" : "تفعيل";
-    Alert.alert(
-      `${action} الحساب`,
-      `هل تريد ${action} حساب ${user.fullName || user.email || "المستخدم"}؟`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "تأكيد",
-          style: user.isActive ? "destructive" : "default",
-          onPress: () =>
-            void mutate(
-              { type: "active", user, value: !user.isActive },
-              `تم ${action} الحساب.`,
-            ),
-        },
-      ],
+  const toggle = (user: NativeUser) => setConfirmation({ type: "active", user });
+
+  const confirmAction = () => {
+    if (!confirmation) return;
+    const current = confirmation;
+    setConfirmation(null);
+
+    if (current.type === "active") {
+      const action = current.user.isActive ? "تعطيل" : "تفعيل";
+      void mutate(
+        { type: "active", user: current.user, value: !current.user.isActive },
+        `تم ${action} الحساب.`,
+      );
+      return;
+    }
+
+    if (current.type === "delete") {
+      void mutate(
+        { type: "delete", userId: current.user.id },
+        "تم حذف الحساب نهائياً.",
+      );
+      return;
+    }
+
+    void mutate(
+      { type: "cancel", pendingId: current.pending.id },
+      "تم إلغاء الحساب المعلق.",
     );
   };
 
@@ -236,24 +253,7 @@ export function AdminUsers() {
                   </View>
                   <Pressable
                     disabled={users.isMutating}
-                    onPress={() =>
-                      Alert.alert(
-                        "إلغاء الحساب المعلق",
-                        "لن يتمكن المستخدم من تفعيل هذا الحساب.",
-                        [
-                          { text: "إلغاء", style: "cancel" },
-                          {
-                            text: "تأكيد",
-                            style: "destructive",
-                            onPress: () =>
-                              void mutate(
-                                { type: "cancel", pendingId: pending.id },
-                                "تم إلغاء الحساب المعلق.",
-                              ),
-                          },
-                        ],
-                      )
-                    }
+                    onPress={() => setConfirmation({ type: "cancel", pending })}
                     style={styles.cancelButton}
                   >
                     <MaterialIcons name="cancel" size={16} color="#BA1A1A" />
@@ -274,8 +274,13 @@ export function AdminUsers() {
               item.role === "captain"
               || (isAdmin && item.role === "supervisor")
             }
+            canDelete={
+              item.role === "captain"
+              || (isAdmin && item.role === "supervisor")
+            }
             disabled={users.isMutating}
             onToggle={() => toggle(item)}
+            onDelete={() => setConfirmation({ type: "delete", user: item })}
             onChangeRole={() => setRoleUser(item)}
           />
         )}
@@ -317,6 +322,15 @@ export function AdminUsers() {
           }}
         />
       ) : null}
+
+      {confirmation ? (
+        <UserManagementConfirmationModal
+          confirmation={confirmation}
+          busy={users.isMutating}
+          onClose={() => setConfirmation(null)}
+          onConfirm={confirmAction}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -346,15 +360,19 @@ function UserCard({
   user,
   canChangeRole,
   canToggle,
+  canDelete,
   disabled,
   onToggle,
+  onDelete,
   onChangeRole,
 }: {
   user: NativeUser;
   canChangeRole: boolean;
   canToggle: boolean;
+  canDelete: boolean;
   disabled: boolean;
   onToggle: () => void;
+  onDelete: () => void;
   onChangeRole: () => void;
 }) {
   const name = user.fullName || user.email || "مستخدم";
@@ -380,7 +398,7 @@ function UserCard({
         <MaterialIcons name="mail-outline" size={14} color="#66727E" />
         <Text style={styles.email}>{user.email || "بدون بريد"}</Text>
       </View>
-      {canToggle || canChangeRole ? (
+      {canToggle || canChangeRole || canDelete ? (
         <View style={styles.actions}>
           {canToggle ? (
             <Pressable
@@ -416,9 +434,95 @@ function UserCard({
               <Text style={styles.roleActionText}>تغيير الدور</Text>
             </Pressable>
           ) : null}
+          {canDelete ? (
+            <Pressable
+              disabled={disabled}
+              onPress={onDelete}
+              style={[styles.action, styles.deleteAction]}
+            >
+              <MaterialIcons name="delete-outline" size={17} color="#B42318" />
+              <Text style={styles.deleteActionText}>حذف المستخدم</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
+  );
+}
+
+function UserManagementConfirmationModal({
+  confirmation,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  confirmation: UserManagementConfirmation;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const user = confirmation.type === "cancel" ? confirmation.pending : confirmation.user;
+  const name = user.fullName || user.email || "هذا المستخدم";
+  const isEnable = confirmation.type === "active" && !confirmation.user.isActive;
+  const isDelete = confirmation.type === "delete";
+  const title = isDelete
+    ? "حذف المستخدم نهائياً"
+    : confirmation.type === "cancel"
+      ? "إلغاء الحساب المعلق"
+      : isEnable
+        ? "تفعيل الحساب"
+        : "تعطيل الحساب";
+  const detail = isDelete
+    ? `سيُحذف حساب ${name} نهائياً. إذا كان لديه سجل تشغيلي أو مالي سيمنع النظام الحذف ويحافظ على البيانات.`
+    : confirmation.type === "cancel"
+      ? `لن يتمكن ${name} من تفعيل هذا الحساب بعد الإلغاء.`
+      : isEnable
+        ? `سيتمكن ${name} من الدخول واستخدام التطبيق بعد التفعيل.`
+        : `لن يتمكن ${name} من الدخول إلى التطبيق بعد التعطيل.`;
+  const destructive = isDelete || confirmation.type === "cancel" || !isEnable;
+  const icon = isDelete
+    ? "delete-outline"
+    : confirmation.type === "cancel"
+      ? "cancel"
+      : isEnable
+        ? "check-circle-outline"
+        : "block";
+  const confirmLabel = isDelete
+    ? "حذف نهائياً"
+    : confirmation.type === "cancel"
+      ? "إلغاء الحساب"
+      : isEnable
+        ? "تفعيل الحساب"
+        : "تعطيل الحساب";
+
+  return (
+    <Modal transparent animationType="fade" visible onRequestClose={busy ? undefined : onClose}>
+      <View style={styles.confirmBackdrop}>
+        <View style={styles.confirmCard}>
+          <View style={[styles.confirmIcon, destructive ? styles.confirmIconDanger : styles.confirmIconSuccess]}>
+            <MaterialIcons name={icon} size={28} color={destructive ? "#B42318" : "#047857"} />
+          </View>
+          <Text style={styles.confirmTitle}>{title}</Text>
+          <Text style={styles.confirmText}>{detail}</Text>
+          <View style={styles.confirmActions}>
+            <Pressable disabled={busy} onPress={onClose} style={[styles.confirmButton, styles.confirmCancelButton]}>
+              <Text style={styles.confirmCancelText}>إلغاء</Text>
+            </Pressable>
+            <Pressable
+              disabled={busy}
+              onPress={onConfirm}
+              style={[
+                styles.confirmButton,
+                destructive ? styles.confirmDestructiveButton : styles.confirmSuccessButton,
+                busy && styles.disabled,
+              ]}
+            >
+              <Text style={styles.confirmPrimaryText}>{busy ? "جارٍ التنفيذ..." : confirmLabel}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -687,10 +791,26 @@ const styles = StyleSheet.create({
   successText: { color: "#047857" },
   roleAction: { backgroundColor: "#EEF6FF", borderColor: "#A8C8FF" },
   roleActionText: { color: "#0060B8", fontFamily: "Cairo_700Bold", fontSize: 10 },
+  deleteAction: { backgroundColor: "#FFF1F1", borderColor: "#F5B5B5" },
+  deleteActionText: { color: "#B42318", fontFamily: "Cairo_700Bold", fontSize: 10 },
   cancelButton: { height: 36, marginTop: 10, borderRadius: 9, backgroundColor: "#FFF5F5", borderWidth: 1, borderColor: "#F2B8B5", flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 5 },
   cancelText: { color: "#BA1A1A", fontFamily: "Cairo_700Bold", fontSize: 11 },
   empty: { textAlign: "center", color: "#66727E", fontFamily: "Cairo_400Regular", padding: 25 },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
+  confirmBackdrop: { flex: 1, backgroundColor: "rgba(7,24,40,0.36)", alignItems: "center", justifyContent: "center", padding: 24 },
+  confirmCard: { width: "100%", maxWidth: 390, borderRadius: 24, backgroundColor: "#FFFFFF", padding: 21, alignItems: "center", shadowColor: "#0B2740", shadowOpacity: 0.22, shadowOffset: { width: 0, height: 10 }, shadowRadius: 24, elevation: 9 },
+  confirmIcon: { width: 58, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  confirmIconDanger: { backgroundColor: "#FFF0F0" },
+  confirmIconSuccess: { backgroundColor: "#EAF8F0" },
+  confirmTitle: { textAlign: "center", fontFamily: "Cairo_700Bold", color: "#1C1B1B", fontSize: 18 },
+  confirmText: { textAlign: "center", fontFamily: "Cairo_400Regular", color: "#66727E", fontSize: 12, lineHeight: 21, marginTop: 7 },
+  confirmActions: { width: "100%", flexDirection: "row-reverse", gap: 9, marginTop: 20 },
+  confirmButton: { flex: 1, minHeight: 45, borderRadius: 12, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
+  confirmCancelButton: { backgroundColor: "#F1F6FA", borderWidth: 1, borderColor: "#D3E3F0" },
+  confirmDestructiveButton: { backgroundColor: "#B42318" },
+  confirmSuccessButton: { backgroundColor: "#047857" },
+  confirmCancelText: { color: "#58616B", fontFamily: "Cairo_700Bold", fontSize: 12 },
+  confirmPrimaryText: { color: "#FFFFFF", fontFamily: "Cairo_700Bold", fontSize: 12 },
   modal: { backgroundColor: "#F0F7FF", borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20 },
   createModal: { maxHeight: "91%", backgroundColor: "#F0F7FF", borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18 },
   modalHeadingRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
