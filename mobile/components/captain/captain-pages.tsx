@@ -24,6 +24,7 @@ import {
 } from "@/features/captain/use-native-captain-dashboard";
 import {
   CAPTAIN_WAGES_PAGE_SIZE,
+  type CaptainWageFilter,
   useNativeCaptainWages,
 } from "@/features/captain/use-native-captain-wages";
 import {
@@ -114,6 +115,28 @@ function groupOrdersByDate(orders: readonly CaptainOrderWithTiming[]) {
     items,
     label: orderDayLabel(dateKey),
   }));
+}
+
+function wagePeriodTitle(
+  filter: CaptainWageFilter,
+  periodStart: string,
+) {
+  if (filter === "weekly") return "أجور الدورة الأسبوعية";
+  if (filter === "monthly") {
+    const month = new Intl.DateTimeFormat("ar-SY", {
+      month: "long",
+      timeZone: "Asia/Damascus",
+      year: "numeric",
+    }).format(new Date(`${periodStart}T12:00:00Z`));
+    return `أجور شهر ${month}`;
+  }
+  if (filter === "custom") return "أجور التاريخ المختار";
+  return "أجور اليوم";
+}
+
+function wagePeriodRange(periodStart: string, periodEnd: string) {
+  if (periodStart === periodEnd) return customWageDateLabel(periodStart);
+  return `${customWageDateLabel(periodStart)} — ${customWageDateLabel(periodEnd)}`;
 }
 
 export function CaptainOrders() {
@@ -320,7 +343,7 @@ export function CaptainWages() {
   return (
     <Page
       title="أجوري"
-      subtitle="تفاصيل الأجور من السجلات الفعلية"
+      subtitle={wagePeriodTitle(data.filter, data.periodStart)}
       refreshing={data.refreshing}
       onRefresh={() => void data.reload(true)}
     >
@@ -382,9 +405,13 @@ export function CaptainWages() {
         <>
           <View style={styles.wageHero}>
             <View>
-              <Text style={styles.wageHeroKicker}>أجوري ضمن الفترة المختارة</Text>
+              <Text style={styles.wageHeroKicker}>
+                {wagePeriodTitle(data.filter, data.periodStart)}
+              </Text>
               <Text style={styles.wageHeroValue}>{money(data.totals.captain)}</Text>
-              <Text style={styles.wageHeroHint}>من {data.total} طلب مكتمل</Text>
+              <Text style={styles.wageHeroHint}>
+                {wagePeriodRange(data.periodStart, data.periodEnd)} · {data.total} طلب
+              </Text>
             </View>
             <View style={styles.wageHeroIcon}>
               <MaterialIcons name="account-balance-wallet" size={25} color="#0878D1" />

@@ -68,6 +68,8 @@ export type CaptainWageTotals = {
 };
 
 export type CaptainWagesPage = {
+  period_start: string;
+  period_end: string;
   rows: CaptainWageRow[];
   total: number;
   totals: CaptainWageTotals;

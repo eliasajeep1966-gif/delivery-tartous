@@ -34,6 +34,8 @@ function damascusDateKey(value: Date) {
 export function useNativeCaptainWages() {
   const [filter, setFilter] = useState<CaptainWageFilter>("daily");
   const [customDate, setCustomDate] = useState(() => damascusDateKey(new Date()));
+  const [periodStart, setPeriodStart] = useState(() => damascusDateKey(new Date()));
+  const [periodEnd, setPeriodEnd] = useState(() => damascusDateKey(new Date()));
   const [page, setPage] = useState(0);
   const [rows, setRows] = useState<CaptainWageRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -82,6 +84,8 @@ export function useNativeCaptainWages() {
         setRows(result.rows);
         setTotal(result.total);
         setTotals(result.totals);
+        setPeriodStart(result.period_start);
+        setPeriodEnd(result.period_end);
       } catch (cause) {
         if (mounted.current && requestVersion === loadVersion.current) {
           setError(
@@ -125,6 +129,8 @@ export function useNativeCaptainWages() {
     () => ({
       filter,
       customDate,
+      periodStart,
+      periodEnd,
       rows,
       total,
       totals,
@@ -148,6 +154,8 @@ export function useNativeCaptainWages() {
     [
       customDate,
       error,
+      periodEnd,
+      periodStart,
       filter,
       hasNextPage,
       hasPreviousPage,
