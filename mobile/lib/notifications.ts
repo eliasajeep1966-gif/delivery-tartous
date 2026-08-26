@@ -41,7 +41,9 @@ export async function registerCaptainPushNotifications(
   userId: string,
 ): Promise<string | null> {
   const Notifications = setupNotifications();
-  if (!Notifications) return null;
+  if (!Notifications) {
+    throw new Error("وحدة الإشعارات غير متاحة في هذه النسخة من التطبيق.");
+  }
 
   try {
     if (Platform.OS === "android") {
@@ -59,19 +61,19 @@ export async function registerCaptainPushNotifications(
       status = (await Notifications.requestPermissionsAsync()).status;
     }
     if (status !== "granted") {
-      console.warn("Push notification permission was not granted.");
-      return null;
+      throw new Error(`صلاحية الإشعارات غير مفعّلة: ${status}`);
     }
 
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
-    const token = (
-      await Notifications.getExpoPushTokenAsync(
-        projectId ? { projectId } : undefined,
-      )
-    ).data;
-    if (!token) return null;
+    if (!projectId) {
+      throw new Error("معرّف EAS غير موجود داخل نسخة التطبيق.");
+    }
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    if (!token) {
+      throw new Error("لم يتم إنشاء Expo Push Token للجهاز.");
+    }
 
     const result = await getNativeSupabaseClient()
       .from("push_tokens")
@@ -87,8 +89,8 @@ export async function registerCaptainPushNotifications(
     if (result.error) throw new Error(result.error.message);
     return token;
   } catch (error) {
-    console.warn("Push notification registration is unavailable.", error);
-    return null;
+    console.error("Push notification registration failed.", error);
+    throw error instanceof Error ? error : new Error("فشل تسجيل إشعارات الطلبات.");
   }
 }
 

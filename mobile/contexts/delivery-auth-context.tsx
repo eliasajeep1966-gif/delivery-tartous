@@ -245,20 +245,12 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           operation: "idle",
         });
         if (profile.role === "captain") {
-          void registerCaptainPushNotifications(profile.id).then((token) => {
-            if (!token) {
-              showToast({
-                message: "تعذر تفعيل إشعارات الطلبات. تحقق من صلاحيات التطبيق.",
-                tone: "error",
-                durationMs: 4000,
-              });
-            }
-          }).catch(() => {
-            showToast({
-              message: "خطأ أثناء تسجيل الإشعارات.",
-              tone: "error",
-              durationMs: 4000,
-            });
+          void registerCaptainPushNotifications(profile.id).catch((error) => {
+            const message =
+              error instanceof Error && error.message
+                ? error.message
+                : "فشل تسجيل إشعارات الطلبات.";
+            showToast({ message, tone: "error", durationMs: 5000 });
           });
         }
       } catch (error) {
