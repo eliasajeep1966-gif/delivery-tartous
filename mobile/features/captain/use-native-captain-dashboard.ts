@@ -27,10 +27,15 @@ export function useNativeCaptainDashboard() {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [orderSaving, setOrderSaving] = useState(false);
   const mounted = useRef(true);
-  const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const orderTransitionInFlight = useRef(false);
+  const reloadVersion = useRef(0);
 
   const reload = useCallback(
     async (silent = false) => {
+      const requestVersion = ++reloadVersion.current;
       if (!captainId) {
         setLoading(false);
         return;
@@ -51,7 +56,8 @@ export function useNativeCaptainDashboard() {
         const stops = current
           ? await nativeCaptainContract.reads.orderStops(current.id)
           : [];
-        if (!mounted.current) return;
+        if (!mounted.current || requestVersion !== reloadVersion.current)
+          return;
         setMetrics(nextMetrics);
         setOrders(nextOrders);
         setCurrentStops(stops);
@@ -61,7 +67,7 @@ export function useNativeCaptainDashboard() {
             cause instanceof Error ? cause.message : "تعذر تحميل حساب الكابتن.",
           );
       } finally {
-        if (mounted.current) {
+        if (mounted.current && requestVersion === reloadVersion.current) {
           setLoading(false);
           setRefreshing(false);
         }
@@ -93,9 +99,12 @@ export function useNativeCaptainDashboard() {
     const refreshTimer = setInterval(() => {
       if (AppState.currentState === "active") void reload(true);
     }, 60_000);
-    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") void reload(true);
-    });
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextState) => {
+        if (nextState === "active") void reload(true);
+      },
+    );
 
     return () => {
       mounted.current = false;
@@ -160,7 +169,9 @@ export function useNativeCaptainDashboard() {
       orderId: string,
       nextStatus: "received" | "in_delivery" | "completed" | "false_order",
     ) => {
-      if (orderSaving) return false;
+      if (orderTransitionInFlight.current) return false;
+      orderTransitionInFlight.current = true;
+      reloadVersion.current += 1;
       setOrderSaving(true);
       setActionError(null);
       try {
@@ -173,17 +184,24 @@ export function useNativeCaptainDashboard() {
         );
         if (nextStatus === "completed" || nextStatus === "false_order")
           setCurrentStops([]);
+        void reload(true);
         return true;
       } catch (cause) {
+        const message =
+          cause instanceof Error ? cause.message : "تعذر تحديث مرحلة الطلب.";
         setActionError(
-          cause instanceof Error ? cause.message : "تعذر تحديث مرحلة الطلب.",
+          message === "Only an in-delivery order can be completed"
+            ? "تم تحديث حالة الطلب مسبقاً. تم تحديث بياناتك الآن."
+            : message,
         );
+        void reload(true);
         return false;
       } finally {
+        orderTransitionInFlight.current = false;
         setOrderSaving(false);
       }
     },
-    [orderSaving],
+    [reload],
   );
 
   return useMemo(
