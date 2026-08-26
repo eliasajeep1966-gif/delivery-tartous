@@ -752,18 +752,26 @@ function ActivityDeliveryJourney({
   const presentation = timing ? presentDeliveryTiming(timing) : null;
   if (!presentation) return null;
 
-  const isCompleted = presentation.mode === "completed";
-  const activeLabel = status === "received" ? "بانتظار التوصيل" : "قيد التوصيل";
+  if (presentation.mode !== "completed") {
+    const text = status === "received"
+      ? `تم الاستلام ${presentation.receivedTime}`
+      : `قيد التوصيل · ${presentation.label}`;
+
+    return (
+      <View style={styles.activityProgressLine}>
+        <MaterialIcons name={status === "received" ? "inventory-2" : "two-wheeler"} size={13} color="#0878D1" />
+        <Text style={styles.activityProgressText}>{text}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.activityJourney}>
       <View style={styles.activityJourneyTop}>
         <Text style={styles.activityJourneyLabel}>زمن التوصيل</Text>
-        <View style={[styles.activityDurationBadge, !isCompleted && styles.activityDurationBadgeActive]}>
-          <MaterialIcons name={isCompleted ? "timer" : "timelapse"} size={12} color={isCompleted ? "#08755C" : "#0878D1"} />
-          <Text style={[styles.activityDurationText, !isCompleted && styles.activityDurationTextActive]}>
-            {presentation.label}
-          </Text>
+        <View style={styles.activityDurationBadge}>
+          <MaterialIcons name="timer" size={12} color="#08755C" />
+          <Text style={styles.activityDurationText}>{presentation.label}</Text>
         </View>
       </View>
       <View style={styles.activityJourneyTrack}>
@@ -772,16 +780,12 @@ function ActivityDeliveryJourney({
           <Text style={styles.activityJourneyMomentTime}>{presentation.receivedTime}</Text>
         </View>
         <View style={styles.activityJourneyConnector}>
-          <View style={[styles.activityJourneyLine, !isCompleted && styles.activityJourneyLineActive]} />
-          <MaterialIcons name="arrow-back" size={13} color={isCompleted ? "#41A78C" : "#0878D1"} />
+          <View style={styles.activityJourneyLine} />
+          <MaterialIcons name="arrow-back" size={13} color="#41A78C" />
         </View>
         <View style={styles.activityJourneyMoment}>
-          <Text style={[styles.activityJourneyMomentLabel, !isCompleted && styles.activityJourneyActiveLabel]}>
-            {isCompleted ? "توصيل" : activeLabel}
-          </Text>
-          <Text style={[styles.activityJourneyMomentTime, !isCompleted && styles.activityJourneyActiveTime]}>
-            {presentation.completedTime ?? "—"}
-          </Text>
+          <Text style={styles.activityJourneyMomentLabel}>توصيل</Text>
+          <Text style={styles.activityJourneyMomentTime}>{presentation.completedTime}</Text>
         </View>
       </View>
     </View>
@@ -1000,18 +1004,15 @@ const styles = StyleSheet.create({
   activityJourneyTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
   activityJourneyLabel: { color: "#4D697D", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
   activityDurationBadge: { alignItems: "center", backgroundColor: "#EAF9F3", borderRadius: 8, flexDirection: "row-reverse", gap: 4, paddingHorizontal: 7, paddingVertical: 3 },
-  activityDurationBadgeActive: { backgroundColor: "#EAF5FF" },
   activityDurationText: { color: "#08755C", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
-  activityDurationTextActive: { color: "#0878D1" },
+  activityProgressLine: { alignItems: "center", flexDirection: "row-reverse", gap: 5, marginTop: 8 },
+  activityProgressText: { color: "#367497", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
   activityJourneyTrack: { alignItems: "center", flexDirection: "row-reverse", marginTop: 7 },
   activityJourneyMoment: { alignItems: "flex-end", minWidth: 49 },
   activityJourneyMomentLabel: { color: "#5C7486", fontSize: 9, fontWeight: "700", writingDirection: "rtl" },
   activityJourneyMomentTime: { color: "#1B415A", fontSize: 10, fontWeight: "800", marginTop: 1, writingDirection: "rtl" },
   activityJourneyConnector: { alignItems: "center", flex: 1, flexDirection: "row", justifyContent: "center", marginHorizontal: 5 },
   activityJourneyLine: { backgroundColor: "#8ACBB9", flex: 1, height: 1, maxWidth: 36 },
-  activityJourneyLineActive: { backgroundColor: "#8BC9EE" },
-  activityJourneyActiveLabel: { color: "#0878D1" },
-  activityJourneyActiveTime: { color: "#0878D1" },
   activityPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   loadingActivity: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E3EDF4", borderRadius: 18, borderStyle: "dashed", borderWidth: 1, flexDirection: "row-reverse", gap: 8, justifyContent: "center", minHeight: 100 },
   loadingIcon: { alignItems: "center", backgroundColor: "#EEF7FC", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },
