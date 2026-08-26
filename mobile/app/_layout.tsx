@@ -1,4 +1,5 @@
 import "@/global.css";
+import "@/lib/global-font";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Cairo_400Regular,
