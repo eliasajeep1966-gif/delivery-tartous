@@ -349,32 +349,37 @@ export function AdminHome() {
 
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
-      <View style={styles.header}>
-        <MotionPressable
-          onPress={() => router.push("/account-settings" as Href)}
-          style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
-          accessibilityLabel="إعدادات الحساب"
-        >
-          <MaterialIcons name="account-circle" size={22} color="#0878D1" />
-        </MotionPressable>
+      <LinearGradient
+        colors={["rgba(250,253,255,0.96)", "rgba(219,248,253,0.97)", "rgba(150,226,239,0.98)"]}
+        locations={[0, 0.52, 1]}
+        style={styles.headerShell}
+      >
+        <View style={styles.header}>
+          <MotionPressable
+            onPress={() => router.push("/account-settings" as Href)}
+            style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
+            accessibilityLabel="إعدادات الحساب"
+          >
+            <MaterialIcons name="account-circle" size={22} color="#0878D1" />
+          </MotionPressable>
 
-        <View style={styles.headerBrand}>
-          <Text style={styles.headerEyebrow}>
-            {profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
-          </Text>
-          <Text style={styles.headerTitle}>دليفري طرطوس</Text>
+          <View style={styles.headerBrand}>
+            <Text style={styles.headerEyebrow}>
+              {profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
+            </Text>
+            <Text style={styles.headerTitle}>دليفري طرطوس</Text>
+          </View>
+
+          <MotionPressable
+            onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
+            style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
+            accessibilityLabel="الإشعارات"
+          >
+            <MaterialIcons name="notifications-none" size={20} color="#0878D1" />
+            <View style={styles.notificationDot} />
+          </MotionPressable>
         </View>
-
-        <MotionPressable
-          onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
-          style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
-          accessibilityLabel="الإشعارات"
-        >
-          <MaterialIcons name="notifications-none" size={20} color="#0878D1" />
-          <View style={styles.notificationDot} />
-        </MotionPressable>
-      </View>
-      <View style={styles.neonDivider} />
+      </LinearGradient>
 
       <FlatList
         data={snapshot?.activities ?? []}
@@ -776,27 +781,27 @@ function SectionHeading({
 }
 
 const styles = StyleSheet.create({
+  headerShell: {
+    borderBottomColor: "rgba(81,181,207,0.32)",
+    borderBottomWidth: 1,
+    shadowColor: "#0B6E8E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  },
   header: {
     alignItems: "center",
-    backgroundColor: "#F4F7FB",
+    backgroundColor: "transparent",
     flexDirection: "row-reverse",
-    height: 56,
+    height: 60,
     justifyContent: "space-between",
     paddingHorizontal: 16,
   },
-  neonDivider: {
-    backgroundColor: "#15C8FF",
-    height: 2,
-    shadowColor: "#15C8FF",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-  },
   accountButton: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#D9EBF8",
-    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.88)",
+    borderColor: "rgba(81,181,207,0.32)",
+    borderRadius: 17,
     borderWidth: 1,
     height: 34,
     justifyContent: "center",
@@ -818,9 +823,9 @@ const styles = StyleSheet.create({
   },
   headerRoundButton: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#D9EBF8",
-    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.88)",
+    borderColor: "rgba(81,181,207,0.32)",
+    borderRadius: 17,
     borderWidth: 1,
     height: 34,
     justifyContent: "center",
@@ -829,7 +834,7 @@ const styles = StyleSheet.create({
   },
   notificationDot: {
     backgroundColor: "#15C8FF",
-    borderColor: "#F4F7FB",
+    borderColor: "#E6F9FC",
     borderRadius: 5,
     borderWidth: 2,
     height: 10,
