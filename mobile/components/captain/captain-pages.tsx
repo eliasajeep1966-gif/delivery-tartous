@@ -318,47 +318,92 @@ export function CaptainSettings() {
     }
   };
   return (
-    <Page title="إعدادات الحساب" subtitle="تغيير بيانات الكابتن">
-      <View style={styles.card}>
-        <View style={styles.accountHeading}>
-          <MaterialIcons name="account-circle" size={28} color={BLUE} />
-          <Text style={styles.title}>تفاصيل الحساب</Text>
+    <Page title="إعدادات الحساب" subtitle="إدارة ملفك وحماية حسابك">
+      <Animated.View
+        entering={FadeInDown.delay(70).duration(190)}
+        style={styles.settingsProfileCard}
+      >
+        <View style={styles.settingsProfileTop}>
+          <View style={styles.settingsAvatar}>
+            <Text style={styles.settingsAvatarText}>
+              {(auth.profile?.full_name || "ك").trim().charAt(0)}
+            </Text>
+          </View>
+          <View style={styles.settingsProfileCopy}>
+            <Text numberOfLines={1} style={styles.settingsProfileName}>
+              {auth.profile?.full_name || "كابتن دليفري"}
+            </Text>
+            <Text numberOfLines={1} style={styles.settingsProfileEmail}>
+              {auth.profile?.email || "البريد الإلكتروني غير متاح"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.settingsStatus,
+              auth.profile?.is_active
+                ? styles.settingsStatusActive
+                : styles.settingsStatusInactive,
+            ]}
+          >
+            <View
+              style={[
+                styles.settingsStatusDot,
+                auth.profile?.is_active
+                  ? styles.settingsStatusDotActive
+                  : styles.settingsStatusDotInactive,
+              ]}
+            />
+            <Text
+              style={
+                auth.profile?.is_active
+                  ? styles.settingsStatusTextActive
+                  : styles.settingsStatusTextInactive
+              }
+            >
+              {auth.profile?.is_active ? "فعال" : "غير فعال"}
+            </Text>
+          </View>
         </View>
-        <View style={styles.accountRow}>
-          <Text style={styles.accountValue}>
-            {auth.profile?.full_name || "غير مسجل"}
-          </Text>
-          <Text style={styles.accountLabel}>الاسم</Text>
+        <View style={styles.settingsMetaRow}>
+          <View style={styles.settingsMetaItem}>
+            <MaterialIcons name="two-wheeler" size={17} color="#5C8299" />
+            <View style={styles.settingsMetaCopy}>
+              <Text style={styles.settingsMetaLabel}>نوع الحساب</Text>
+              <Text style={styles.settingsMetaValue}>كابتن</Text>
+            </View>
+          </View>
+          <View style={styles.settingsMetaDivider} />
+          <View style={styles.settingsMetaItem}>
+            <MaterialIcons name="calendar-today" size={15} color="#5C8299" />
+            <View style={styles.settingsMetaCopy}>
+              <Text style={styles.settingsMetaLabel}>تاريخ الانضمام</Text>
+              <Text numberOfLines={1} style={styles.settingsMetaValue}>
+                {date(auth.profile?.created_at ?? null)}
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.accountRow}>
-          <Text style={styles.accountValue}>
-            {auth.profile?.email || "غير متاح"}
-          </Text>
-          <Text style={styles.accountLabel}>البريد الإلكتروني</Text>
+      </Animated.View>
+
+      <Animated.View entering={FadeInDown.delay(110).duration(190)} style={styles.settingsSection}>
+        <View style={styles.settingsSectionHeading}>
+          <View style={styles.settingsSectionIcon}>
+            <MaterialIcons name="edit" size={19} color={BLUE} />
+          </View>
+          <View style={styles.settingsSectionCopy}>
+            <Text style={styles.settingsSectionTitle}>الاسم الظاهر</Text>
+            <Text style={styles.settingsSectionSubtitle}>
+              الاسم الذي يظهر للإدارة والطلبات
+            </Text>
+          </View>
         </View>
-        <View style={styles.accountRow}>
-          <Text style={styles.accountValue}>كابتن</Text>
-          <Text style={styles.accountLabel}>الدور</Text>
-        </View>
-        <View style={styles.accountRow}>
-          <Text style={styles.accountValue}>
-            {auth.profile?.is_active ? "فعال" : "غير فعال"}
-          </Text>
-          <Text style={styles.accountLabel}>حالة الحساب</Text>
-        </View>
-        <View style={styles.accountRow}>
-          <Text style={styles.accountValue}>
-            {date(auth.profile?.created_at ?? null)}
-          </Text>
-          <Text style={styles.accountLabel}>تاريخ إنشاء الحساب</Text>
-        </View>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.title}>تغيير الاسم</Text>
+        <Text style={styles.settingsFieldLabel}>الاسم الكامل</Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          style={styles.input}
+          placeholder="اكتب الاسم الكامل"
+          placeholderTextColor="#809AA9"
+          style={[styles.input, styles.settingsInput]}
           textAlign="right"
         />
         <Button
@@ -366,37 +411,64 @@ export function CaptainSettings() {
           onPress={() => void saveName()}
           disabled={saving}
         />
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.title}>تغيير كلمة المرور</Text>
+      </Animated.View>
+
+      <Animated.View entering={FadeInDown.delay(150).duration(190)} style={styles.settingsSection}>
+        <View style={styles.settingsSectionHeading}>
+          <View style={styles.settingsSectionIcon}>
+            <MaterialIcons name="lock-outline" size={19} color={BLUE} />
+          </View>
+          <View style={styles.settingsSectionCopy}>
+            <Text style={styles.settingsSectionTitle}>أمان الحساب</Text>
+            <Text style={styles.settingsSectionSubtitle}>
+              استخدم كلمة مرور من 12 محرفًا على الأقل
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.settingsFieldLabel}>كلمة المرور الجديدة</Text>
         <TextInput
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={styles.input}
-          placeholder="كلمة المرور الجديدة"
+          style={[styles.input, styles.settingsInput]}
+          placeholder="أدخل كلمة المرور الجديدة"
+          placeholderTextColor="#809AA9"
           textAlign="right"
         />
+        <Text style={styles.settingsFieldLabel}>تأكيد كلمة المرور</Text>
         <TextInput
           value={confirmation}
           onChangeText={setConfirmation}
           secureTextEntry
-          style={styles.input}
-          placeholder="تأكيد كلمة المرور"
+          style={[styles.input, styles.settingsInput]}
+          placeholder="أعد إدخال كلمة المرور"
+          placeholderTextColor="#809AA9"
           textAlign="right"
         />
         <Button
-          label="حفظ كلمة المرور"
+          label="تحديث كلمة المرور"
           onPress={() => void savePassword()}
           disabled={saving}
         />
-      </View>
+      </Animated.View>
+
       {message ? <Message text={message} /> : null}
-      <View style={styles.logoutCard}>
-        <Text style={styles.logoutTitle}>إنهاء الجلسة</Text>
-        <Text style={styles.muted}>
-          سيتم تسجيل خروجك من تطبيق الكابتن على هذا الجهاز.
-        </Text>
+
+      <Animated.View
+        entering={FadeInDown.delay(190).duration(190)}
+        style={styles.logoutCard}
+      >
+        <View style={styles.logoutHeading}>
+          <View style={styles.logoutIcon}>
+            <MaterialIcons name="logout" size={19} color="#B42318" />
+          </View>
+          <View style={styles.settingsSectionCopy}>
+            <Text style={styles.logoutTitle}>إنهاء الجلسة</Text>
+            <Text style={styles.logoutSubtitle}>
+              سيتم تسجيل خروجك من هذا الجهاز فقط.
+            </Text>
+          </View>
+        </View>
         <Button
           label="تسجيل الخروج"
           onPress={() =>
@@ -411,7 +483,7 @@ export function CaptainSettings() {
           }
           danger
         />
-      </View>
+      </Animated.View>
     </Page>
   );
 }
@@ -689,47 +761,187 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     writingDirection: "rtl",
   },
-  accountHeading: {
+  settingsProfileCard: {
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderColor: "#BCEBFA",
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 14,
+    padding: 14,
+    shadowColor: "#0A668A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+  },
+  settingsProfileTop: {
     alignItems: "center",
     flexDirection: "row-reverse",
-    gap: 8,
-    marginBottom: 4,
   },
-  accountRow: {
-    borderTopColor: "#E4F0F5",
-    borderTopWidth: 1,
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    paddingVertical: 7,
+  settingsAvatar: {
+    alignItems: "center",
+    backgroundColor: DEEP_BLUE,
+    borderColor: NEON,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 56,
+    justifyContent: "center",
+    width: 56,
   },
-  accountLabel: {
-    color: "#7892A3",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 10,
+  settingsAvatarText: {
+    color: "#FFFFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 23,
+    lineHeight: 31,
+    writingDirection: "rtl",
+  },
+  settingsProfileCopy: { flex: 1, marginHorizontal: 10 },
+  settingsProfileName: {
+    color: DEEP_BLUE,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  accountValue: {
-    color: "#285C79",
-    flex: 1,
+  settingsProfileEmail: {
+    color: "#668496",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 2,
+    textAlign: "right",
+  },
+  settingsStatus: {
+    alignItems: "center",
+    borderRadius: 10,
+    flexDirection: "row-reverse",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  settingsStatusActive: { backgroundColor: "#EAFBF5" },
+  settingsStatusInactive: { backgroundColor: "#F2F5F7" },
+  settingsStatusDot: { borderRadius: 4, height: 7, width: 7 },
+  settingsStatusDotActive: { backgroundColor: "#16A36A" },
+  settingsStatusDotInactive: { backgroundColor: "#8398A5" },
+  settingsStatusTextActive: {
+    color: "#0F7A51",
     fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    marginRight: 12,
-    textAlign: "left",
+    fontSize: 9,
     writingDirection: "rtl",
   },
-  logoutCard: {
-    backgroundColor: "#FFF8F8",
-    borderColor: "#F3D2D2",
-    borderRadius: 15,
-    borderWidth: 1,
-    gap: 8,
-    padding: 13,
+  settingsStatusTextInactive: {
+    color: "#647B89",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
   },
-  logoutTitle: {
-    color: "#991B1B",
+  settingsMetaRow: {
+    backgroundColor: "#F7FCFE",
+    borderColor: "#E0F1F7",
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    minHeight: 62,
+    paddingHorizontal: 10,
+  },
+  settingsMetaItem: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row-reverse",
+  },
+  settingsMetaCopy: { flex: 1, marginRight: 7 },
+  settingsMetaDivider: { backgroundColor: "#DCEEF4", marginVertical: 11, width: 1 },
+  settingsMetaLabel: {
+    color: "#7A94A4",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 8,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  settingsMetaValue: {
+    color: "#28566F",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    marginTop: 2,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  settingsSection: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderColor: "#D1ECF6",
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 9,
+    padding: 14,
+  },
+  settingsSectionHeading: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    marginBottom: 2,
+  },
+  settingsSectionIcon: {
+    alignItems: "center",
+    backgroundColor: "#EAF9FF",
+    borderColor: "#BCEBFA",
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  settingsSectionCopy: { flex: 1, marginRight: 9 },
+  settingsSectionTitle: {
+    color: DEEP_BLUE,
     fontFamily: "Cairo_700Bold",
     fontSize: 13,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  settingsSectionSubtitle: {
+    color: "#748F9F",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  settingsFieldLabel: {
+    color: "#527287",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  settingsInput: { backgroundColor: "#FBFEFF" },
+  logoutCard: {
+    backgroundColor: "#FFF8F8",
+    borderColor: "#F4D4D4",
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14,
+  },
+  logoutHeading: { alignItems: "center", flexDirection: "row-reverse" },
+  logoutIcon: {
+    alignItems: "center",
+    backgroundColor: "#FDECEC",
+    borderRadius: 12,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  logoutTitle: {
+    color: "#9D241C",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  logoutSubtitle: {
+    color: "#9C6560",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 1,
     textAlign: "right",
     writingDirection: "rtl",
   },
