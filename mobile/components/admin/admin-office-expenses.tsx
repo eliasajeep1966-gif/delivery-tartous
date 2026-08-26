@@ -14,6 +14,7 @@ import {
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import {
@@ -41,6 +42,75 @@ type ExpenseDay = {
   total: number;
   expenses: NativeOfficeExpense[];
 };
+
+type ExpenseBrowserPeriod = "daily" | "weekly" | "monthly";
+
+type DateRange = { start: string; end: string };
+
+const expenseBrowserPeriods: { id: ExpenseBrowserPeriod; label: string }[] = [
+  { id: "daily", label: "يومي" },
+  { id: "weekly", label: "أسبوعي" },
+  { id: "monthly", label: "شهري" },
+];
+
+function dateFromKey(value: string): Date {
+  return new Date(`${value}T12:00:00Z`);
+}
+
+function dateKeyFromDate(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+function addDays(value: string, amount: number): string {
+  const date = dateFromKey(value);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return dateKeyFromDate(date);
+}
+
+function addMonths(value: string, amount: number): string {
+  const date = dateFromKey(value);
+  date.setUTCMonth(date.getUTCMonth() + amount);
+  return dateKeyFromDate(date);
+}
+
+function rangeForPeriod(period: ExpenseBrowserPeriod, anchor: string): DateRange {
+  if (period === "daily") return { start: anchor, end: anchor };
+
+  const date = dateFromKey(anchor);
+  if (period === "weekly") {
+    // تبدأ أسابيع العرض يوم السبت، وهو تسلسل العمل المعتاد في الواجهة العربية.
+    const daysSinceSaturday = (date.getUTCDay() + 1) % 7;
+    date.setUTCDate(date.getUTCDate() - daysSinceSaturday);
+    const start = dateKeyFromDate(date);
+    return { start, end: addDays(start, 6) };
+  }
+
+  date.setUTCDate(1);
+  const start = dateKeyFromDate(date);
+  date.setUTCMonth(date.getUTCMonth() + 1);
+  date.setUTCDate(0);
+  return { start, end: dateKeyFromDate(date) };
+}
+
+function shiftPeriod(
+  period: ExpenseBrowserPeriod,
+  anchor: string,
+  direction: -1 | 1,
+): string {
+  if (period === "daily") return addDays(anchor, direction);
+  if (period === "weekly") return addDays(anchor, direction * 7);
+  return addMonths(anchor, direction);
+}
+
+function periodRangeLabel(period: ExpenseBrowserPeriod, range: DateRange): string {
+  if (period === "daily") return dateLabel(range.start);
+  if (period === "weekly") return `${dateLabel(range.start)} — ${dateLabel(range.end)}`;
+  return new Intl.DateTimeFormat("ar-SY", {
+    month: "long",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).format(dateFromKey(range.start));
+}
 
 function groupExpensesByDay(expenses: readonly NativeOfficeExpense[]): ExpenseDay[] {
   const days = new Map<string, ExpenseDay>();
@@ -73,11 +143,38 @@ export function AdminOfficeExpenses() {
   const [expenseDate, setExpenseDate] = useState(today);
   const [notes, setNotes] = useState("");
   const [selectedDay, setSelectedDay] = useState<ExpenseDay | null>(null);
+  const [browserPeriod, setBrowserPeriod] = useState<ExpenseBrowserPeriod>("daily");
+  const [browserAnchor, setBrowserAnchor] = useState(today);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const expenses = useNativeOfficeExpenses();
   const expenseDays = useMemo(
     () => groupExpensesByDay(expenses.data ?? []),
     [expenses.data],
   );
+  const dateRange = useMemo(
+    () => rangeForPeriod(browserPeriod, browserAnchor),
+    [browserAnchor, browserPeriod],
+  );
+  const visibleExpenseDays = useMemo(
+    () => expenseDays.filter((day) => day.date >= dateRange.start && day.date <= dateRange.end),
+    [dateRange.end, dateRange.start, expenseDays],
+  );
+  const latestSelectableDay = today();
+  const canMoveNext = dateRange.end < latestSelectableDay;
+
+  const selectPeriod = (period: ExpenseBrowserPeriod) => {
+    setBrowserPeriod(period);
+    setBrowserAnchor(latestSelectableDay);
+  };
+
+  const movePeriod = (direction: -1 | 1) => {
+    setBrowserAnchor((current) => {
+      const next = shiftPeriod(browserPeriod, current, direction);
+      return direction === 1 && rangeForPeriod(browserPeriod, next).end > latestSelectableDay
+        ? current
+        : next;
+    });
+  };
 
   const submit = async () => {
     const parsed = Number(amount.replace(",", "."));
@@ -188,16 +285,75 @@ export function AdminOfficeExpenses() {
         <View style={styles.sectionHeading}>
           <View>
             <Text style={styles.sectionTitle}>سجل مصاريف المكتب</Text>
-            <Text style={styles.muted}>اختر يوماً لعرض مصاريفه</Text>
+            <Text style={styles.muted}>اختر الفترة ثم اضغط اليوم لرؤية مصاريفه</Text>
           </View>
-          <Text style={styles.dayCount}>{expenseDays.length} أيام</Text>
+          <Text style={styles.dayCount}>{visibleExpenseDays.length} أيام</Text>
         </View>
+
+        <View style={styles.periodButtons}>
+          {expenseBrowserPeriods.map((item) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: browserPeriod === item.id }}
+              key={item.id}
+              onPress={() => selectPeriod(item.id)}
+              style={({ pressed }) => [
+                styles.periodButton,
+                browserPeriod === item.id && styles.periodButtonActive,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[
+                styles.periodButtonText,
+                browserPeriod === item.id && styles.periodButtonTextActive,
+              ]}>{item.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <MotionPressable
+          onPress={() => setIsDatePickerOpen(true)}
+          style={styles.datePickerButton}
+        >
+          <MaterialIcons name="event" size={19} color={BLUE} />
+          <View style={styles.datePickerCopy}>
+            <Text style={styles.datePickerKicker}>تحديد تاريخ</Text>
+            <Text style={styles.datePickerValue}>{dateLabel(browserAnchor)}</Text>
+          </View>
+        </MotionPressable>
+
+        <View style={styles.periodNavigator}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => movePeriod(-1)}
+            style={({ pressed }) => [styles.navigatorButton, pressed && styles.pressed]}
+          >
+            <MaterialIcons name="chevron-right" size={21} color={BLUE} />
+            <Text style={styles.navigatorButtonText}>السابق</Text>
+          </Pressable>
+          <Text numberOfLines={1} style={styles.periodRangeTitle}>{periodRangeLabel(browserPeriod, dateRange)}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canMoveNext }}
+            disabled={!canMoveNext}
+            onPress={() => movePeriod(1)}
+            style={({ pressed }) => [
+              styles.navigatorButton,
+              !canMoveNext && styles.navigatorButtonDisabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.navigatorButtonText}>التالي</Text>
+            <MaterialIcons name="chevron-left" size={21} color={BLUE} />
+          </Pressable>
+        </View>
+
         {expenses.isPending ? (
           <Message text="جارٍ تحميل سجل المصاريف..." />
         ) : expenses.error ? (
           <Message text="تعذر تحميل سجل المصاريف." />
-        ) : expenseDays.length ? (
-          expenseDays.map((day) => (
+        ) : visibleExpenseDays.length ? (
+          visibleExpenseDays.map((day) => (
             <MotionPressable
               key={day.date}
               onPress={() => setSelectedDay(day)}
@@ -222,7 +378,7 @@ export function AdminOfficeExpenses() {
             </MotionPressable>
           ))
         ) : (
-          <Message text="لا توجد مصاريف مسجلة حالياً." />
+          <Message text="لا توجد مصاريف ضمن الفترة المختارة." />
         )}
       </ScrollView>
 
@@ -230,6 +386,20 @@ export function AdminOfficeExpenses() {
         day={selectedDay}
         onClose={() => setSelectedDay(null)}
       />
+      {isDatePickerOpen ? (
+        <FinancialDatePicker
+          visible
+          value={dateFromKey(browserAnchor)}
+          title="تحديد تاريخ سجل المصاريف"
+          hint="اختر يوماً لبدء العرض اليومي من تاريخه"
+          onClose={() => setIsDatePickerOpen(false)}
+          onSelect={(date) => {
+            setBrowserAnchor(dateKeyFromDate(date));
+            setBrowserPeriod("daily");
+            setIsDatePickerOpen(false);
+          }}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -348,6 +518,20 @@ const styles = StyleSheet.create({
   end: { alignItems: "flex-end" },
   expense: { color: "#B54708", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
   dayCount: { backgroundColor: "#EAF4FF", borderRadius: 10, color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, overflow: "hidden", paddingHorizontal: 9, paddingVertical: 5, writingDirection: "rtl" },
+  periodButtons: { flexDirection: "row-reverse", gap: 8 },
+  periodButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#C8DCEB", borderRadius: 11, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 41 },
+  periodButtonActive: { backgroundColor: "#E8F3FF", borderColor: BLUE },
+  periodButtonText: { color: "#526F82", fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
+  periodButtonTextActive: { color: BLUE },
+  datePickerButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#C8DCEB", borderRadius: 13, borderWidth: 1, flexDirection: "row-reverse", gap: 9, minHeight: 52, paddingHorizontal: 12 },
+  datePickerCopy: { alignItems: "flex-end", flex: 1 },
+  datePickerKicker: { color: "#527086", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
+  datePickerValue: { color: "#173B54", fontFamily: "Cairo_400Regular", fontSize: 11, marginTop: 1, writingDirection: "rtl" },
+  periodNavigator: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#D3E3F0", borderRadius: 14, borderWidth: 1, flexDirection: "row-reverse", justifyContent: "space-between", minHeight: 48, paddingHorizontal: 6 },
+  navigatorButton: { alignItems: "center", flexDirection: "row-reverse", gap: 1, minHeight: 36, paddingHorizontal: 5 },
+  navigatorButtonDisabled: { opacity: 0.32 },
+  navigatorButtonText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
+  periodRangeTitle: { color: "#244E69", flex: 1, fontFamily: "Cairo_700Bold", fontSize: 10, paddingHorizontal: 4, textAlign: "center", writingDirection: "rtl" },
   dayCard: { alignItems: "center", backgroundColor: "#FFF", borderColor: "#D3E3F0", borderRadius: 16, borderWidth: 1, flexDirection: "row-reverse", gap: 10, minHeight: 70, padding: 12 },
   dayIcon: { alignItems: "center", backgroundColor: "#FFF1E8", borderRadius: 12, height: 40, justifyContent: "center", width: 40 },
   dayCopy: { alignItems: "flex-end", flex: 1 },
