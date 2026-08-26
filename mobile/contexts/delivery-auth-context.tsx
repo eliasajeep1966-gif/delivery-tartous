@@ -442,12 +442,9 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
     applyState({ ...current, operation: "signing-out" });
     clearQueryCache();
     try {
-      if (current.profile?.role === "captain") {
-        await getClient()
-          .from("push_tokens")
-          .delete()
-          .eq("user_id", current.profile.id);
-      }
+      // Keep the captain's device Push Token across logout and app restarts.
+      // It is refreshed by registerCaptainPushNotifications on the next login
+      // and should only be removed when the account is permanently deleted.
       await getClient().auth.signOut();
       applyState({
         status: "unauthenticated",
