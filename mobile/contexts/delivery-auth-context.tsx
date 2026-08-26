@@ -154,25 +154,31 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
   );
 
   const loadProfile = useCallback(
-    async (session: Session) => {
+    async (session: Session, preserveAuthenticatedState = false) => {
       if (loadingProfileForUserRef.current === session.user.id) return;
 
       loadingProfileForUserRef.current = session.user.id;
       const version = ++requestVersionRef.current;
       const current = stateRef.current;
+      const keepsAuthenticatedState =
+        preserveAuthenticatedState &&
+        current.status === "authenticated" &&
+        current.profile?.id === session.user.id;
       if (
         current.session?.user.id &&
         current.session.user.id !== session.user.id
       )
         clearQueryCache();
-      applyState({
-        status: "initializing",
-        session,
-        profile:
-          current.profile?.id === session.user.id ? current.profile : null,
-        issue: null,
-        operation: current.operation,
-      });
+      if (!keepsAuthenticatedState) {
+        applyState({
+          status: "initializing",
+          session,
+          profile:
+            current.profile?.id === session.user.id ? current.profile : null,
+          issue: null,
+          operation: current.operation,
+        });
+      }
 
       try {
         const client = getClient();
@@ -257,8 +263,12 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
         if (!mountedRef.current || version !== requestVersionRef.current)
           return;
         const issue = classifyAuthError(error, "profile");
-        if (issue.code === "session-invalid") {
+        if (issue.code === "session-invalid" && !keepsAuthenticatedState) {
           await signOutLocallyWithIssue("auth-invalid", issue);
+          return;
+        }
+        if (keepsAuthenticatedState) {
+          applyState({ ...current, operation: "idle" });
           return;
         }
         applyState({
@@ -276,14 +286,20 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
     [applyState, clearQueryCache, getClient, showToast, signOutLocallyWithIssue],
   );
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (silent = false) => {
     const current = stateRef.current;
-    applyState({
-      ...current,
-      status: "initializing",
-      issue: null,
-      operation: "retrying",
-    });
+    const keepsAuthenticatedState =
+      silent &&
+      current.status === "authenticated" &&
+      current.session?.user.id === current.profile?.id;
+    if (!keepsAuthenticatedState) {
+      applyState({
+        ...current,
+        status: "initializing",
+        issue: null,
+        operation: "retrying",
+      });
+    }
 
     try {
       const client = getClient();
@@ -300,11 +316,15 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
         });
         return;
       }
-      await loadProfile(data.session);
+      await loadProfile(data.session, keepsAuthenticatedState);
     } catch (error) {
       const issue = classifyAuthError(error, "session");
-      if (issue.code === "session-invalid") {
+      if (issue.code === "session-invalid" && !keepsAuthenticatedState) {
         await signOutLocallyWithIssue("auth-invalid", issue);
+        return;
+      }
+      if (keepsAuthenticatedState) {
+        applyState({ ...current, operation: "idle" });
         return;
       }
       applyState({
@@ -491,7 +511,7 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           filter: `id=eq.${sessionUserId}`,
         },
         () => {
-          if (active) void refresh();
+          if (active) void refresh(true);
         },
       )
       .subscribe();
@@ -550,18 +570,15 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
             return;
           }
 
-          if (
-            event === "INITIAL_SESSION" ||
-            event === "SIGNED_IN" ||
-            event === "USER_UPDATED"
-          ) {
+          if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
             void loadProfile(session);
+          }
+          if (event === "USER_UPDATED") {
+            void loadProfile(session, true);
           }
         });
       },
     );
-
-    void refresh();
 
     return () => {
       mountedRef.current = false;
@@ -584,7 +601,7 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
         nextAppState === "active" && previousAppState !== "active";
       if (nextAppState === "active") {
         client.auth.startAutoRefresh();
-        if (returnedToForeground) void refresh();
+        if (returnedToForeground) void refresh(true);
       } else {
         client.auth.stopAutoRefresh();
       }

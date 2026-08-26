@@ -1,7 +1,7 @@
 import "react-native-url-polyfill/auto";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, processLock, type SupabaseClient } from "@supabase/supabase-js";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
@@ -136,6 +136,7 @@ export function getNativeSupabaseClient(): SupabaseClient {
     const { url, publishableKey } = getConfiguration();
     cachedClient = createClient(url, publishableKey, {
       auth: {
+        lock: processLock,
         storage: authStorage,
         storageKey: "delivery-tartous.auth.session",
         persistSession: true,
