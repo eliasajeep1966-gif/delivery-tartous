@@ -1,14 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQuery } from "@tanstack/react-query";
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   type LayoutChangeEvent,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -129,7 +125,7 @@ export function AdminWages() {
     useState<WageDashboardFilter>("daily");
   const [selectedPeriodStart, setSelectedPeriodStart] = useState("");
   const [customDate, setCustomDate] = useState(() => new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isCustomDateMenuOpen, setIsCustomDateMenuOpen] = useState(false);
   const [filterTrackWidth, setFilterTrackWidth] = useState(0);
   const [selectedCaptainId, setSelectedCaptainId] = useState<string | null>(
     null,
@@ -175,6 +171,14 @@ export function AdminWages() {
       return true;
     });
   }, [activeRows]);
+  const availableCustomDates = useMemo(() => {
+    const seen = new Set<string>();
+    return periodRows.filter((row) => {
+      if (seen.has(row.period_start)) return false;
+      seen.add(row.period_start);
+      return true;
+    });
+  }, [periodRows]);
   const selectedKey =
     dashboardFilter === "custom"
       ? customDateKey
@@ -270,7 +274,8 @@ export function AdminWages() {
       setDashboardFilter(next);
       setSelectedPeriodStart("");
       if (next === "custom") {
-        setShowDatePicker(true);
+        setIsCustomDateMenuOpen(true);
+        wagePeriods.changePeriod("daily");
         return;
       }
       wagePeriods.changePeriod(next);
@@ -278,15 +283,13 @@ export function AdminWages() {
     [dataOpacity, wagePeriods],
   );
 
-  const handleDatePickerChange = useCallback(
-    (event: DateTimePickerEvent, value?: Date) => {
-      if (Platform.OS === "android") setShowDatePicker(false);
-      if (event.type === "set" && value) {
-        dataOpacity.set(
-          withTiming(0.42, { duration: 90, easing: Easing.out(Easing.cubic) }),
-        );
-        setCustomDate(value);
-      }
+  const selectCustomDate = useCallback(
+    (dateKey: string) => {
+      dataOpacity.set(
+        withTiming(0.42, { duration: 90, easing: Easing.out(Easing.cubic) }),
+      );
+      setCustomDate(new Date(`${dateKey}T12:00:00Z`));
+      setIsCustomDateMenuOpen(false);
     },
     [dataOpacity],
   );
@@ -476,40 +479,55 @@ export function AdminWages() {
               </Text>
             </View>
             <MotionPressable
-              onPress={() => setShowDatePicker(true)}
+              onPress={() => setIsCustomDateMenuOpen((current) => !current)}
               style={({ pressed }) => [
                 styles.datePickerButton,
                 pressed && styles.smallPressed,
               ]}
             >
               <MaterialIcons name="calendar-month" size={17} color={BLUE} />
-              <Text style={styles.datePickerButtonText}>تغيير التاريخ</Text>
+              <Text style={styles.datePickerButtonText}>اختيار يوم</Text>
             </MotionPressable>
           </View>
         ) : null}
-        {showDatePicker ? (
+        {dashboardFilter === "custom" && isCustomDateMenuOpen ? (
           <View style={styles.datePickerPanel}>
             <View style={styles.datePickerHeading}>
-              <Text style={styles.datePickerTitle}>اختر يومًا محددًا</Text>
-              {Platform.OS === "ios" ? (
-                <MotionPressable
-                  onPress={() => setShowDatePicker(false)}
-                  style={({ pressed }) => [
-                    styles.datePickerDismiss,
-                    pressed && styles.smallPressed,
-                  ]}
-                >
-                  <Text style={styles.datePickerDismissText}>تم</Text>
-                </MotionPressable>
-              ) : null}
+              <Text style={styles.datePickerTitle}>اختر من الأيام المسجلة</Text>
+              <Text style={styles.datePickerHint}>تُعرض تواريخ الأجور المتاحة فقط</Text>
             </View>
-            <DateTimePicker
-              display={Platform.OS === "ios" ? "inline" : "default"}
-              maximumDate={new Date()}
-              mode="date"
-              onChange={handleDatePickerChange}
-              value={customDate}
-            />
+            {availableCustomDates.length ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.customDateOptions}
+              >
+                {availableCustomDates.map((row) => (
+                  <MotionPressable
+                    key={row.period_start}
+                    onPress={() => selectCustomDate(row.period_start)}
+                    style={({ pressed }) => [
+                      styles.customDateChip,
+                      row.period_start === customDateKey && styles.customDateChipActive,
+                      pressed && styles.smallPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.customDateChipText,
+                        row.period_start === customDateKey && styles.customDateChipTextActive,
+                      ]}
+                    >
+                      {periodLabel("daily", row)}
+                    </Text>
+                  </MotionPressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.customDateEmpty}>
+                لا توجد تواريخ أجور متاحة ضمن السجل المحمّل.
+              </Text>
+            )}
           </View>
         ) : null}
         {dashboardFilter !== "custom" && options.length > 0 ? (
@@ -1390,18 +1408,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     writingDirection: "rtl",
   },
-  datePickerDismiss: {
+  datePickerHint: {
+    color: "#7694A6",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 8,
+    textAlign: "left",
+    writingDirection: "rtl",
+  },
+  customDateOptions: {
+    flexDirection: "row-reverse",
+    gap: 7,
+    paddingTop: 10,
+  },
+  customDateChip: {
     alignItems: "center",
-    backgroundColor: "#E8F7FF",
-    borderRadius: 9,
+    backgroundColor: "#F6FBFE",
+    borderColor: "#D4E8F3",
+    borderRadius: 11,
+    borderWidth: 1,
     justifyContent: "center",
-    minHeight: 30,
+    minHeight: 35,
     paddingHorizontal: 10,
   },
-  datePickerDismissText: {
-    color: BLUE,
+  customDateChipActive: {
+    backgroundColor: "#E2F5FF",
+    borderColor: "#0878D1",
+  },
+  customDateChipText: {
+    color: "#54758A",
     fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
+  customDateChipTextActive: { color: BLUE },
+  customDateEmpty: {
+    color: "#718DA0",
+    fontFamily: "Cairo_400Regular",
     fontSize: 10,
+    lineHeight: 17,
+    marginTop: 9,
+    textAlign: "right",
     writingDirection: "rtl",
   },
   smallPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },

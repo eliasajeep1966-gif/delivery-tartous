@@ -1,3 +1,4 @@
+// Load environment variables with proper priority (system > .env)
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
 
@@ -95,7 +96,6 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
-    "@react-native-community/datetimepicker",
     [
       "expo-notifications",
       {
