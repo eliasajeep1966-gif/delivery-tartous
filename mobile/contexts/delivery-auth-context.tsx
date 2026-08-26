@@ -598,7 +598,15 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
         nextAppState === "active" && previousAppState !== "active";
       if (nextAppState === "active") {
         client.auth.startAutoRefresh();
-        if (returnedToForeground) void refresh(true);
+        if (returnedToForeground) {
+          void refresh(true);
+          const currentProfile = stateRef.current.profile;
+          if (currentProfile?.role === "captain") {
+            void registerCaptainPushNotifications(currentProfile.id).catch((error) => {
+              console.error("Captain Push Token refresh failed.", error);
+            });
+          }
+        }
       } else {
         client.auth.stopAutoRefresh();
       }
