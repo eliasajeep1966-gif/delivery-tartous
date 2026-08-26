@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -46,6 +47,24 @@ const date = (value: string | null) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "غير مسجل";
+const customWageDateLabel = (value: string) =>
+  new Intl.DateTimeFormat("ar-SY-u-nu-latn", {
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00Z`));
+const damascusDateKey = (value: Date) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).formatToParts(value);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+};
 
 export function CaptainOrders() {
   const data = useNativeCaptainOrders();
@@ -208,6 +227,7 @@ function OrderDeliveryTiming({
 
 export function CaptainWages() {
   const data = useNativeCaptainWages();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const firstRowNumber = data.total
     ? data.page * CAPTAIN_WAGES_PAGE_SIZE + 1
     : 0;
@@ -224,30 +244,55 @@ export function CaptainWages() {
       onRefresh={() => void data.reload(true)}
     >
       <View style={styles.periods}>
-        {(["daily", "weekly", "monthly"] as const).map((value) => (
-          <MotionPressable
-            key={value}
-            onPress={() => data.selectPeriod(value)}
-            style={[
-              styles.period,
-              data.period === value && styles.periodActive,
-            ]}
-          >
-            <Text
+        {(["daily", "weekly", "monthly", "custom"] as const).map(
+          (value) => (
+            <MotionPressable
+              key={value}
+              onPress={() => {
+                data.selectFilter(value);
+                if (value === "custom") setIsDatePickerOpen(true);
+              }}
               style={[
-                styles.periodText,
-                data.period === value && styles.periodTextActive,
+                styles.period,
+                data.filter === value && styles.periodActive,
               ]}
             >
-              {value === "daily"
-                ? "يومي"
-                : value === "weekly"
-                  ? "أسبوعي"
-                  : "شهري"}
-            </Text>
-          </MotionPressable>
-        ))}
+              <Text
+                style={[
+                  styles.periodText,
+                  data.filter === value && styles.periodTextActive,
+                ]}
+              >
+                {value === "daily"
+                  ? "يومي"
+                  : value === "weekly"
+                    ? "أسبوعي"
+                    : value === "monthly"
+                      ? "شهري"
+                      : "تاريخ"}
+              </Text>
+            </MotionPressable>
+          ),
+        )}
       </View>
+      <MotionPressable
+        accessibilityLabel="اختيار تاريخ مخصص للأجور"
+        onPress={() => setIsDatePickerOpen(true)}
+        style={styles.customDateControl}
+      >
+        <View style={styles.customDateIcon}>
+          <MaterialIcons name="calendar-month" size={20} color={BLUE} />
+        </View>
+        <View style={styles.customDateCopy}>
+          <Text style={styles.customDateKicker}>التاريخ المعروض</Text>
+          <Text numberOfLines={1} style={styles.customDateValue}>
+            {data.filter === "custom"
+              ? customWageDateLabel(data.customDate)
+              : "اختر تاريخًا مخصصًا"}
+          </Text>
+        </View>
+        <MaterialIcons name="chevron-left" size={22} color="#6B90A5" />
+      </MotionPressable>
       {data.error ? (
         <Message text={data.error} />
       ) : data.loading ? (
@@ -355,6 +400,17 @@ export function CaptainWages() {
           )}
         </>
       )}
+      {isDatePickerOpen ? (
+        <FinancialDatePicker
+          onClose={() => setIsDatePickerOpen(false)}
+          onSelect={(nextDate) => {
+            data.selectCustomDate(damascusDateKey(nextDate));
+            setIsDatePickerOpen(false);
+          }}
+          value={new Date(`${data.customDate}T12:00:00Z`)}
+          visible
+        />
+      ) : null}
     </Page>
   );
 }
@@ -965,6 +1021,42 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   periodTextActive: { color: "#FFFFFF" },
+  customDateControl: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderColor: "#BCEBFA",
+    borderRadius: 17,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    minHeight: 62,
+    paddingHorizontal: 11,
+  },
+  customDateIcon: {
+    alignItems: "center",
+    backgroundColor: "#EAF9FF",
+    borderColor: "#BCEBFA",
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  customDateCopy: { flex: 1, marginHorizontal: 9 },
+  customDateKicker: {
+    color: "#7290A1",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  customDateValue: {
+    color: DEEP_BLUE,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 },
   metric: {
     backgroundColor: "rgba(255,255,255,0.94)",

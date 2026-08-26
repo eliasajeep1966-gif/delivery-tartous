@@ -192,12 +192,17 @@ export const nativeCaptainContract = {
     },
     async wagesPage(
       period: CaptainWagePeriod,
-      { limit, offset }: { limit: number; offset: number },
+      {
+        limit,
+        offset,
+        customDate,
+      }: { limit: number; offset: number; customDate?: string | null },
     ): Promise<CaptainWagesPage> {
       const result = await client().rpc("get_my_captain_wage_page", {
         p_period: period,
         p_limit: Math.min(Math.max(Math.floor(limit), 1), 50),
         p_offset: Math.max(Math.floor(offset), 0),
+        p_custom_date: customDate ?? null,
       });
       return unwrap(
         result as Result<CaptainWagesPage>,

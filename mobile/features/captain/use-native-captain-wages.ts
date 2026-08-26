@@ -8,6 +8,7 @@ import {
 } from "@/lib/supabase/native-captain-contract";
 
 export const CAPTAIN_WAGES_PAGE_SIZE = 10;
+export type CaptainWageFilter = CaptainWagePeriod | "custom";
 
 const EMPTY_TOTALS: CaptainWageTotals = {
   gross: 0,
@@ -18,8 +19,21 @@ const EMPTY_TOTALS: CaptainWageTotals = {
   unpaid: 0,
 };
 
+function damascusDateKey(value: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).formatToParts(value);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+}
+
 export function useNativeCaptainWages() {
-  const [period, setPeriodState] = useState<CaptainWagePeriod>("daily");
+  const [filter, setFilter] = useState<CaptainWageFilter>("daily");
+  const [customDate, setCustomDate] = useState(() => damascusDateKey(new Date()));
   const [page, setPage] = useState(0);
   const [rows, setRows] = useState<CaptainWageRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -30,6 +44,7 @@ export function useNativeCaptainWages() {
   const mounted = useRef(true);
   const loadVersion = useRef(0);
 
+  const period: CaptainWagePeriod = filter === "custom" ? "daily" : filter;
   const pageCount = Math.max(
     1,
     Math.ceil(total / CAPTAIN_WAGES_PAGE_SIZE),
@@ -51,6 +66,7 @@ export function useNativeCaptainWages() {
         const result = await nativeCaptainContract.reads.wagesPage(period, {
           limit: CAPTAIN_WAGES_PAGE_SIZE,
           offset: page * CAPTAIN_WAGES_PAGE_SIZE,
+          customDate: filter === "custom" ? customDate : null,
         });
         if (!mounted.current || requestVersion !== loadVersion.current) return;
 
@@ -79,7 +95,7 @@ export function useNativeCaptainWages() {
         }
       }
     },
-    [page, period],
+    [customDate, filter, page, period],
   );
 
   useEffect(() => {
@@ -94,14 +110,21 @@ export function useNativeCaptainWages() {
     };
   }, [reload]);
 
-  const selectPeriod = useCallback((nextPeriod: CaptainWagePeriod) => {
+  const selectFilter = useCallback((nextFilter: CaptainWageFilter) => {
     setPage(0);
-    setPeriodState(nextPeriod);
+    setFilter(nextFilter);
+  }, []);
+
+  const selectCustomDate = useCallback((nextDate: string) => {
+    setPage(0);
+    setCustomDate(nextDate);
+    setFilter("custom");
   }, []);
 
   return useMemo(
     () => ({
-      period,
+      filter,
+      customDate,
       rows,
       total,
       totals,
@@ -113,7 +136,8 @@ export function useNativeCaptainWages() {
       hasPreviousPage,
       hasNextPage,
       reload,
-      selectPeriod,
+      selectFilter,
+      selectCustomDate,
       previousPage: () => {
         if (hasPreviousPage) setPage(safePage - 1);
       },
@@ -122,17 +146,19 @@ export function useNativeCaptainWages() {
       },
     }),
     [
+      customDate,
       error,
+      filter,
       hasNextPage,
       hasPreviousPage,
       loading,
       pageCount,
-      period,
       refreshing,
       reload,
       rows,
       safePage,
-      selectPeriod,
+      selectCustomDate,
+      selectFilter,
       total,
       totals,
     ],
