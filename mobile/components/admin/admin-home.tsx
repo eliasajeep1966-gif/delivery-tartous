@@ -1,34 +1,22 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { LinearGradient } from "expo-linear-gradient";
 import { type Href, useRouter } from "expo-router";
 import { type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AppState,
   FlatList,
-  type LayoutChangeEvent,
+  Pressable,
   RefreshControl,
   StyleSheet,
-  Text as NativeText,
+  Text,
   View,
 } from "react-native";
-import Animated, {
-  Easing,
-  FadeInDown,
-  Layout,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
 
 import {
   AdminNewOrderModal,
   type NativeNewOrderDraft,
 } from "@/components/admin/admin-new-order-modal";
 import { ScreenContainer } from "@/components/screen-container";
-import { MotionPressable } from "@/components/ui/motion-pressable";
-import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
@@ -47,66 +35,51 @@ import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
 type IconName = ComponentProps<typeof MaterialIcons>["name"];
 
-function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
-  const flattened = StyleSheet.flatten(style);
-  const isBold =
-    flattened?.fontWeight === "700" ||
-    flattened?.fontWeight === "800" ||
-    flattened?.fontWeight === "bold";
-
-  return (
-    <NativeText
-      {...props}
-      style={[{ fontFamily: isBold ? "Cairo_700Bold" : "Cairo_400Regular" }, style]}
-    />
-  );
-}
-
 const statusStyle: Record<
   AdminOrderStatus,
   { label: string; color: string; background: string; strip: string }
 > = {
   pending: {
     label: "قيد الانتظار",
-    color: "#255F94",
-    background: "#EAF4FF",
-    strip: "#2C81C5",
+    color: "#0060B8",
+    background: "#EFF6FF",
+    strip: "#0060B8",
   },
   assigned: {
     label: "تم تعيين كابتن",
-    color: "#4C43A8",
-    background: "#F0EEFF",
-    strip: "#7165E8",
+    color: "#4338CA",
+    background: "#EEF2FF",
+    strip: "#6366F1",
   },
   received: {
     label: "تم الاستلام",
-    color: "#7037B7",
-    background: "#F6F0FF",
-    strip: "#9B63DF",
+    color: "#6D28D9",
+    background: "#F5F3FF",
+    strip: "#8B5CF6",
   },
   in_delivery: {
     label: "قيد التوصيل",
-    color: "#006F8E",
-    background: "#E8F9FC",
-    strip: "#12A9C8",
+    color: "#0E7490",
+    background: "#ECFEFF",
+    strip: "#06B6D4",
   },
   completed: {
     label: "مكتمل",
-    color: "#08755C",
-    background: "#EAF9F3",
-    strip: "#16B384",
+    color: "#047857",
+    background: "#ECFDF5",
+    strip: "#10B981",
   },
   cancelled: {
     label: "ملغى",
-    color: "#B33740",
-    background: "#FFF0F1",
-    strip: "#F06B72",
+    color: "#B91C1C",
+    background: "#FEF2F2",
+    strip: "#EF4444",
   },
   false_order: {
     label: "طلب كاذب",
-    color: "#A46113",
-    background: "#FFF7E8",
-    strip: "#F4AA43",
+    color: "#B45309",
+    background: "#FFFBEB",
+    strip: "#F59E0B",
   },
 };
 
@@ -114,7 +87,6 @@ export function AdminHome() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
   const { showToast } = useAppToast();
-  const { playSound } = useAppSound();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
   const home = useAdminHome(isBackOffice);
@@ -158,139 +130,10 @@ export function AdminHome() {
     };
   }, [isBackOffice, refetch, scheduleRealtimeRefresh]);
 
-  const createLedProgress = useSharedValue(0);
-  const createLedWidth = useSharedValue(0);
-  const createLedHeight = useSharedValue(0);
-  const handleCreateCardLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    createLedWidth.value = width;
-    createLedHeight.value = height;
-  };
-
-  useEffect(() => {
-    createLedProgress.value = withRepeat(
-      withTiming(1, { duration: 5200, easing: Easing.linear }),
-      -1,
-      false,
-    );
-  }, [createLedProgress]);
-
-  const getLedPoint = (distance: number, width: number, height: number) => {
-    "worklet";
-    const inset = 2;
-    const innerWidth = Math.max(width - inset * 2, 1);
-    const innerHeight = Math.max(height - inset * 2, 1);
-    const radius = Math.min(18, innerWidth / 2, innerHeight / 2);
-    const horizontal = Math.max(innerWidth - radius * 2, 0);
-    const vertical = Math.max(innerHeight - radius * 2, 0);
-    const corner = (Math.PI * radius) / 2;
-    const perimeter = horizontal * 2 + vertical * 2 + corner * 4;
-    let travel = distance % perimeter;
-    const left = inset;
-    const right = inset + innerWidth;
-    const top = inset;
-    const bottom = inset + innerHeight;
-
-    if (travel <= horizontal) {
-      return { x: left + radius + travel, y: top, angle: 0, perimeter };
-    }
-    travel -= horizontal;
-    if (travel <= corner) {
-      const theta = -Math.PI / 2 + (travel / corner) * (Math.PI / 2);
-      return {
-        x: right - radius + radius * Math.cos(theta),
-        y: top + radius + radius * Math.sin(theta),
-        angle: theta + Math.PI / 2,
-        perimeter,
-      };
-    }
-    travel -= corner;
-    if (travel <= vertical) {
-      return { x: right, y: top + radius + travel, angle: Math.PI / 2, perimeter };
-    }
-    travel -= vertical;
-    if (travel <= corner) {
-      const theta = (travel / corner) * (Math.PI / 2);
-      return {
-        x: right - radius + radius * Math.cos(theta),
-        y: bottom - radius + radius * Math.sin(theta),
-        angle: theta + Math.PI / 2,
-        perimeter,
-      };
-    }
-    travel -= corner;
-    if (travel <= horizontal) {
-      return { x: right - radius - travel, y: bottom, angle: Math.PI, perimeter };
-    }
-    travel -= horizontal;
-    if (travel <= corner) {
-      const theta = Math.PI / 2 + (travel / corner) * (Math.PI / 2);
-      return {
-        x: left + radius + radius * Math.cos(theta),
-        y: bottom - radius + radius * Math.sin(theta),
-        angle: theta + Math.PI / 2,
-        perimeter,
-      };
-    }
-    travel -= corner;
-    if (travel <= vertical) {
-      return { x: left, y: bottom - radius - travel, angle: (Math.PI * 3) / 2, perimeter };
-    }
-    travel -= vertical;
-    const theta = Math.PI + (travel / corner) * (Math.PI / 2);
-    return {
-      x: left + radius + radius * Math.cos(theta),
-      y: top + radius + radius * Math.sin(theta),
-      angle: theta + Math.PI / 2,
-      perimeter,
-    };
-  };
-
-  const createLedDotStyle = useAnimatedStyle(() => {
-    if (!createLedWidth.value || !createLedHeight.value) return { opacity: 0 };
-    const point = getLedPoint(
-      createLedProgress.value * getLedPoint(0, createLedWidth.value, createLedHeight.value).perimeter,
-      createLedWidth.value,
-      createLedHeight.value,
-    );
-    return {
-      opacity: 1,
-      left: point.x - 5,
-      top: point.y - 5,
-    };
-  });
-
-  const createLedTailStyle = useAnimatedStyle(() => {
-    if (!createLedWidth.value || !createLedHeight.value) return { opacity: 0 };
-    const start = getLedPoint(0, createLedWidth.value, createLedHeight.value);
-    const currentDistance = createLedProgress.value * start.perimeter;
-    const point = getLedPoint(currentDistance, createLedWidth.value, createLedHeight.value);
-    const previous = getLedPoint(
-      (currentDistance - 34 + start.perimeter) % start.perimeter,
-      createLedWidth.value,
-      createLedHeight.value,
-    );
-    const dx = point.x - previous.x;
-    const dy = point.y - previous.y;
-    const length = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-
-    return {
-      opacity: 0.9,
-      left: (point.x + previous.x) / 2 - length / 2,
-      top: (point.y + previous.y) / 2 - 1,
-      width: length,
-      transform: [{ rotate: `${angle}deg` }],
-    };
-  });
-
   if (!isBackOffice) {
     return (
       <ScreenContainer className="p-5">
         <View style={styles.roleNotice}>
-          <View style={styles.roleNoticeIcon}>
-            <MaterialIcons name="lock-outline" size={22} color="#9C3E44" />
-          </View>
           <Text style={styles.roleNoticeTitle}>لا تملك صلاحية لوحة العمل</Text>
           <Text style={styles.roleNoticeText}>
             هذه الواجهة مخصصة للأدمن والمشرف فقط.
@@ -318,7 +161,6 @@ export function AdminHome() {
           draft.captainId,
         );
         void notifyCaptainOfOrder(assigned.id).catch(() => undefined);
-        playSound("adminOrderSuccess");
         setCreateOpen(false);
         showToast({ message: `تم إنشاء وتعيين الطلب #${assigned.orderNumber}.` });
       } catch (assignmentError) {
@@ -345,172 +187,129 @@ export function AdminHome() {
     }
   };
 
-  const availableCount = snapshot?.availableCaptains.length ?? 0;
-
   return (
-    <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
+    <ScreenContainer className="bg-[#F3FBFF]" containerClassName="bg-[#F3FBFF]">
       <View style={styles.header}>
-        <MotionPressable
+        <View style={styles.headerSide}>
+          <Pressable
+            onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
+            style={({ pressed }) => [
+              styles.headerRoundButton,
+              pressed && styles.pressed,
+            ]}
+            accessibilityLabel="الإشعارات"
+          >
+            <MaterialIcons
+              name="notifications-none"
+              size={18}
+              color="#4D7D9F"
+            />
+            <View style={styles.notificationDot} />
+          </Pressable>
+        </View>
+        <Text style={styles.headerTitle}>دليفري طرطوس</Text>
+        <Pressable
           onPress={() => router.push("/account-settings" as Href)}
-          style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
+          style={({ pressed }) => [
+            styles.supportButton,
+            pressed && styles.pressed,
+          ]}
           accessibilityLabel="إعدادات الحساب"
         >
-          <MaterialIcons name="account-circle" size={22} color="#0878D1" />
-        </MotionPressable>
-
-        <View style={styles.headerBrand}>
-          <Text style={styles.headerEyebrow}>
-            {profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
-          </Text>
-          <Text style={styles.headerTitle}>دليفري طرطوس</Text>
-        </View>
-
-        <MotionPressable
-          onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
-          style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
-          accessibilityLabel="الإشعارات"
-        >
-          <MaterialIcons name="notifications-none" size={20} color="#0878D1" />
-          <View style={styles.notificationDot} />
-        </MotionPressable>
+          <MaterialIcons name="account-circle" size={20} color="#FFFFFF" />
+        </Pressable>
       </View>
-      <View style={styles.neonDivider} />
 
       <FlatList
         data={snapshot?.activities ?? []}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <ActivityRow item={item} onPress={openOrders} index={index} />
+        renderItem={({ item }) => (
+          <ActivityRow item={item} onPress={openOrders} />
         )}
         refreshControl={
           <RefreshControl
             refreshing={home.isRefetching}
             onRefresh={() => void home.refetch()}
-            tintColor="#0878D1"
+            tintColor="#0060B8"
           />
         }
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <>
-            <Animated.View entering={FadeInDown.duration(220)}>
-              <LinearGradient
-                  colors={["#EEF7FF", "#FFFFFF"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.heroCard}
-              >
-                <View style={styles.heroTopRow}>
-                  <View style={styles.livePill}>
-                    <View style={styles.liveDot} />
-                    <Text style={styles.liveText}>تحديث مباشر</Text>
-                  </View>
-                  <Text style={styles.heroDate}>تشغيل اليوم</Text>
-                </View>
-                <Text style={styles.heroTitle}>
-                  أهلاً، {profile.role === "supervisor" ? "مشرف الفريق" : "مدير المكتب"}
-                </Text>
-                <Text style={styles.heroSubtitle}>
-                  راقب الحركة واتخذ الإجراء المناسب من مكان واحد.
-                </Text>
-              </LinearGradient>
-            </Animated.View>
+            <View style={styles.welcomeCard}>
+              <Text style={styles.welcomeTitle}>
+                مرحباً، {profile.role === "supervisor" ? "المشرف" : "المدير"}
+              </Text>
+              <Text style={styles.welcomeSubtitle}>
+                إليك نظرة سريعة على حركة الطلبات اليوم
+              </Text>
+            </View>
 
             {home.error ? (
-              <Animated.View entering={FadeInDown.delay(40).duration(200)} style={styles.errorCard}>
-                <View style={styles.errorIcon}>
-                  <MaterialIcons name="sync-problem" size={19} color="#B23D47" />
-                </View>
-                <View style={styles.errorCopy}>
-                  <Text style={styles.errorTitle}>تعذر تحديث الملخص</Text>
-                  <Text style={styles.errorText}>
-                    {home.error instanceof Error
-                      ? home.error.message
-                      : "تعذر تحميل لوحة الإدارة."}
-                  </Text>
-                </View>
-                <MotionPressable
+              <View style={styles.errorCard}>
+                <Text style={styles.errorText}>
+                  {home.error instanceof Error
+                    ? home.error.message
+                    : "تعذر تحميل لوحة الإدارة."}
+                </Text>
+                <Pressable
                   onPress={() => void home.refetch()}
-                  style={({ pressed }) => [styles.retryButton, pressed && styles.smallPressed]}
+                  style={({ pressed }) => [
+                    styles.retryButton,
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <MaterialIcons name="refresh" size={16} color="#0878D1" />
-                </MotionPressable>
-              </Animated.View>
-            ) : null}
-
-            <View style={styles.metricsHeader}>
-              <View>
-                <Text style={styles.overline}>لقطة تشغيلية</Text>
-                <Text style={styles.metricsTitle}>حركة الطلبات اليوم</Text>
+                  <MaterialIcons name="refresh" size={14} color="#0060B8" />
+                  <Text style={styles.retryText}>إعادة المحاولة</Text>
+                </Pressable>
               </View>
-              <MotionPressable
-                onPress={openOrders}
-                style={({ pressed }) => [styles.viewOrdersButton, pressed && styles.smallPressed]}
-              >
-                <Text style={styles.viewOrdersText}>كل الطلبات</Text>
-                <MaterialIcons name="arrow-back" size={14} color="#0878D1" />
-              </MotionPressable>
-            </View>
+            ) : null}
 
             <View style={styles.metricGrid}>
               {home.isPending || !snapshot ? (
                 <MetricSkeletons />
               ) : (
-                snapshot.metrics.map((metric, index) => (
+                snapshot.metrics.map((metric) => (
                   <MetricCard
                     key={metric.id}
                     metric={metric}
                     onPress={openOrders}
-                    index={index}
                   />
                 ))
               )}
             </View>
 
-            <Animated.View entering={FadeInDown.delay(150).duration(220)}>
-              <MotionPressable
-                onLayout={handleCreateCardLayout}
-                onPress={() => {
-                  setCreateError(null);
-                  setCreateOpen(true);
-                }}
-                style={({ pressed }) => [styles.createCard, pressed && styles.createPressed]}
-              >
-                <LinearGradient
-                  colors={["#063B78", "#0872CC", "#0CBDF2"]}
-                  start={{ x: 1, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={styles.createGradient}
-                >
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[styles.createLedTail, createLedTailStyle]}
-                  />
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[styles.createLedDot, createLedDotStyle]}
-                  />
-                  <View style={styles.createIconWrap}>
-                    <MaterialIcons name="add" size={26} color="#0C679D" />
-                  </View>
-                  <View style={styles.createCopy}>
-                    <Text style={styles.createKicker}>إجراء سريع</Text>
-                    <Text style={styles.createTitle}>إنشاء طلب جديد</Text>
-                    <Text style={styles.createSubtitle}>
-                      {home.isPending
-                        ? "جارٍ تجهيز بيانات الكباتن..."
-                        : snapshot?.availableCaptains.length
-                          ? "أضف تفاصيل الطلب وعيّن كابتناً متاحاً"
-                          : "يمكنك إضافة الطلب ثم متابعته من قائمة الطلبات"}
-                    </Text>
-                  </View>
-                  <MaterialIcons name="arrow-back" size={21} color="rgba(255,255,255,0.88)" />
-                </LinearGradient>
-              </MotionPressable>
-            </Animated.View>
+            <Pressable
+              onPress={() => {
+                setCreateError(null);
+                setCreateOpen(true);
+              }}
+              style={({ pressed }) => [
+                styles.createCard,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View>
+                <Text style={styles.createTitle}>إنشاء طلب جديد</Text>
+                <Text style={styles.createSubtitle}>
+                  {home.isPending
+                    ? "جارٍ تحميل الكباتن..."
+                    : snapshot?.availableCaptains.length
+                      ? "أضف طلباً وعيّن كابتناً متاحاً"
+                      : "لا يوجد كابتن متاح حالياً"}
+                </Text>
+              </View>
+              <View style={styles.createPlus}>
+                <MaterialIcons
+                  name="add-circle-outline"
+                  size={24}
+                  color="#FFFFFF"
+                />
+              </View>
+            </Pressable>
 
             <SectionHeading
-              title="أحدث النشاطات"
-              subtitle="تحديثات الطلبات الأخيرة"
+              title="آخر النشاطات"
               action="عرض الطلبات"
               onPress={openOrders}
             />
@@ -519,18 +318,11 @@ export function AdminHome() {
         ListEmptyComponent={
           home.isPending ? (
             <View style={styles.loadingActivity}>
-              <View style={styles.loadingIcon}>
-                <MaterialIcons name="history" size={20} color="#5A8FB1" />
-              </View>
               <Text style={styles.loadingText}>جارٍ تحميل النشاطات...</Text>
             </View>
           ) : (
             <View style={styles.emptyActivities}>
-              <View style={styles.emptyIcon}>
-                <MaterialIcons name="inbox" size={23} color="#6D9BB9" />
-              </View>
-              <Text style={styles.emptyTitle}>لا توجد نشاطات جديدة</Text>
-              <Text style={styles.emptyText}>ستظهر هنا آخر تحديثات حركة الطلبات.</Text>
+              <Text style={styles.emptyText}>لا توجد نشاطات إدارية حديثة.</Text>
             </View>
           )
         }
@@ -538,8 +330,7 @@ export function AdminHome() {
           <View style={styles.captainsSection}>
             <SectionHeading
               title="الكباتن المتاحون الآن"
-              subtitle={availableCount ? `${availableCount} جاهزون للاستلام` : "تتحدث حسب حالة الكابتن"}
-              action="إدارة الكباتن"
+              action="عرض الكل"
               onPress={() => router.push("/(tabs)/captains" as Href)}
             />
             <FlatList
@@ -549,35 +340,30 @@ export function AdminHome() {
               keyExtractor={(item) => item.id}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.captainsList}
-              renderItem={({ item, index }) => (
-                <Animated.View
-                  entering={FadeInDown.delay(Math.min(index * 35, 175)).duration(180)}
-                  layout={Layout.duration(180)}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => router.push("/(tabs)/captains" as Href)}
+                  style={({ pressed }) => [
+                    styles.captainItem,
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <MotionPressable
-                    onPress={() => router.push("/(tabs)/captains" as Href)}
-                    style={({ pressed }) => [styles.captainItem, pressed && styles.captainPressed]}
-                  >
-                    <View style={styles.captainAvatar}>
-                      <Text style={styles.captainInitial}>{item.initial}</Text>
-                      <View style={styles.availableDot} />
-                    </View>
-                    <Text numberOfLines={1} style={styles.captainName}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.captainAvailability}>متاح الآن</Text>
-                  </MotionPressable>
-                </Animated.View>
+                  <View style={styles.captainAvatar}>
+                    <Text style={styles.captainInitial}>{item.initial}</Text>
+                    <View style={styles.availableDot} />
+                  </View>
+                  <Text numberOfLines={1} style={styles.captainName}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.captainAvailability}>متاح</Text>
+                </Pressable>
               )}
               ListEmptyComponent={
-                <View style={styles.emptyCaptainCard}>
-                  <MaterialIcons name="person-off" size={18} color="#7296AD" />
-                  <Text style={styles.emptyCaptainText}>
-                    {home.isPending
-                      ? "جارٍ التحميل..."
-                      : "لا يوجد كابتن متاح حالياً."}
-                  </Text>
-                </View>
+                <Text style={styles.emptyCaptainText}>
+                  {home.isPending
+                    ? "جارٍ التحميل..."
+                    : "لا يوجد كابتن متاح حالياً."}
+                </Text>
               }
             />
           </View>
@@ -602,11 +388,7 @@ function MetricSkeletons() {
   return (
     <>
       {[0, 1, 2, 3].map((item) => (
-        <View key={item} style={styles.metricSkeleton}>
-          <View style={styles.skeletonIcon} />
-          <View style={styles.skeletonNumber} />
-          <View style={styles.skeletonLabel} />
-        </View>
+        <View key={item} style={styles.metricSkeleton} />
       ))}
     </>
   );
@@ -615,162 +397,120 @@ function MetricSkeletons() {
 function MetricCard({
   metric,
   onPress,
-  index,
 }: {
   metric: AdminHomeMetric;
   onPress: () => void;
-  index: number;
 }) {
   const highlighted = metric.id === "in_delivery";
-  const tone: Record<
-    AdminHomeMetric["id"],
-    { icon: IconName; accent: string; background: string; iconBackground: string }
-  > = {
-    pending: {
-      icon: "inventory-2",
-      accent: "#126FA7",
-      background: "#FFFFFF",
-      iconBackground: "#EAF5FC",
-    },
-    in_delivery: {
-      icon: "two-wheeler",
-      accent: "#FFFFFF",
-      background: "#0878D1",
-      iconBackground: "rgba(255,255,255,0.16)",
-    },
-    completed_today: {
-      icon: "check-circle-outline",
-      accent: "#0A8A67",
-      background: "#FFFFFF",
-      iconBackground: "#E8F8F2",
-    },
-    cancelled_today: {
-      icon: "cancel",
-      accent: "#D65760",
-      background: "#FFFFFF",
-      iconBackground: "#FFF0F2",
-    },
+  const iconColors: Record<AdminHomeMetric["id"], string> = {
+    pending: "#1478BF",
+    in_delivery: "#FFFFFF",
+    completed_today: "#10B981",
+    cancelled_today: "#F87171",
   };
-  const currentTone = tone[metric.id];
-
   return (
-    <Animated.View
-      entering={FadeInDown.delay(55 + index * 40).duration(190)}
-      layout={Layout.duration(180)}
-      style={styles.metricAnimatedWrap}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.metricCard,
+        highlighted && styles.metricCardHighlight,
+        pressed && styles.pressed,
+      ]}
     >
-      <MotionPressable
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.metricCard,
-          { backgroundColor: currentTone.background },
-          highlighted && styles.metricCardHighlight,
-          pressed && styles.metricPressed,
-        ]}
-      >
-        <View style={styles.metricTop}>
-          <View style={[styles.metricIcon, { backgroundColor: currentTone.iconBackground }]}>
-            <MaterialIcons name={metric.icon as IconName} size={19} color={currentTone.accent} />
-          </View>
-          <MaterialIcons
-            name="arrow-back"
-            size={15}
-            color={highlighted ? "rgba(255,255,255,0.65)" : "#B1C6D5"}
-          />
-        </View>
-        <Text style={[styles.metricValue, highlighted && styles.metricValueHighlight]}>
+      <View style={styles.metricTop}>
+        <MaterialIcons
+          name={metric.icon as IconName}
+          size={19}
+          color={iconColors[metric.id]}
+        />
+        <Text
+          style={[
+            styles.metricValue,
+            highlighted && styles.metricValueHighlight,
+          ]}
+        >
           {metric.value}
         </Text>
-        <Text style={[styles.metricLabel, highlighted && styles.metricLabelHighlight]}>
-          {metric.label}
-        </Text>
-      </MotionPressable>
-    </Animated.View>
+      </View>
+      <Text
+        style={[styles.metricLabel, highlighted && styles.metricLabelHighlight]}
+      >
+        {metric.label}
+      </Text>
+    </Pressable>
   );
 }
 
 function ActivityRow({
   item,
   onPress,
-  index,
 }: {
   item: AdminHomeActivity;
   onPress: () => void;
-  index: number;
 }) {
   const meta = item.status ? statusStyle[item.status] : null;
   return (
-    <Animated.View
-      entering={FadeInDown.delay(Math.min(80 + index * 35, 260)).duration(180)}
-      layout={Layout.duration(180)}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.activityCard,
+        pressed && styles.activityPressed,
+      ]}
     >
-      <MotionPressable
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.activityCard,
-          pressed && styles.activityPressed,
+      <View
+        style={[
+          styles.activityStrip,
+          { backgroundColor: meta?.strip ?? "#4F8BB5" },
         ]}
-      >
-        <View style={[styles.activityAccent, { backgroundColor: meta?.strip ?? "#4F90BB" }]} />
-        <View style={styles.activityIconWrap}>
-          <MaterialIcons
-            name={meta?.label === "مكتمل" ? "task-alt" : "local-shipping"}
-            size={18}
-            color={meta?.color ?? "#367CA7"}
-          />
-        </View>
-        <View style={styles.activityContent}>
-          <View style={styles.activityTop}>
-            <Text numberOfLines={1} style={styles.activityTitle}>
-              {item.title}
-            </Text>
-            {meta ? (
-              <View style={[styles.statusBadge, { backgroundColor: meta.background }]}>
-                <Text style={[styles.statusText, { color: meta.color }]}>
-                  {meta.label}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <Text numberOfLines={1} style={styles.activitySubtitle}>
-            {item.subtitle}
+      />
+      <View style={styles.activityContent}>
+        <View style={styles.activityTop}>
+          <Text numberOfLines={1} style={styles.activityTitle}>
+            {item.title}
           </Text>
-          <View style={styles.timeRow}>
-            <MaterialIcons name="schedule" size={12} color="#7692A5" />
-            <Text style={styles.timeText}>{item.timestamp}</Text>
-          </View>
+          {meta ? (
+            <View
+              style={[styles.statusBadge, { backgroundColor: meta.background }]}
+            >
+              <Text style={[styles.statusText, { color: meta.color }]}>
+                {meta.label}
+              </Text>
+            </View>
+          ) : null}
         </View>
-        <MaterialIcons name="chevron-left" size={19} color="#8EAABB" />
-      </MotionPressable>
-    </Animated.View>
+        <Text numberOfLines={1} style={styles.activitySubtitle}>
+          {item.subtitle}
+        </Text>
+        <View style={styles.timeRow}>
+          <MaterialIcons name="schedule" size={11} color="#7590A2" />
+          <Text style={styles.timeText}>{item.timestamp}</Text>
+        </View>
+      </View>
+      <MaterialIcons
+        name="chevron-left"
+        size={18}
+        color="#88A0B0"
+        style={styles.activityChevron}
+      />
+    </Pressable>
   );
 }
 
 function SectionHeading({
   title,
-  subtitle,
   action,
   onPress,
 }: {
   title: string;
-  subtitle: string;
   action: string;
   onPress: () => void;
 }) {
   return (
     <View style={styles.sectionHeading}>
-      <View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
-      </View>
-      <MotionPressable
-        onPress={onPress}
-        hitSlop={8}
-        style={({ pressed }) => [styles.sectionAction, pressed && styles.smallPressed]}
-      >
-        <Text style={styles.sectionActionText}>{action}</Text>
-        <MaterialIcons name="arrow-back" size={13} color="#0878D1" />
-      </MotionPressable>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Pressable onPress={onPress} hitSlop={8}>
+        <Text style={styles.sectionAction}>{action}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -778,204 +518,365 @@ function SectionHeading({
 const styles = StyleSheet.create({
   header: {
     alignItems: "center",
-    backgroundColor: "#F4F7FB",
-    flexDirection: "row-reverse",
+    backgroundColor: "#F8FDFF",
+    borderBottomColor: "#E1F0F6",
+    borderBottomWidth: 1,
+    flexDirection: "row",
     height: 56,
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
-  neonDivider: {
-    backgroundColor: "#15C8FF",
-    height: 2,
-    shadowColor: "#15C8FF",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-  },
-  accountButton: {
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#D9EBF8",
-    borderRadius: 15,
-    borderWidth: 1,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  headerBrand: { alignItems: "center", flex: 1, paddingHorizontal: 10 },
-  headerEyebrow: {
-    color: "#6F8A9D",
-    fontSize: 9,
-    fontWeight: "700",
-    writingDirection: "rtl",
-  },
-  headerTitle: {
-    color: "#07488D",
-    fontSize: 14,
-    fontWeight: "800",
-    marginTop: -1,
-    writingDirection: "rtl",
-  },
+  headerSide: { flexDirection: "row", gap: 6 },
   headerRoundButton: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#D9EBF8",
-    borderRadius: 15,
+    backgroundColor: "#EEF8FC",
+    borderColor: "#D6E9F4",
+    borderRadius: 16,
     borderWidth: 1,
-    height: 34,
+    height: 32,
     justifyContent: "center",
     position: "relative",
-    width: 34,
+    width: 32,
   },
   notificationDot: {
-    backgroundColor: "#15C8FF",
-    borderColor: "#F4F7FB",
-    borderRadius: 5,
-    borderWidth: 2,
-    height: 10,
+    backgroundColor: "#159ED8",
+    borderRadius: 4,
+    height: 7,
     position: "absolute",
-    right: 3,
-    top: 3,
-    width: 10,
+    right: 4,
+    top: 5,
+    width: 7,
   },
-  headerPressed: { opacity: 0.78, transform: [{ scale: 0.96 }] },
-  listContent: { paddingBottom: 34, paddingHorizontal: 16, paddingTop: 12 },
-  heroCard: {
-    borderColor: "#D8EBF7",
-    borderRadius: 24,
-    borderWidth: 1,
-    marginBottom: 18,
-    overflow: "hidden",
-    padding: 17,
-    shadowColor: "#0C679D",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-  },
-  heroTopRow: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
-  livePill: {
-    alignItems: "center",
-    backgroundColor: "#E4F8EE",
-    borderRadius: 12,
-    flexDirection: "row-reverse",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  liveDot: { backgroundColor: "#19A778", borderRadius: 4, height: 7, width: 7 },
-  liveText: { color: "#08745A", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
-  heroDate: { color: "#6E90A6", fontSize: 11, fontWeight: "700", writingDirection: "rtl" },
-  heroTitle: {
-    color: "#123D60",
-    fontSize: 21,
+  headerTitle: {
+    color: "#005BA8",
+    fontSize: 14,
     fontWeight: "800",
-    marginTop: 17,
+    writingDirection: "rtl",
+  },
+  supportButton: {
+    alignItems: "center",
+    backgroundColor: "#075EAE",
+    borderRadius: 8,
+    elevation: 2,
+    height: 32,
+    justifyContent: "center",
+    shadowColor: "#0060B8",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    width: 32,
+  },
+  listContent: { paddingBottom: 34, paddingHorizontal: 12, paddingTop: 12 },
+  welcomeCard: {
+    backgroundColor: "rgba(255,255,255,0.70)",
+    borderColor: "#E0F0F7",
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    shadowColor: "#0060B8",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 7,
+  },
+  welcomeTitle: {
+    color: "#155B8D",
+    fontSize: 16,
+    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
-  heroSubtitle: {
-    color: "#608098",
-    fontSize: 12,
-    lineHeight: 20,
-    marginTop: 5,
+  welcomeSubtitle: {
+    color: "#658096",
+    fontSize: 11,
+    marginTop: 4,
     textAlign: "right",
     writingDirection: "rtl",
   },
   errorCard: {
     alignItems: "center",
-    backgroundColor: "#FFF5F5",
-    borderColor: "#F6D5D8",
-    borderRadius: 16,
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+    borderRadius: 12,
     borderWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 10,
-    marginBottom: 15,
+    marginBottom: 12,
     padding: 12,
   },
-  errorIcon: { alignItems: "center", backgroundColor: "#FFE6E8", borderRadius: 11, height: 36, justifyContent: "center", width: 36 },
-  errorCopy: { flex: 1 },
-  errorTitle: { color: "#9C343D", fontSize: 12, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  errorText: { color: "#B35A61", fontSize: 10, lineHeight: 16, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  retryButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#F4CDD0", borderRadius: 10, borderWidth: 1, height: 34, justifyContent: "center", width: 34 },
-  metricsHeader: { alignItems: "flex-end", flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 11 },
-  overline: { color: "#7B9AAC", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  metricsTitle: { color: "#163E5C", fontSize: 17, fontWeight: "800", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  viewOrdersButton: { alignItems: "center", flexDirection: "row-reverse", gap: 3, paddingVertical: 5 },
-  viewOrdersText: { color: "#0878D1", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
-  metricGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, justifyContent: "space-between" },
-  metricAnimatedWrap: { width: "48.5%" },
-  metricCard: {
-    borderColor: "#E6EEF4",
-    borderRadius: 16,
-    borderWidth: 1,
-    minHeight: 90,
-    overflow: "hidden",
-    padding: 11,
-    shadowColor: "#113D5B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.055,
-    shadowRadius: 9,
+  errorText: {
+    color: "#BA1A1A",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 19,
+    textAlign: "center",
+    writingDirection: "rtl",
   },
-  metricCardHighlight: { borderColor: "#0878D1", shadowColor: "#0878D1", shadowOpacity: 0.2, shadowRadius: 13 },
-  metricTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
-  metricIcon: { alignItems: "center", borderRadius: 10, height: 29, justifyContent: "center", width: 29 },
-  metricValue: { color: "#164C70", fontSize: 22, fontWeight: "800", marginTop: 8, textAlign: "right", writingDirection: "rtl" },
+  retryButton: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 4,
+    marginTop: 8,
+  },
+  retryText: {
+    color: "#0060B8",
+    fontSize: 12,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  metricGrid: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: 10,
+    justifyContent: "space-between",
+  },
+  metricCard: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "rgba(255,255,255,0.92)",
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 104,
+    padding: 14,
+    shadowColor: "#0060B8",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    width: "48.5%",
+  },
+  metricCardHighlight: {
+    backgroundColor: "#0060B8",
+    borderColor: "#086FC4",
+    shadowColor: "#0060B8",
+    shadowOpacity: 0.22,
+    shadowRadius: 13,
+  },
+  metricTop: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+  },
+  metricValue: { color: "#1B557E", fontSize: 25, fontWeight: "800" },
   metricValueHighlight: { color: "#FFFFFF" },
-  metricLabel: { color: "#6A879A", fontSize: 10, fontWeight: "700", marginTop: 1, textAlign: "right", writingDirection: "rtl" },
-  metricLabelHighlight: { color: "rgba(255,255,255,0.82)" },
-  metricPressed: { opacity: 0.88, transform: [{ scale: 0.975 }] },
-  metricSkeleton: { backgroundColor: "#FFFFFF", borderColor: "#E6EEF4", borderRadius: 16, borderWidth: 1, minHeight: 90, overflow: "hidden", padding: 11, width: "48.5%" },
-  skeletonIcon: { alignSelf: "flex-end", backgroundColor: "#EDF3F7", borderRadius: 10, height: 29, width: 29 },
-  skeletonNumber: { backgroundColor: "#EAF1F5", borderRadius: 5, height: 19, marginLeft: "auto", marginTop: 8, width: "36%" },
-  skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
-  createCard: { borderColor: "rgba(84,222,255,0.62)", borderRadius: 20, borderWidth: 1, marginTop: 18, overflow: "hidden", shadowColor: "#16CEFF", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.28, shadowRadius: 16 },
-  createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, overflow: "hidden", paddingHorizontal: 16, paddingVertical: 15, position: "relative" },
-  createLedTail: { backgroundColor: "rgba(167,246,255,0.42)", borderRadius: 3, height: 2, position: "absolute" },
-  createLedDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
-  createIconWrap: { alignItems: "center", backgroundColor: "#F5FDFF", borderColor: "rgba(137,240,255,0.8)", borderRadius: 17, borderWidth: 1, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
-  createCopy: { flex: 1 },
-  createKicker: { color: "rgba(231,248,255,0.72)", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  createTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginTop: 3, textAlign: "right", writingDirection: "rtl" },
-  createSubtitle: { color: "rgba(235,249,255,0.86)", fontSize: 11, lineHeight: 17, marginTop: 4, textAlign: "right", writingDirection: "rtl" },
-  createPressed: { opacity: 0.92, transform: [{ scale: 0.985 }] },
-  sectionHeading: { alignItems: "flex-end", flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 11, marginTop: 24 },
-  sectionTitle: { color: "#163E5C", fontSize: 17, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  sectionSubtitle: { color: "#7894A7", fontSize: 10, fontWeight: "700", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  sectionAction: { alignItems: "center", flexDirection: "row-reverse", gap: 3, paddingVertical: 6 },
-  sectionActionText: { color: "#0878D1", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
-  activityCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E4EDF3", borderRadius: 18, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 9, minHeight: 94, overflow: "hidden", paddingHorizontal: 12, paddingVertical: 11, shadowColor: "#153C58", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.045, shadowRadius: 7 },
-  activityAccent: { bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
-  activityIconWrap: { alignItems: "center", backgroundColor: "#F3F8FB", borderRadius: 12, height: 38, justifyContent: "center", width: 38 },
+  metricLabel: {
+    color: "#617B90",
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 12,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  metricLabelHighlight: { color: "rgba(255,255,255,0.92)" },
+  metricSkeleton: {
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 104,
+    width: "48.5%",
+  },
+  createCard: {
+    alignItems: "center",
+    backgroundColor: "#0060B8",
+    borderRadius: 12,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginTop: 14,
+    minHeight: 94,
+    overflow: "hidden",
+    paddingHorizontal: 14,
+    shadowColor: "#0060B8",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.23,
+    shadowRadius: 13,
+  },
+  createTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  createSubtitle: {
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 11,
+    marginTop: 5,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  createPlus: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: 18,
+    height: 38,
+    justifyContent: "center",
+    width: 38,
+  },
+  sectionHeading: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    marginTop: 18,
+  },
+  sectionTitle: {
+    color: "#18547E",
+    fontSize: 14,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  sectionAction: {
+    color: "#0877C2",
+    fontSize: 11,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  activityCard: {
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderColor: "rgba(255,255,255,0.92)",
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+    minHeight: 86,
+    overflow: "hidden",
+    paddingBottom: 11,
+    paddingLeft: 30,
+    paddingRight: 14,
+    paddingTop: 11,
+    position: "relative",
+    shadowColor: "#0060B8",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.045,
+    shadowRadius: 7,
+  },
+  activityStrip: {
+    bottom: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: 4,
+  },
   activityContent: { flex: 1 },
-  activityTop: { alignItems: "center", flexDirection: "row-reverse", gap: 6, justifyContent: "space-between" },
-  activityTitle: { color: "#1A4868", flex: 1, fontSize: 12, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  statusBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4 },
+  activityTop: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 8,
+    justifyContent: "space-between",
+  },
+  activityTitle: {
+    color: "#154F79",
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  statusBadge: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 3 },
   statusText: { fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
-  activitySubtitle: { color: "#5E7C90", fontSize: 11, fontWeight: "700", marginTop: 5, textAlign: "right", writingDirection: "rtl" },
-  timeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 3, marginTop: 6 },
-  timeText: { color: "#7B96A8", fontSize: 10, writingDirection: "rtl" },
-  activityPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
-  loadingActivity: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E3EDF4", borderRadius: 18, borderStyle: "dashed", borderWidth: 1, flexDirection: "row-reverse", gap: 8, justifyContent: "center", minHeight: 100 },
-  loadingIcon: { alignItems: "center", backgroundColor: "#EEF7FC", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },
-  loadingText: { color: "#5F8298", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
-  emptyActivities: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#D9E8F0", borderRadius: 18, borderStyle: "dashed", borderWidth: 1, justifyContent: "center", minHeight: 135, paddingHorizontal: 16 },
-  emptyIcon: { alignItems: "center", backgroundColor: "#EDF6FB", borderRadius: 15, height: 46, justifyContent: "center", width: 46 },
-  emptyTitle: { color: "#315F7C", fontSize: 13, fontWeight: "800", marginTop: 9, writingDirection: "rtl" },
-  emptyText: { color: "#7892A4", fontSize: 11, marginTop: 3, textAlign: "center", writingDirection: "rtl" },
+  activitySubtitle: {
+    color: "#38586F",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 6,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  timeRow: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 3,
+    marginTop: 5,
+  },
+  timeText: { color: "#7590A2", fontSize: 9, writingDirection: "rtl" },
+  activityChevron: { left: 8, position: "absolute", top: 33 },
+  activityPressed: { opacity: 0.78, transform: [{ scale: 0.99 }] },
+  loadingActivity: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderRadius: 12,
+    minHeight: 86,
+    justifyContent: "center",
+  },
+  loadingText: { color: "#638096", fontSize: 12, writingDirection: "rtl" },
+  emptyActivities: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderColor: "#C1DFEA",
+    borderRadius: 12,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 86,
+    paddingHorizontal: 16,
+  },
+  emptyText: { color: "#587386", fontSize: 14, writingDirection: "rtl" },
   captainsSection: { marginTop: 2 },
-  captainsList: { gap: 10, paddingBottom: 8 },
-  captainItem: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E5EDF3", borderRadius: 16, borderWidth: 1, minHeight: 105, paddingHorizontal: 8, paddingVertical: 10, shadowColor: "#143D5B", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.04, shadowRadius: 6, width: 82 },
-  captainAvatar: { alignItems: "center", backgroundColor: "#EAF6FC", borderColor: "#D5EAF5", borderRadius: 22, borderWidth: 1, height: 44, justifyContent: "center", position: "relative", width: 44 },
-  captainInitial: { color: "#21678F", fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
-  availableDot: { backgroundColor: "#18A877", borderColor: "#FFFFFF", borderRadius: 7, borderWidth: 2, bottom: -2, height: 14, position: "absolute", right: -1, width: 14 },
-  captainName: { color: "#315B77", fontSize: 10, fontWeight: "800", marginTop: 7, textAlign: "center", writingDirection: "rtl" },
-  captainAvailability: { color: "#15916C", fontSize: 9, fontWeight: "700", marginTop: 2, writingDirection: "rtl" },
-  captainPressed: { opacity: 0.78, transform: [{ scale: 0.97 }] },
-  emptyCaptainCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E0EAF0", borderRadius: 14, borderWidth: 1, flexDirection: "row-reverse", gap: 7, paddingHorizontal: 12, paddingVertical: 12 },
-  emptyCaptainText: { color: "#638399", fontSize: 11, fontWeight: "700", writingDirection: "rtl" },
-  smallPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
-  roleNotice: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E8D6D8", borderRadius: 22, borderWidth: 1, padding: 24 },
-  roleNoticeIcon: { alignItems: "center", backgroundColor: "#FFF1F2", borderRadius: 18, height: 48, justifyContent: "center", width: 48 },
-  roleNoticeTitle: { color: "#4E2B31", fontSize: 18, fontWeight: "800", marginTop: 12, textAlign: "right", writingDirection: "rtl" },
-  roleNoticeText: { color: "#79646A", fontSize: 13, lineHeight: 21, marginTop: 6, textAlign: "center", writingDirection: "rtl" },
+  captainsList: { gap: 14, paddingBottom: 6 },
+  captainItem: { alignItems: "center", maxWidth: 70, minWidth: 58 },
+  captainAvatar: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    height: 44,
+    justifyContent: "center",
+    position: "relative",
+    shadowColor: "#0060B8",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 7,
+    width: 44,
+  },
+  captainInitial: {
+    color: "#477188",
+    fontSize: 15,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  availableDot: {
+    backgroundColor: "#10B981",
+    borderColor: "#D9EFF9",
+    borderRadius: 7,
+    borderWidth: 2,
+    bottom: 0,
+    height: 13,
+    position: "absolute",
+    right: 0,
+    width: 13,
+  },
+  captainName: {
+    color: "#335872",
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 4,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  captainAvailability: {
+    color: "#55788E",
+    fontSize: 9,
+    marginTop: 1,
+    writingDirection: "rtl",
+  },
+  emptyCaptainText: { color: "#638096", fontSize: 12, writingDirection: "rtl" },
+  pressed: { opacity: 0.74, transform: [{ scale: 0.98 }] },
+  roleNotice: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D8E5F1",
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 20,
+  },
+  roleNoticeTitle: {
+    color: "#17364D",
+    fontSize: 18,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  roleNoticeText: {
+    color: "#52616B",
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
 });
