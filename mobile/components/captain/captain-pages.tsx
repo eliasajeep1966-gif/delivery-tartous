@@ -86,7 +86,7 @@ export function CaptainOrders() {
       {data.error ? (
         <Message text={data.error} />
       ) : data.loading ? (
-        <Message text="جارٍ تحميل طلباتك..." />
+        <LoadingCards />
       ) : data.orders.length ? (
         <>
           <View style={styles.ordersPageSummary}>
@@ -296,7 +296,7 @@ export function CaptainWages() {
       {data.error ? (
         <Message text={data.error} />
       ) : data.loading ? (
-        <Message text="جارٍ تحميل أجورك..." />
+        <LoadingCards includeMetrics />
       ) : (
         <>
           <View style={styles.metrics}>
@@ -445,6 +445,8 @@ export function CaptainCustodyPage() {
     >
       {error ? (
         <Message text={error} />
+      ) : loading ? (
+        <LoadingCards />
       ) : rows.length ? (
         rows.map((row, index) => (
           <Animated.View
@@ -749,6 +751,27 @@ function Message({ text }: { text: string }) {
     </View>
   );
 }
+function LoadingCards({ includeMetrics = false }: { includeMetrics?: boolean }) {
+  return (
+    <View style={styles.loadingCards} accessibilityLabel="جارٍ تحميل البيانات">
+      {includeMetrics ? (
+        <View style={styles.loadingMetrics}>
+          {["metric-one", "metric-two", "metric-three", "metric-four"].map((key) => (
+            <View key={key} style={[styles.loadingBlock, styles.loadingMetric]} />
+          ))}
+        </View>
+      ) : null}
+      {["row-one", "row-two", "row-three"].map((key) => (
+        <View key={key} style={[styles.loadingBlock, styles.loadingCard]}>
+          <View style={styles.loadingLineShort} />
+          <View style={styles.loadingLineLong} />
+          <View style={styles.loadingLineMedium} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function Button({
   label,
   onPress,
@@ -1087,6 +1110,14 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
+  loadingCards: { gap: 10 },
+  loadingMetrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 },
+  loadingBlock: { backgroundColor: "#EAF3F7", overflow: "hidden" },
+  loadingMetric: { borderRadius: 15, height: 84, width: "48.5%" },
+  loadingCard: { borderRadius: 17, gap: 10, minHeight: 118, padding: 14 },
+  loadingLineShort: { backgroundColor: "#D5E5EC", borderRadius: 6, height: 10, width: "30%" },
+  loadingLineMedium: { backgroundColor: "#D5E5EC", borderRadius: 6, height: 10, width: "56%" },
+  loadingLineLong: { alignSelf: "flex-end", backgroundColor: "#D5E5EC", borderRadius: 7, height: 14, width: "72%" },
   message: {
     alignItems: "center",
     backgroundColor: "#FFFFFF",

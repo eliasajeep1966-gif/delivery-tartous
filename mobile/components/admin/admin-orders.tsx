@@ -297,6 +297,7 @@ export function AdminOrders() {
       <FlatList
         data={visibleOrders}
         keyExtractor={(item) => item.id}
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         refreshControl={
           <RefreshControl
             refreshing={orders.isRefetching}

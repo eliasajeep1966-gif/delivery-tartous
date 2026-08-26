@@ -2,6 +2,8 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type ComponentProps, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { MotionPressable } from "@/components/ui/motion-pressable";
+
 type IconName = ComponentProps<typeof MaterialIcons>["name"];
 type KeyboardType = ComponentProps<typeof TextInput>["keyboardType"];
 
@@ -84,16 +86,18 @@ export function AuthPasswordField({ visible, onToggleVisibility, ...props }: Aut
           style={[styles.field, styles.rtlField]}
           accessibilityLabel={props.label}
         />
-        <Pressable
+        <MotionPressable
           onPress={onToggleVisibility}
           disabled={!props.editable}
           hitSlop={10}
-          style={({ pressed }) => [styles.visibilityButton, pressed && styles.iconPressed]}
+          haptic="none"
+          pressedScale={0.92}
+          style={styles.visibilityButton}
           accessibilityRole="button"
           accessibilityLabel={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
         >
           <MaterialIcons name={visible ? "visibility-off" : "visibility"} size={21} color="#60707D" />
-        </Pressable>
+        </MotionPressable>
       </View>
     </View>
   );
@@ -101,15 +105,16 @@ export function AuthPasswordField({ visible, onToggleVisibility, ...props }: Aut
 
 export function AuthPrimaryButton({ label, icon, loading, onPress }: { label: string; icon: IconName; loading: boolean; onPress: () => void }) {
   return (
-    <Pressable
+    <MotionPressable
       onPress={onPress}
       disabled={loading}
-      style={({ pressed }) => [styles.primaryButton, (pressed || loading) && styles.buttonPressed]}
+      haptic="medium"
+      style={[styles.primaryButton, loading && styles.buttonPressed]}
       accessibilityRole="button"
     >
       {loading ? <ActivityIndicator color="#FFFFFF" /> : <MaterialIcons name={icon} size={22} color="#FFFFFF" />}
       <Text style={styles.primaryText}>{label}</Text>
-    </Pressable>
+    </MotionPressable>
   );
 }
 

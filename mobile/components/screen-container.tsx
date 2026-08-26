@@ -1,6 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, View, type ViewProps } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { cn } from "@/lib/utils";
@@ -46,17 +45,14 @@ export function ScreenContainer({
         className={cn("flex-1", safeAreaClassName)}
         style={style}
       >
-        <Animated.View entering={FadeIn.duration(180)} style={styles.content}>
-          <View className={cn("flex-1", className)} style={styles.transparentLayer}>
-            {children}
-          </View>
-        </Animated.View>
+        <View className={cn("flex-1", className)} style={styles.transparentLayer}>
+          {children}
+        </View>
       </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1 },
   transparentLayer: { backgroundColor: "transparent" },
 });
