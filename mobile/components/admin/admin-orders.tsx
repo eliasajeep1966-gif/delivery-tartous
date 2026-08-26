@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { type ComponentProps, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -10,8 +10,8 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
+  Text as NativeText,
+  TextInput as NativeTextInput,
   View,
 } from "react-native";
 
@@ -33,6 +33,16 @@ import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 import { notifyCaptainOfOrder } from "@/lib/notifications";
 
 import { nativeAdminContract } from "@/lib/supabase/native-admin-contract";
+
+function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
+  const flattened = StyleSheet.flatten(style);
+  const isBold = flattened?.fontWeight === "700" || flattened?.fontWeight === "800" || flattened?.fontWeight === "bold";
+  return <NativeText {...props} style={[style, { fontFamily: isBold ? "Cairo_700Bold" : "Cairo_400Regular" }]} />;
+}
+
+function TextInput({ style, ...props }: ComponentProps<typeof NativeTextInput>) {
+  return <NativeTextInput {...props} style={[style, { fontFamily: "Cairo_400Regular" }]} />;
+}
 
 const filters: { id: AdminOrdersFilter; label: string }[] = [
   { id: "all", label: "الكل" },
@@ -105,6 +115,20 @@ function formatDate(value: string) {
       month: "short",
       day: "numeric",
       hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return "غير متاح";
+  }
+}
+
+function formatCompactDate(value: string) {
+  try {
+    return new Intl.DateTimeFormat("ar-SY", {
+      timeZone: "Asia/Damascus",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
       minute: "2-digit",
     }).format(new Date(value));
   } catch {
@@ -434,33 +458,36 @@ function OrderRow({
       <View style={[styles.orderStrip, { backgroundColor: status.strip }]} />
       <View style={styles.orderBody}>
         <View style={styles.orderTop}>
-          <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
-          <View
-            style={[styles.statusBadge, { backgroundColor: status.background }]}
-          >
-            <Text style={[styles.statusText, { color: status.text }]}>
-              {status.label}
-            </Text>
+          <View style={styles.orderIdentity}>
+            <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
+            <Text style={styles.orderDate}>{formatCompactDate(item.createdAt)}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: status.background }]}>
+            <Text style={[styles.statusText, { color: status.text }]}>{status.label}</Text>
           </View>
         </View>
         <View style={styles.orderCustomerRow}>
-          <Text style={styles.orderCustomer}>{item.customerName}</Text>
+          <View style={styles.customerNameRow}>
+            <MaterialIcons name="person-outline" size={14} color="#5E7C90" />
+            <Text numberOfLines={1} style={styles.orderCustomer}>{item.customerName}</Text>
+          </View>
           <Text style={styles.orderFee}>{formatMoney(item.fee)}</Text>
         </View>
-        <View style={styles.locationRow}>
-          <MaterialIcons name="location-on" size={15} color="#414752" />
-          <Text numberOfLines={1} style={styles.locationText}>
-            {item.pickupAddress} ← {item.deliveryAddress}
+        <View style={styles.routeRow}>
+          <MaterialIcons name="storefront" size={14} color="#0878D1" />
+          <Text numberOfLines={1} style={styles.routeText}>{item.pickupAddress}</Text>
+          <MaterialIcons name="arrow-back" size={13} color="#91A8B8" />
+          <MaterialIcons name="location-on" size={14} color="#16A879" />
+          <Text numberOfLines={1} style={styles.routeText}>{item.deliveryAddress}</Text>
+        </View>
+        <View style={styles.captainRow}>
+          <MaterialIcons name="two-wheeler" size={13} color={item.assignedCaptainName ? "#0878D1" : "#7E95A5"} />
+          <Text numberOfLines={1} style={[styles.captainText, !item.assignedCaptainName && styles.captainTextMuted]}>
+            {item.assignedCaptainName ?? "بانتظار تعيين كابتن"}
           </Text>
         </View>
-        <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
       </View>
-      <MaterialIcons
-        name="arrow-back"
-        size={20}
-        color="#75818E"
-        style={styles.orderArrow}
-      />
+      <MaterialIcons name="chevron-left" size={19} color="#91A8B8" style={styles.orderArrow} />
     </Pressable>
   );
 }
@@ -904,55 +931,51 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 36,
   },
-  listContent: { paddingBottom: 30, paddingHorizontal: 18, paddingTop: 20 },
+  listContent: { paddingBottom: 24, paddingHorizontal: 16, paddingTop: 12 },
   heroCard: {
-    alignItems: "flex-start",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 16,
-    borderWidth: 1,
+    alignItems: "center",
+    backgroundColor: "#F9FCFF",
+    borderBottomColor: "#D7E7F1",
+    borderBottomWidth: 1,
     flexDirection: "row-reverse",
-    padding: 16,
-    shadowColor: "#004889",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    paddingBottom: 10,
+    paddingHorizontal: 2,
   },
   heroIcon: {
     alignItems: "center",
     backgroundColor: "#EAF4FF",
-    borderRadius: 16,
-    height: 44,
+    borderRadius: 10,
+    height: 34,
     justifyContent: "center",
-    marginLeft: 12,
-    width: 44,
+    marginLeft: 9,
+    width: 34,
   },
   heroText: { flex: 1 },
   heroTitle: {
-    color: "#1C1B1B",
-    fontSize: 18,
+    color: "#163E5C",
+    fontSize: 16,
     fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   heroSubtitle: {
-    color: "#58616B",
-    fontSize: 12,
-    lineHeight: 19,
-    marginTop: 4,
+    color: "#6F899B",
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 1,
     textAlign: "right",
     writingDirection: "rtl",
   },
   searchBox: {
     alignItems: "center",
-    backgroundColor: "#FBFDFF",
-    borderColor: "#C9D9E7",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D7E5EE",
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row-reverse",
-    height: 44,
-    marginTop: 14,
-    paddingHorizontal: 12,
+    height: 42,
+    marginTop: 10,
+    paddingHorizontal: 11,
   },
   searchInput: {
     color: "#1C1B1B",
@@ -961,15 +984,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
     writingDirection: "rtl",
   },
-  filters: { gap: 8, paddingVertical: 14 },
+  filters: { gap: 6, paddingVertical: 10 },
   filterChip: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#D4E2EC",
-    borderRadius: 16,
+    borderColor: "#D8E5ED",
+    borderRadius: 14,
     borderWidth: 1,
-    height: 32,
+    height: 30,
     justifyContent: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 11,
   },
   filterChipSelected: { backgroundColor: "#0060B8", borderColor: "#0060B8" },
   filterText: {
@@ -983,11 +1006,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 9,
   },
   listTitle: {
-    color: "#1C1B1B",
-    fontSize: 16,
+    color: "#163E5C",
+    fontSize: 15,
     fontWeight: "800",
     writingDirection: "rtl",
   },
@@ -1004,69 +1027,57 @@ const styles = StyleSheet.create({
   },
   orderCard: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#E0E8EE",
-    borderRadius: 16,
+    borderColor: "#E2EBF1",
+    borderRadius: 15,
     borderWidth: 1,
-    marginBottom: 12,
-    minHeight: 128,
+    marginBottom: 8,
+    minHeight: 112,
     overflow: "hidden",
-    paddingBottom: 14,
-    paddingLeft: 34,
-    paddingRight: 18,
-    paddingTop: 14,
+    paddingBottom: 10,
+    paddingLeft: 31,
+    paddingRight: 15,
+    paddingTop: 10,
     position: "relative",
-    shadowColor: "#004889",
+    shadowColor: "#164865",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
   },
-  orderStrip: { bottom: 0, position: "absolute", right: 0, top: 0, width: 6 },
+  orderStrip: { bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
   orderBody: { flex: 1 },
   orderTop: {
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
   },
-  orderNumber: { color: "#1C1B1B", fontSize: 16, fontWeight: "800" },
-  statusBadge: { borderRadius: 5, paddingHorizontal: 8, paddingVertical: 4 },
-  statusText: { fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  orderIdentity: { alignItems: "center", flexDirection: "row-reverse", gap: 7 },
+  orderNumber: { color: "#163E5C", fontSize: 15, fontWeight: "800", writingDirection: "rtl" },
+  statusBadge: { borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 },
+  statusText: { fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
   orderCustomerRow: {
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    marginTop: 8,
+    marginTop: 7,
   },
-  orderCustomer: { color: "#1C1B1B", fontSize: 14, writingDirection: "rtl" },
+  customerNameRow: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 4, marginLeft: 12 },
+  orderCustomer: { color: "#234B66", flexShrink: 1, fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
   orderFee: {
-    color: "#1C1B1B",
-    fontSize: 16,
+    color: "#163E5C",
+    fontSize: 13,
     fontWeight: "800",
     writingDirection: "rtl",
   },
-  locationRow: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    marginTop: 7,
-  },
-  locationText: {
-    color: "#414752",
-    flex: 1,
-    fontSize: 12,
-    marginRight: 4,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  orderDate: {
-    color: "#75818E",
-    fontSize: 10,
-    marginTop: 8,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  orderArrow: { left: 9, position: "absolute", top: 52 },
+  routeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 7 },
+  routeText: { color: "#5A7487", flex: 1, fontSize: 10, fontWeight: "700", textAlign: "right", writingDirection: "rtl" },
+  captainRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 6 },
+  captainText: { color: "#0878D1", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
+  captainTextMuted: { color: "#8096A6" },
+  orderDate: { color: "#7892A4", fontSize: 9, writingDirection: "rtl" },
+  orderArrow: { left: 8, position: "absolute", top: 46 },
   orderPressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },
   skeletonWrap: { gap: 12 },
-  skeleton: { backgroundColor: "#FFFFFF", borderRadius: 16, height: 128 },
+  skeleton: { backgroundColor: "#FFFFFF", borderRadius: 15, height: 112 },
   errorBox: {
     alignItems: "center",
     backgroundColor: "#FEF2F2",
