@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 
 import { registerCaptainPushNotifications } from "@/lib/notifications";
+import { useAppToast } from "@/contexts/app-toast-context";
 import {
   createContext,
   type PropsWithChildren,
@@ -106,6 +107,7 @@ function profileIssue(code: "profile-missing" | "profile-mismatch"): AuthIssue {
 }
 
 export function DeliveryAuthProvider({ children }: PropsWithChildren) {
+  const { showToast } = useAppToast();
   const queryClient = useQueryClient();
   const [state, setState] = useState<DeliveryAuthState>(initialState);
   const stateRef = useRef(initialState);
@@ -243,9 +245,21 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           operation: "idle",
         });
         if (profile.role === "captain") {
-          void registerCaptainPushNotifications(profile.id).catch(
-            () => undefined,
-          );
+          void registerCaptainPushNotifications(profile.id).then((token) => {
+            if (!token) {
+              showToast({
+                message: "تعذر تفعيل إشعارات الطلبات. تحقق من صلاحيات التطبيق.",
+                tone: "error",
+                durationMs: 4000,
+              });
+            }
+          }).catch(() => {
+            showToast({
+              message: "خطأ أثناء تسجيل الإشعارات.",
+              tone: "error",
+              durationMs: 4000,
+            });
+          });
         }
       } catch (error) {
         if (!mountedRef.current || version !== requestVersionRef.current)
@@ -267,7 +281,7 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
           loadingProfileForUserRef.current = null;
       }
     },
-    [applyState, clearQueryCache, getClient, signOutLocallyWithIssue],
+    [applyState, clearQueryCache, getClient, showToast, signOutLocallyWithIssue],
   );
 
   const refresh = useCallback(async () => {

@@ -10,6 +10,7 @@ import { orderStatusPresentation, type CreateOrderFlowDraft, type OrderStatus } 
 import type { HomeOrderFilter } from '@/features/admin/homeMappers';
 import { useAdminHomeData } from '@/features/admin/useAdminHomeData';
 import { WebRequestTimeoutError } from '@/lib/authRequest';
+import { getWebSupabaseClient } from '@/data/supabase/webSupabaseClient';
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -62,6 +63,10 @@ export default function Home() {
       const createdOrder = await createOrderWithStops({ stops, fee: flow.totalFee, idempotencyKey });
       try {
         const assignedOrder = await assignOrderCaptain(createdOrder.id, flow.assignedCaptainId);
+        const { error: pushError } = await getWebSupabaseClient().functions.invoke('send-order-push', {
+          body: { orderId: assignedOrder.id },
+        });
+        if (pushError) console.error('Order push notification failed.', pushError);
         setIsCreateOrderOpen(false);
         void reload({ background: true });
         toast.success(`تم إنشاء وتعيين الطلب #${assignedOrder.order_number}.`);
