@@ -112,29 +112,6 @@ function periodRangeLabel(period: ExpenseBrowserPeriod, range: DateRange): strin
   }).format(dateFromKey(range.start));
 }
 
-function groupExpensesByDay(expenses: readonly NativeOfficeExpense[]): ExpenseDay[] {
-  const days = new Map<string, ExpenseDay>();
-  for (const expense of expenses) {
-    const current = days.get(expense.expense_date) ?? {
-      date: expense.expense_date,
-      total: 0,
-      expenses: [],
-    };
-    current.total += Number(expense.amount);
-    current.expenses.push(expense);
-    days.set(expense.expense_date, current);
-  }
-
-  return [...days.values()]
-    .map((day) => ({
-      ...day,
-      expenses: [...day.expenses].sort((a, b) =>
-        b.created_at.localeCompare(a.created_at),
-      ),
-    }))
-    .sort((a, b) => b.date.localeCompare(a.date));
-}
-
 export function AdminOfficeExpenses() {
   const router = useRouter();
   const { showToast } = useAppToast();
@@ -146,18 +123,21 @@ export function AdminOfficeExpenses() {
   const [browserPeriod, setBrowserPeriod] = useState<ExpenseBrowserPeriod>("daily");
   const [browserAnchor, setBrowserAnchor] = useState(today);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const expenses = useNativeOfficeExpenses();
-  const expenseDays = useMemo(
-    () => groupExpensesByDay(expenses.data ?? []),
-    [expenses.data],
-  );
   const dateRange = useMemo(
     () => rangeForPeriod(browserPeriod, browserAnchor),
     [browserAnchor, browserPeriod],
   );
-  const visibleExpenseDays = useMemo(
-    () => expenseDays.filter((day) => day.date >= dateRange.start && day.date <= dateRange.end),
-    [dateRange.end, dateRange.start, expenseDays],
+  const expenses = useNativeOfficeExpenses({
+    startDate: dateRange.start,
+    endDate: dateRange.end,
+  });
+  const expenseDays = useMemo<ExpenseDay[]>(
+    () => expenses.days.map((day) => ({
+      date: day.expenseDate,
+      total: day.expenseTotal,
+      expenses: day.expenses,
+    })),
+    [expenses.days],
   );
   const latestSelectableDay = today();
   const canMoveNext = dateRange.end < latestSelectableDay;
@@ -287,7 +267,7 @@ export function AdminOfficeExpenses() {
             <Text style={styles.sectionTitle}>سجل مصاريف المكتب</Text>
             <Text style={styles.muted}>اختر الفترة ثم اضغط اليوم لرؤية مصاريفه</Text>
           </View>
-          <Text style={styles.dayCount}>{visibleExpenseDays.length} أيام</Text>
+          <Text style={styles.dayCount}>{expenseDays.length} أيام</Text>
         </View>
 
         <View style={styles.periodButtons}>
@@ -325,7 +305,7 @@ export function AdminOfficeExpenses() {
             style={({ pressed }) => [styles.navigatorButton, pressed && styles.pressed]}
           >
             <MaterialIcons name="chevron-right" size={21} color={BLUE} />
-            <Text style={styles.navigatorButtonText}>السابق</Text>
+            <Text style={styles.navigatorButtonText}>فترة أقدم</Text>
           </Pressable>
           <Text numberOfLines={1} style={styles.periodRangeTitle}>{periodRangeLabel(browserPeriod, dateRange)}</Text>
           <Pressable
@@ -339,7 +319,7 @@ export function AdminOfficeExpenses() {
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.navigatorButtonText}>التالي</Text>
+            <Text style={styles.navigatorButtonText}>فترة أحدث</Text>
             <MaterialIcons name="chevron-left" size={21} color={BLUE} />
           </Pressable>
         </View>
@@ -348,8 +328,8 @@ export function AdminOfficeExpenses() {
           <Message text="جارٍ تحميل سجل المصاريف..." />
         ) : expenses.error ? (
           <Message text="تعذر تحميل سجل المصاريف." />
-        ) : visibleExpenseDays.length ? (
-          visibleExpenseDays.map((day) => (
+        ) : expenseDays.length ? (
+          expenseDays.map((day) => (
             <MotionPressable
               key={day.date}
               onPress={() => setSelectedDay(day)}
@@ -376,6 +356,39 @@ export function AdminOfficeExpenses() {
         ) : (
           <Message text="لا توجد مصاريف ضمن الفترة المختارة." />
         )}
+        {expenseDays.length ? (
+          <View style={styles.pagination}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !expenses.hasPreviousPage }}
+              disabled={!expenses.hasPreviousPage || expenses.isFetching}
+              onPress={expenses.previousPage}
+              style={({ pressed }) => [
+                styles.paginationButton,
+                (!expenses.hasPreviousPage || expenses.isFetching) && styles.paginationButtonDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <MaterialIcons name="chevron-right" size={21} color={BLUE} />
+              <Text style={styles.paginationButtonText}>السابق</Text>
+            </Pressable>
+            <Text style={styles.paginationLabel}>صفحة {expenses.pageNumber} · 5 أيام</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !expenses.hasNextPage }}
+              disabled={!expenses.hasNextPage || expenses.isFetching}
+              onPress={expenses.nextPage}
+              style={({ pressed }) => [
+                styles.paginationButton,
+                (!expenses.hasNextPage || expenses.isFetching) && styles.paginationButtonDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.paginationButtonText}>التالي</Text>
+              <MaterialIcons name="chevron-left" size={21} color={BLUE} />
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       <DayExpensesModal
@@ -525,6 +538,11 @@ const styles = StyleSheet.create({
   navigatorButtonDisabled: { opacity: 0.32 },
   navigatorButtonText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   periodRangeTitle: { color: "#244E69", flex: 1, fontFamily: "Cairo_700Bold", fontSize: 10, paddingHorizontal: 4, textAlign: "center", writingDirection: "rtl" },
+  pagination: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#D3E3F0", borderRadius: 14, borderWidth: 1, flexDirection: "row-reverse", justifyContent: "space-between", minHeight: 48, paddingHorizontal: 7 },
+  paginationButton: { alignItems: "center", flexDirection: "row-reverse", gap: 1, minHeight: 36, paddingHorizontal: 5 },
+  paginationButtonDisabled: { opacity: 0.32 },
+  paginationButtonText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
+  paginationLabel: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 9, writingDirection: "rtl" },
   dayCard: { alignItems: "center", backgroundColor: "#FFF", borderColor: "#D3E3F0", borderRadius: 16, borderWidth: 1, flexDirection: "row-reverse", gap: 10, minHeight: 70, padding: 12 },
   dayIcon: { alignItems: "center", backgroundColor: "#FFF1E8", borderRadius: 12, height: 40, justifyContent: "center", width: 40 },
   dayCopy: { alignItems: "flex-end", flex: 1 },

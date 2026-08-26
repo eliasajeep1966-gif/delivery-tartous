@@ -462,6 +462,22 @@ export type NativeOfficeExpense = {
   created_at: string;
 };
 
+export type NativeOfficeExpenseDay = {
+  expenseDate: string;
+  expenseTotal: number;
+  expenseCount: number;
+  expenses: NativeOfficeExpense[];
+  hasMore: boolean;
+};
+
+type NativeOfficeExpenseDayRpcRow = {
+  expense_date: string;
+  expense_total: number | string;
+  expense_count: number | string;
+  expenses: Array<Omit<NativeOfficeExpense, "expense_date">>;
+  has_more: boolean;
+};
+
 export type NativeCompanyExpensePeriodRow = {
   period_start: string;
   period_end: string;
@@ -511,13 +527,35 @@ export const nativeOfficeExpensesContract = {
         "تعذر تحميل ملخص مصاريف المكتب.",
       );
     },
-    async list(): Promise<NativeOfficeExpense[]> {
-      return unwrap(
-        (await getNativeSupabaseClient().rpc("list_office_expenses", {
-          p_limit: 100,
-        })) as RpcResult<NativeOfficeExpense[]>,
+    async listDayPage(input: {
+      startDate: string;
+      endDate: string;
+      beforeDay: string | null;
+    }): Promise<NativeOfficeExpenseDay[]> {
+      const rows = unwrap(
+        (await getNativeSupabaseClient().rpc("get_office_expense_day_page", {
+          p_start_date: input.startDate,
+          p_end_date: input.endDate,
+          p_before_day: input.beforeDay,
+          p_day_limit: 5,
+        })) as RpcResult<NativeOfficeExpenseDayRpcRow[]>,
         "تعذر تحميل سجل مصاريف المكتب.",
       );
+      return rows.flatMap((row) => {
+        const expenseDate = optionalText(row.expense_date);
+        if (!expenseDate || !Array.isArray(row.expenses)) return [];
+        return [{
+          expenseDate,
+          expenseTotal: finiteNumber(row.expense_total),
+          expenseCount: Math.max(0, Math.floor(finiteNumber(row.expense_count))),
+          expenses: row.expenses.map((expense) => ({
+            ...expense,
+            amount: finiteNumber(expense.amount),
+            expense_date: expenseDate,
+          })),
+          hasMore: row.has_more === true,
+        }];
+      });
     },
   },
   actions: {
@@ -624,14 +662,52 @@ export function useNativeOfficeExpensePeriods(period: NativeFinancePeriod){
   return query;
 }
 
-export function useNativeOfficeExpenses() {
+export function useNativeOfficeExpenses(input: {
+  startDate: string;
+  endDate: string;
+}) {
   const queryClient = useQueryClient();
+  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([null]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const beforeDay = cursorHistory[pageIndex] ?? null;
+
+  useEffect(() => {
+    setCursorHistory([null]);
+    setPageIndex(0);
+  }, [input.endDate, input.startDate]);
+
   const query = useQuery({
-    queryKey: ["admin-office-expenses"],
-    queryFn: () => nativeOfficeExpensesContract.reads.list(),
+    queryKey: [
+      "admin-office-expenses",
+      input.startDate,
+      input.endDate,
+      beforeDay,
+    ],
+    queryFn: () => nativeOfficeExpensesContract.reads.listDayPage({
+      ...input,
+      beforeDay,
+    }),
     staleTime: 20_000,
     retry: 1,
   });
+
+  const days = query.data ?? [];
+  const hasNextPage = Boolean(days.at(-1)?.hasMore);
+  const hasPreviousPage = pageIndex > 0;
+
+  const nextPage = useCallback(() => {
+    const lastDay = days.at(-1)?.expenseDate;
+    if (!lastDay || !hasNextPage || query.isFetching) return;
+    const nextIndex = pageIndex + 1;
+    setCursorHistory((current) => [...current.slice(0, nextIndex), lastDay]);
+    setPageIndex(nextIndex);
+  }, [days, hasNextPage, pageIndex, query.isFetching]);
+
+  const previousPage = useCallback(() => {
+    if (!hasPreviousPage || query.isFetching) return;
+    setPageIndex((current) => Math.max(0, current - 1));
+  }, [hasPreviousPage, query.isFetching]);
+
   const createExpense = async (input: {
     title: string;
     amount: number;
@@ -643,11 +719,23 @@ export function useNativeOfficeExpenses() {
     await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
     return result;
   };
+
   const deleteExpense = async (id: string) => {
     const result = await nativeOfficeExpensesContract.actions.remove(id);
     await queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
     await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
     return result;
   };
-  return { ...query, createExpense, deleteExpense };
+
+  return {
+    ...query,
+    days,
+    pageNumber: pageIndex + 1,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage,
+    previousPage,
+    createExpense,
+    deleteExpense,
+  };
 }
