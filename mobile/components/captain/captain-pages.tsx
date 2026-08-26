@@ -1,5 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   Linking,
@@ -21,9 +21,12 @@ import {
   useNativeCaptainOrders,
 } from "@/features/captain/use-native-captain-dashboard";
 import {
+  CAPTAIN_WAGES_PAGE_SIZE,
+  useNativeCaptainWages,
+} from "@/features/captain/use-native-captain-wages";
+import {
   nativeCaptainContract,
   type CaptainCustody,
-  type CaptainWageRow,
 } from "@/lib/supabase/native-captain-contract";
 
 const DEEP_BLUE = "#063B78";
@@ -38,23 +41,6 @@ const date = (value: string | null) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "غير مسجل";
-
-type Period = "daily" | "weekly" | "monthly";
-function inPeriod(value: string, period: Period) {
-  const time = new Date(value).getTime();
-  const now = new Date();
-  const start = new Date(now);
-  if (period === "daily") start.setHours(0, 0, 0, 0);
-  if (period === "weekly") {
-    start.setDate(now.getDate() - 6);
-    start.setHours(0, 0, 0, 0);
-  }
-  if (period === "monthly") {
-    start.setDate(1);
-    start.setHours(0, 0, 0, 0);
-  }
-  return time >= start.getTime() && time <= now.getTime();
-}
 
 export function CaptainOrders() {
   const data = useNativeCaptainOrders();
@@ -159,66 +145,36 @@ export function CaptainOrders() {
 }
 
 export function CaptainWages() {
-  const { profile } = useDeliveryAuth();
-  const [rows, setRows] = useState<CaptainWageRow[]>([]);
-  const [period, setPeriod] = useState<Period>("daily");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    if (!profile) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setRows(await nativeCaptainContract.reads.wages(profile.id));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر تحميل الأجور.");
-    } finally {
-      setLoading(false);
-    }
-  }, [profile]);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void load();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [load]);
-  const visible = useMemo(
-    () => rows.filter((row) => inPeriod(row.completed_at, period)),
-    [period, rows],
+  const data = useNativeCaptainWages();
+  const firstRowNumber = data.total
+    ? data.page * CAPTAIN_WAGES_PAGE_SIZE + 1
+    : 0;
+  const lastRowNumber = Math.min(
+    (data.page + 1) * CAPTAIN_WAGES_PAGE_SIZE,
+    data.total,
   );
-  const totals = useMemo(
-    () =>
-      visible.reduce(
-        (sum, row) => ({
-          gross: sum.gross + row.gross_fee,
-          captain: sum.captain + row.captain_amount,
-          company: sum.company + row.company_amount,
-          settlement: sum.settlement + row.settlement_amount,
-          paid: sum.paid + row.paid_amount,
-          unpaid: sum.unpaid + row.unpaid_amount,
-        }),
-        { gross: 0, captain: 0, company: 0, settlement: 0, paid: 0, unpaid: 0 },
-      ),
-    [visible],
-  );
+
   return (
     <Page
       title="أجوري"
       subtitle="تفاصيل الأجور من السجلات الفعلية"
-      refreshing={loading}
-      onRefresh={() => void load()}
+      refreshing={data.refreshing}
+      onRefresh={() => void data.reload(true)}
     >
       <View style={styles.periods}>
         {(["daily", "weekly", "monthly"] as const).map((value) => (
           <MotionPressable
             key={value}
-            onPress={() => setPeriod(value)}
-            style={[styles.period, period === value && styles.periodActive]}
+            onPress={() => data.selectPeriod(value)}
+            style={[
+              styles.period,
+              data.period === value && styles.periodActive,
+            ]}
           >
             <Text
               style={[
                 styles.periodText,
-                period === value && styles.periodTextActive,
+                data.period === value && styles.periodTextActive,
               ]}
             >
               {value === "daily"
@@ -230,46 +186,111 @@ export function CaptainWages() {
           </MotionPressable>
         ))}
       </View>
-      {error ? (
-        <Message text={error} />
+      {data.error ? (
+        <Message text={data.error} />
+      ) : data.loading ? (
+        <Message text="جارٍ تحميل أجورك..." />
       ) : (
         <>
           <View style={styles.metrics}>
-            <Metric label="الإجمالي" value={money(totals.gross)} />
-            <Metric label="صافي الكابتن (70%)" value={money(totals.captain)} />
-            <Metric label="حصة الشركة" value={money(totals.company)} />
-            <Metric label="التسوية" value={money(totals.settlement)} />
-            <Metric label="المسدّد" value={money(totals.paid)} />
-            <Metric label="المتبقي" value={money(totals.unpaid)} />
+            <Metric label="الإجمالي" value={money(data.totals.gross)} />
+            <Metric
+              label="صافي الكابتن (70%)"
+              value={money(data.totals.captain)}
+            />
+            <Metric label="حصة الشركة" value={money(data.totals.company)} />
+            <Metric label="التسوية" value={money(data.totals.settlement)} />
+            <Metric label="المسدّد" value={money(data.totals.paid)} />
+            <Metric label="المتبقي" value={money(data.totals.unpaid)} />
           </View>
-          {visible.map((row, index) => (
-            <Animated.View
-              entering={FadeInDown.delay(70 + index * 30).duration(190)}
-              key={row.financial_ledger_id}
-              style={styles.card}
-            >
-              <View style={styles.between}>
+
+          {data.rows.length ? (
+            <>
+              <View style={styles.ordersPageSummary}>
                 <View>
-                  <Text style={styles.muted}>الطلب #{row.order_number}</Text>
-                  <Text style={styles.line}>{date(row.completed_at)}</Text>
-                </View>
-                <View style={styles.left}>
-                  <Text style={styles.amount}>
-                    {money(row.captain_amount)} (70%)
-                  </Text>
-                  <Text style={styles.company}>
-                    الشركة: {money(row.company_amount)}
+                  <Text style={styles.ordersPageTitle}>سجل الأجور</Text>
+                  <Text style={styles.ordersPageHint}>
+                    عرض {firstRowNumber}–{lastRowNumber} من {data.total}
                   </Text>
                 </View>
+                <Text style={styles.ordersPageCount}>{data.total} سجل</Text>
               </View>
-              <View style={styles.divider} />
-              <Text style={row.is_fully_paid ? styles.paid : styles.unpaid}>
-                {row.is_fully_paid
-                  ? "تم تسليم الأجر"
-                  : `متبقي ${money(row.unpaid_amount)}`}
-              </Text>
-            </Animated.View>
-          ))}
+
+              {data.rows.map((row, index) => (
+                <Animated.View
+                  entering={FadeInDown.delay(70 + index * 30).duration(190)}
+                  key={row.financial_ledger_id}
+                  style={styles.card}
+                >
+                  <View style={styles.between}>
+                    <View>
+                      <Text style={styles.muted}>الطلب #{row.order_number}</Text>
+                      <Text style={styles.line}>{date(row.completed_at)}</Text>
+                    </View>
+                    <View style={styles.left}>
+                      <Text style={styles.amount}>
+                        {money(row.captain_amount)} (70%)
+                      </Text>
+                      <Text style={styles.company}>
+                        الشركة: {money(row.company_amount)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.divider} />
+                  <Text style={row.is_fully_paid ? styles.paid : styles.unpaid}>
+                    {row.is_fully_paid
+                      ? "تم تسليم الأجر"
+                      : `متبقي ${money(row.unpaid_amount)}`}
+                  </Text>
+                </Animated.View>
+              ))}
+
+              {data.pageCount > 1 ? (
+                <View style={styles.ordersPagination}>
+                  <MotionPressable
+                    accessibilityLabel="صفحة الأجور السابقة"
+                    disabled={!data.hasPreviousPage}
+                    onPress={data.previousPage}
+                    style={[
+                      styles.ordersPaginationButton,
+                      !data.hasPreviousPage &&
+                        styles.ordersPaginationButtonDisabled,
+                    ]}
+                  >
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={22}
+                      color={DEEP_BLUE}
+                    />
+                    <Text style={styles.ordersPaginationButtonText}>
+                      السابق
+                    </Text>
+                  </MotionPressable>
+                  <Text style={styles.ordersPaginationLabel}>
+                    صفحة {data.page + 1} من {data.pageCount}
+                  </Text>
+                  <MotionPressable
+                    accessibilityLabel="صفحة الأجور التالية"
+                    disabled={!data.hasNextPage}
+                    onPress={data.nextPage}
+                    style={[
+                      styles.ordersPaginationButton,
+                      !data.hasNextPage && styles.ordersPaginationButtonDisabled,
+                    ]}
+                  >
+                    <Text style={styles.ordersPaginationButtonText}>التالي</Text>
+                    <MaterialIcons
+                      name="chevron-left"
+                      size={22}
+                      color={DEEP_BLUE}
+                    />
+                  </MotionPressable>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <Message text="لا توجد أجور مسجلة ضمن هذه الفترة." />
+          )}
         </>
       )}
     </Page>

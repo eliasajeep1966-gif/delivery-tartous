@@ -42,6 +42,23 @@ export type CaptainHomeMetrics = {
   completed_gross: number;
 };
 
+export type CaptainWagePeriod = "daily" | "weekly" | "monthly";
+
+export type CaptainWageTotals = {
+  gross: number;
+  captain: number;
+  company: number;
+  settlement: number;
+  paid: number;
+  unpaid: number;
+};
+
+export type CaptainWagesPage = {
+  rows: CaptainWageRow[];
+  total: number;
+  totals: CaptainWageTotals;
+};
+
 export type CaptainWageRow = {
   captain_amount: number;
   company_amount: number;
@@ -150,6 +167,20 @@ export const nativeCaptainContract = {
     },
     async wages(captainId: string): Promise<CaptainWageRow[]> {
       return unwrap(await client().rpc("get_captain_wage_details_v2", { p_captain_id: captainId }) as Result<CaptainWageRow[]>, "تعذر تحميل أجورك.");
+    },
+    async wagesPage(
+      period: CaptainWagePeriod,
+      { limit, offset }: { limit: number; offset: number },
+    ): Promise<CaptainWagesPage> {
+      const result = await client().rpc("get_my_captain_wage_page", {
+        p_period: period,
+        p_limit: Math.min(Math.max(Math.floor(limit), 1), 50),
+        p_offset: Math.max(Math.floor(offset), 0),
+      });
+      return unwrap(
+        result as Result<CaptainWagesPage>,
+        "تعذر تحميل أجورك.",
+      );
     },
     async custody(): Promise<CaptainCustody[]> {
       const result = await client().from("captain_custody").select("id,item_name,item_details,assigned_at,returned_at,return_notes").order("assigned_at", { ascending: false }).order("id", { ascending: false });
