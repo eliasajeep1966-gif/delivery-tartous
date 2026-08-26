@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -119,10 +120,16 @@ export function AdminCompanyWages() {
         </View>
         <View style={styles.periods}>
           {(["daily", "monthly", "annual"] as const).map((value) => (
-            <MotionPressable
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: period === value }}
               key={value}
               onPress={() => setPeriod(value)}
-              style={[styles.period, period === value && styles.active]}
+              style={({ pressed }) => [
+                styles.period,
+                period === value && styles.active,
+                pressed && styles.periodPressed,
+              ]}
             >
               <Text
                 style={[
@@ -136,7 +143,7 @@ export function AdminCompanyWages() {
                     ? "شهري"
                     : "سنوي"}
               </Text>
-            </MotionPressable>
+            </Pressable>
           ))}
         </View>
         <View style={styles.heading}>
@@ -184,30 +191,52 @@ export function AdminCompanyWages() {
             }
           />
         ) : (
-          rows.map((row) => (
-            <View key={row.period_start} style={styles.row}>
-              <View>
-                <Text style={styles.rowTitle}>
-                  {periodLabel(period, row.period_start, row.period_end)}
-                </Text>
-                <Text style={styles.muted}>{row.order_count} طلبات</Text>
+          rows.map((row) => {
+            const expenses = Number(
+              expenseByPeriod.get(row.period_start)?.expense_total ?? 0,
+            );
+            return (
+              <View key={row.period_start} style={styles.recordCard}>
+                <RecordCell
+                  label={periodLabel(period, row.period_start, row.period_end)}
+                  value={`${row.order_count} طلبات`}
+                  color="#1C1B1B"
+                />
+                <RecordCell
+                  label="حصة الشركة"
+                  value={money(row.company_total)}
+                  color="#6D28D9"
+                />
+                <RecordCell
+                  label="الصافي بعد المصاريف"
+                  value={money(row.company_total - expenses)}
+                  color="#047857"
+                />
               </View>
-              <View style={styles.end}>
-                <Text style={styles.company}>{money(row.company_total)}</Text>
-                <Text style={styles.muted}>حصة الشركة</Text>
-                <Text style={styles.expense}>{money(Number(expenseByPeriod.get(row.period_start)?.expense_total ?? 0))}</Text>
-                <Text style={styles.muted}>مصاريف المكتب</Text>
-                <Text style={styles.net}>{money(row.company_total - Number(expenseByPeriod.get(row.period_start)?.expense_total ?? 0))}</Text>
-                <Text style={styles.muted}>الصافي</Text>
-                <Text style={styles.amount}>{money(row.gross_total)}</Text>
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
     </ScreenContainer>
   );
 }
+function RecordCell({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <View style={styles.recordCell}>
+      <Text style={styles.muted}>{label}</Text>
+      <Text style={[styles.recordValue, { color }]}>{value}</Text>
+    </View>
+  );
+}
+
 function Message({ text }: { text: string }) {
   return (
     <View style={styles.message}>
@@ -286,22 +315,21 @@ const styles = StyleSheet.create({
   periodTitle: { color: "#27506B", fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
   periodHint: { color: "#7A96AA", fontFamily: "Cairo_400Regular", fontSize: 9, writingDirection: "rtl" },
   periods: {
-    backgroundColor: "#FFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 15,
-    borderWidth: 1,
     flexDirection: "row-reverse",
-    gap: 5,
-    padding: 5,
+    gap: 8,
   },
   period: {
     alignItems: "center",
-    borderRadius: 11,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#B9D6ED",
+    borderRadius: 10,
+    borderWidth: 1,
     flex: 1,
     justifyContent: "center",
-    minHeight: 40,
+    minHeight: 46,
   },
-  active: { backgroundColor: BLUE },
+  periodPressed: { opacity: 0.72 },
+  active: { backgroundColor: BLUE, borderColor: BLUE },
   periodText: { color: "#5C7C90", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   activeText: { color: "#FFF" },
   heading: {
@@ -360,14 +388,31 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  row: {
+  recordCard: {
     backgroundColor: "#FFF",
     borderColor: "#D3E3F0",
     borderRadius: 15,
     borderWidth: 1,
     flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    padding: 14,
+    gap: 7,
+    padding: 8,
+  },
+  recordCell: {
+    backgroundColor: "#F7FAFD",
+    borderColor: "#E1ECF4",
+    borderRadius: 11,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 76,
+    padding: 8,
+  },
+  recordValue: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    marginTop: 5,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   rowTitle: {
     color: "#1C1B1B",
@@ -376,11 +421,8 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  end: { alignItems: "flex-end" },
-  company: { color: "#6D28D9", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
   expense: { color: "#B54708", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
   net: { color: "#047857", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
-  amount: { color: "#1C1B1B", fontFamily: "Cairo_600SemiBold", fontSize: 10, marginTop: 3, writingDirection: "rtl" },
   message: {
     alignItems: "center",
     backgroundColor: "#FFF",

@@ -1,9 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import {
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import {
   type NativeCompanyProfitPeriodRow,
@@ -65,6 +67,21 @@ function periodButtonLabel(period: NativeFinancePeriod) {
 export function AdminCompanyProfitHistory() {
   const router = useRouter();
   const history = useNativeFullCompanyProfitHistory();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [dateValue, setDateValue] = useState(
+    () => new Date(`${new Date().toISOString().slice(0, 10)}T12:00:00Z`),
+  );
+  const dateKey = (value: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Damascus",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(value);
+  const selectedDateLabel = new Intl.DateTimeFormat("ar-SY-u-nu-latn", {
+    timeZone: "Asia/Damascus",
+    dateStyle: "medium",
+  }).format(dateValue);
   const rows = history.data;
   const totals = useMemo(
     () =>
@@ -113,25 +130,47 @@ export function AdminCompanyProfitHistory() {
 
       <View style={styles.periods}>
         {(["daily", "monthly", "annual"] as const).map((period) => (
-          <MotionPressable
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{
+              selected: !history.customDate && history.period === period,
+            }}
             key={period}
             onPress={() => history.changePeriod(period)}
-            style={[
+            style={({ pressed }) => [
               styles.period,
-              history.period === period && styles.activePeriod,
+              !history.customDate &&
+                history.period === period &&
+                styles.activePeriod,
+              pressed && styles.periodPressed,
             ]}
           >
             <Text
               style={[
                 styles.periodText,
-                history.period === period && styles.activePeriodText,
+                !history.customDate &&
+                  history.period === period &&
+                  styles.activePeriodText,
               ]}
             >
               {periodButtonLabel(period)}
             </Text>
-          </MotionPressable>
+          </Pressable>
         ))}
       </View>
+
+      <MotionPressable
+        onPress={() => setIsDatePickerOpen(true)}
+        style={styles.dateFilter}
+      >
+        <View style={styles.dateFilterCopy}>
+          <Text style={styles.dateFilterKicker}>فلترة بتاريخ محدد</Text>
+          <Text style={styles.dateFilterValue}>
+            {history.customDate ? selectedDateLabel : "اختر تاريخاً لعرض يوم واحد"}
+          </Text>
+        </View>
+        <MaterialIcons name="event" size={20} color={VIOLET} />
+      </MotionPressable>
 
       <View style={styles.heading}>
         <Text style={styles.title}>الفترات المعروضة</Text>
@@ -161,18 +200,22 @@ export function AdminCompanyProfitHistory() {
         data={rows}
         keyExtractor={(row) => row.period_start}
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={styles.rowStart}>
-              <Text style={styles.rowTitle}>
-                {periodLabel(history.period, item)}
-              </Text>
-              <Text style={styles.muted}>{item.order_count} طلبات مكتملة</Text>
-            </View>
-            <View style={styles.rowEnd}>
-              <Text style={styles.company}>{money(item.company_total)}</Text>
-              <Text style={styles.rowCaption}>حصة الشركة</Text>
-              <Text style={styles.amount}>{money(item.gross_total)}</Text>
-            </View>
+          <View style={styles.recordCard}>
+            <RecordCell
+              label={periodLabel(history.period, item)}
+              value={`${item.order_count} طلبات`}
+              color="#1C1B1B"
+            />
+            <RecordCell
+              label="حصة الشركة"
+              value={money(item.company_total)}
+              color={VIOLET}
+            />
+            <RecordCell
+              label="إجمالي الأجور"
+              value={money(item.gross_total)}
+              color={BLUE}
+            />
           </View>
         )}
         ListHeaderComponent={header}
@@ -230,6 +273,19 @@ export function AdminCompanyProfitHistory() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       />
+      {isDatePickerOpen ? (
+        <FinancialDatePicker
+          onClose={() => setIsDatePickerOpen(false)}
+          onSelect={(date) => {
+            const nextKey = dateKey(date);
+            setDateValue(new Date(`${nextKey}T12:00:00Z`));
+            history.selectCustomDate(nextKey);
+            setIsDatePickerOpen(false);
+          }}
+          value={dateValue}
+          visible
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -247,6 +303,23 @@ function Metric({
     <View style={styles.metric}>
       <Text style={[styles.metricValue, { color }]}>{value}</Text>
       <Text style={styles.muted}>{label}</Text>
+    </View>
+  );
+}
+
+function RecordCell({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <View style={styles.recordCell}>
+      <Text style={styles.rowCaption}>{label}</Text>
+      <Text style={[styles.recordValue, { color }]}>{value}</Text>
     </View>
   );
 }
@@ -343,22 +416,21 @@ const styles = StyleSheet.create({
   },
   metricValue: { fontFamily: "Cairo_700Bold", fontSize: 14, textAlign: "right", writingDirection: "rtl" },
   periods: {
-    backgroundColor: "#FFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 15,
-    borderWidth: 1,
     flexDirection: "row-reverse",
-    gap: 5,
-    padding: 5,
+    gap: 8,
   },
   period: {
     alignItems: "center",
-    borderRadius: 11,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#B9D6ED",
+    borderRadius: 10,
+    borderWidth: 1,
     flex: 1,
     justifyContent: "center",
-    minHeight: 40,
+    minHeight: 46,
   },
-  activePeriod: { backgroundColor: BLUE },
+  periodPressed: { opacity: 0.72 },
+  activePeriod: { backgroundColor: BLUE, borderColor: BLUE },
   periodText: { color: "#5C7C90", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   activePeriodText: { color: "#FFF" },
   heading: {
@@ -378,16 +450,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  row: {
+  dateFilter: {
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    borderColor: "#D3E3F0",
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    minHeight: 58,
+    paddingHorizontal: 14,
+  },
+  dateFilterCopy: { flex: 1 },
+  dateFilterKicker: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 9, textAlign: "right", writingDirection: "rtl" },
+  dateFilterValue: { color: VIOLET, fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  recordCard: {
     backgroundColor: "#FFF",
     borderColor: "#D3E3F0",
     borderRadius: 15,
     borderWidth: 1,
     flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    padding: 14,
+    gap: 7,
+    padding: 8,
   },
-  rowStart: { flex: 1, marginLeft: 12 },
+  recordCell: {
+    backgroundColor: "#F7FAFD",
+    borderColor: "#E1ECF4",
+    borderRadius: 11,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 76,
+    padding: 8,
+  },
+  recordValue: { fontFamily: "Cairo_700Bold", fontSize: 10, marginTop: 5, textAlign: "right", writingDirection: "rtl" },
   rowTitle: {
     color: "#1C1B1B",
     fontFamily: "Cairo_700Bold",
@@ -395,7 +491,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  rowEnd: { alignItems: "flex-end" },
   company: { color: VIOLET, fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
   rowCaption: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 9, marginTop: 3, writingDirection: "rtl" },
   amount: { color: "#1C1B1B", fontFamily: "Cairo_600SemiBold", fontSize: 10, marginTop: 3, writingDirection: "rtl" },
