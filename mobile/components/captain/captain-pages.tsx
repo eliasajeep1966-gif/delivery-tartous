@@ -26,6 +26,7 @@ import {
 const DEEP_BLUE = "#063B78";
 const BLUE = "#0878D1";
 const NEON = "#16CEFF";
+const CAPTAIN_ORDERS_PAGE_SIZE = 10;
 const money = (value: number) =>
   `${new Intl.NumberFormat("en-US").format(value)} ل.س`;
 const date = (value: string | null) =>
@@ -55,6 +56,27 @@ function inPeriod(value: string, period: Period) {
 
 export function CaptainOrders() {
   const data = useNativeCaptainDashboard();
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(
+    1,
+    Math.ceil(data.orders.length / CAPTAIN_ORDERS_PAGE_SIZE),
+  );
+  const safePage = Math.min(page, pageCount - 1);
+  const pageStart = safePage * CAPTAIN_ORDERS_PAGE_SIZE;
+  const visibleOrders = useMemo(
+    () =>
+      data.orders.slice(
+        pageStart,
+        pageStart + CAPTAIN_ORDERS_PAGE_SIZE,
+      ),
+    [data.orders, pageStart],
+  );
+  const firstOrderNumber = data.orders.length ? pageStart + 1 : 0;
+  const lastOrderNumber = Math.min(
+    pageStart + CAPTAIN_ORDERS_PAGE_SIZE,
+    data.orders.length,
+  );
+
   return (
     <Page
       title="طلباتي"
@@ -64,36 +86,83 @@ export function CaptainOrders() {
     >
       {data.error ? (
         <Message text={data.error} />
-      ) : (
-        data.orders.map((order, index) => (
-          <Animated.View
-            entering={FadeInDown.delay(70 + index * 30).duration(190)}
-            key={order.id}
-            style={styles.card}
-          >
-            <View style={styles.between}>
-              <View>
-                <Text style={styles.muted}>الطلب #{order.order_number}</Text>
-                <Text style={styles.title}>{order.customer_name}</Text>
-                <MotionPressable
-                  onPress={() =>
-                    void Linking.openURL(`tel:${order.customer_phone}`)
-                  }
-                >
-                  <Text style={styles.phone}>{order.customer_phone}</Text>
-                </MotionPressable>
-              </View>
-              <View style={styles.left}>
-                <Text style={styles.badge}>{order.status}</Text>
-                <Text style={styles.amount}>{money(order.fee)}</Text>
-              </View>
+      ) : data.orders.length ? (
+        <>
+          <View style={styles.ordersPageSummary}>
+            <View>
+              <Text style={styles.ordersPageTitle}>سجل الطلبات</Text>
+              <Text style={styles.ordersPageHint}>
+                عرض {firstOrderNumber}–{lastOrderNumber} من {data.orders.length}
+              </Text>
             </View>
-            <View style={styles.divider} />
-            <Text style={styles.line}>المصدر: {order.pickup_address}</Text>
-            <Text style={styles.line}>الوجهة: {order.delivery_address}</Text>
-            <Text style={styles.muted}>{date(order.updated_at)}</Text>
-          </Animated.View>
-        ))
+            <Text style={styles.ordersPageCount}>{data.orders.length} طلب</Text>
+          </View>
+
+          {visibleOrders.map((order, index) => (
+            <Animated.View
+              entering={FadeInDown.delay(70 + index * 30).duration(190)}
+              key={order.id}
+              style={styles.card}
+            >
+              <View style={styles.between}>
+                <View>
+                  <Text style={styles.muted}>الطلب #{order.order_number}</Text>
+                  <Text style={styles.title}>{order.customer_name}</Text>
+                  <MotionPressable
+                    onPress={() =>
+                      void Linking.openURL(`tel:${order.customer_phone}`)
+                    }
+                  >
+                    <Text style={styles.phone}>{order.customer_phone}</Text>
+                  </MotionPressable>
+                </View>
+                <View style={styles.left}>
+                  <Text style={styles.badge}>{order.status}</Text>
+                  <Text style={styles.amount}>{money(order.fee)}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <Text style={styles.line}>المصدر: {order.pickup_address}</Text>
+              <Text style={styles.line}>الوجهة: {order.delivery_address}</Text>
+              <Text style={styles.muted}>{date(order.updated_at)}</Text>
+            </Animated.View>
+          ))}
+
+          {pageCount > 1 ? (
+            <View style={styles.ordersPagination}>
+              <MotionPressable
+                accessibilityLabel="الصفحة السابقة"
+                disabled={safePage === 0}
+                onPress={() => setPage(safePage - 1)}
+                style={[
+                  styles.ordersPaginationButton,
+                  safePage === 0 && styles.ordersPaginationButtonDisabled,
+                ]}
+              >
+                <MaterialIcons name="chevron-right" size={22} color={DEEP_BLUE} />
+                <Text style={styles.ordersPaginationButtonText}>السابق</Text>
+              </MotionPressable>
+              <Text style={styles.ordersPaginationLabel}>
+                صفحة {safePage + 1} من {pageCount}
+              </Text>
+              <MotionPressable
+                accessibilityLabel="الصفحة التالية"
+                disabled={safePage === pageCount - 1}
+                onPress={() => setPage(safePage + 1)}
+                style={[
+                  styles.ordersPaginationButton,
+                  safePage === pageCount - 1 &&
+                    styles.ordersPaginationButtonDisabled,
+                ]}
+              >
+                <Text style={styles.ordersPaginationButtonText}>التالي</Text>
+                <MaterialIcons name="chevron-left" size={22} color={DEEP_BLUE} />
+              </MotionPressable>
+            </View>
+          ) : null}
+        </>
+      ) : (
+        <Message text="لا توجد طلبات مسندة إلى حسابك حالياً." />
       )}
     </Page>
   );
@@ -611,6 +680,82 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     textAlign: "right",
+    writingDirection: "rtl",
+  },
+  ordersPageSummary: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderColor: "#CDEBF6",
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  ordersPageTitle: {
+    color: DEEP_BLUE,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  ordersPageHint: {
+    color: "#708A9A",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  ordersPageCount: {
+    backgroundColor: "#E8F9FF",
+    borderColor: "#BCEBFA",
+    borderRadius: 10,
+    borderWidth: 1,
+    color: BLUE,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    writingDirection: "rtl",
+  },
+  ordersPagination: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: "#CDEBF6",
+    borderRadius: 17,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    padding: 5,
+  },
+  ordersPaginationButton: {
+    alignItems: "center",
+    backgroundColor: "#F4FBFE",
+    borderColor: "#D1ECF6",
+    borderRadius: 13,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 2,
+    justifyContent: "center",
+    minHeight: 48,
+    minWidth: 86,
+    paddingHorizontal: 8,
+  },
+  ordersPaginationButtonDisabled: { opacity: 0.42 },
+  ordersPaginationButtonText: {
+    color: DEEP_BLUE,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    writingDirection: "rtl",
+  },
+  ordersPaginationLabel: {
+    color: "#527287",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    textAlign: "center",
     writingDirection: "rtl",
   },
   card: {
