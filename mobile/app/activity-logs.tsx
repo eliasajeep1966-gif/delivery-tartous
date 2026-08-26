@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowRight, CheckCircle2, ClipboardList, Clock3, Package, Search, ShieldCheck, Trash2, Truck, UserPlus, WalletCards, XCircle } from "lucide-react-native";
+import { CheckCircle2, ClipboardList, Clock3, Package, Search, ShieldCheck, Trash2, Truck, UserPlus, WalletCards, XCircle } from "lucide-react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useNativeActivityLogs, type ActivityLogCategory, type ActivityLogIcon, type ActivityLogTone } from "@/features/admin/use-native-activity-logs";
 
 const filters = [{ id: "all", label: "الكل" }, { id: "orders", label: "الطلبات" }, { id: "users", label: "المستخدمون" }, { id: "captains", label: "الكباتن" }, { id: "system", label: "النظام" }] as const;
@@ -15,10 +16,16 @@ export default function ActivityLogsScreen() {
   const router = useRouter(); const [filter, setFilter] = useState<Filter>("all"); const [query, setQuery] = useState(""); const data = useNativeActivityLogs();
   const activities = useMemo(() => { const normalized = query.trim().toLocaleLowerCase(); return data.activities.filter((item) => (filter === "all" || item.category === filter) && (!normalized || `${item.action} ${item.subject} ${item.actor} ${item.details}`.toLocaleLowerCase().includes(normalized))); }, [data.activities, filter, query]);
   return <ScreenContainer edges={["top"]} className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
-    <View className="flex-row items-center justify-between bg-[#0060B8] px-5 py-3 shadow-sm">
-      <Pressable accessibilityLabel="العودة" onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")} className="h-10 w-10 items-center justify-center"><ArrowRight size={23} color="#FFFFFF" /></Pressable>
-      <View className="flex-row items-center gap-2"><View className="items-end"><Text className="text-[11px] text-[#DBEAFF]">لوحة الأدمن</Text><Text className="text-xl font-bold text-white">سجل الحركات</Text></View><View className="h-9 w-9 items-center justify-center rounded-xl bg-white/15"><ClipboardList size={21} color="#FFFFFF" /></View></View>
-    </View>
+    <DeliveryAppHeader
+      contextLabel="سجل الحركات"
+      leadingAction={{
+        accessibilityLabel: "العودة",
+        icon: "arrow-forward",
+        onPress: () =>
+          router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+      }}
+      trailingAction={{ accessibilityLabel: "سجل الحركات", icon: "assignment" }}
+    />
     <ScrollView className="flex-1" contentContainerClassName="gap-4 p-4 pb-8" showsVerticalScrollIndicator={false}>
       <View className="rounded-2xl border border-[#D3E3F0] bg-white p-4 shadow-sm"><View className="flex-row items-start justify-between gap-3"><View className="flex-1 items-end"><Text className="text-right text-lg font-bold text-[#1C1B1B]">سجل الحركات</Text><Text className="mt-1 text-right text-xs leading-5 text-[#58616B]">كل التغييرات والعمليات في مكان واحد، مع منفّذ الحركة ووقتها.</Text></View><View className="h-11 w-11 items-center justify-center rounded-2xl bg-[#EAF4FF]"><Clock3 size={23} color="#0060B8" /></View></View><View className="mt-4 flex-row items-center rounded-xl border border-[#C9D9E7] bg-[#FBFDFF] px-3"><Search size={18} color="#75818E" /><TextInput value={query} onChangeText={setQuery} placeholder="ابحث باسم، طلب، أو حركة" placeholderTextColor="#8A98A6" className="h-11 flex-1 text-right text-sm text-[#1C1B1B]" /></View></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2" directionalLockEnabled><View className="flex-row gap-2">{filters.map((item) => <Pressable key={item.id} onPress={() => setFilter(item.id)} className={`rounded-full px-4 py-2 ${filter === item.id ? "bg-[#0060B8]" : "border border-[#D4E2EC] bg-white"}`}><Text className={`text-xs font-bold ${filter === item.id ? "text-white" : "text-[#58616B]"}`}>{item.label}</Text></Pressable>)}</View></ScrollView>

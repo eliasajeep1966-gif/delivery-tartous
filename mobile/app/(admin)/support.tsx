@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import {
   ChevronDown,
-  CircleHelp,
   Headphones,
   Mail,
   MessageCircle,
@@ -21,6 +20,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 
@@ -91,23 +91,16 @@ export default function AdminSupportScreen() {
     );
   return (
     <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
-      <View className="flex-row items-center justify-between bg-[#0060B8] px-4 py-4">
-        <Pressable
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.replace("/(tabs)")
-          }
-          className="h-10 w-10 items-center justify-center rounded-2xl bg-white/15 active:scale-95"
-        >
-          <CircleHelp size={20} color="#FFF" />
-        </Pressable>
-        <View className="items-end">
-          <Text className="text-[11px] text-[#DBEAFF]">إعدادات النظام</Text>
-          <Text className="text-xl font-bold text-white">المساعدة والدعم</Text>
-        </View>
-        <View className="h-10 w-10 items-center justify-center rounded-2xl bg-white/15">
-          <Headphones size={21} color="#FFF" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="المساعدة والدعم"
+        leadingAction={{
+          accessibilityLabel: "العودة",
+          icon: "arrow-forward",
+          onPress: () =>
+            router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+        }}
+        trailingAction={{ accessibilityLabel: "المساعدة والدعم", icon: "headset-mic" }}
+      />
       <ScrollView
         contentContainerClassName="gap-4 p-4 pb-8"
         showsVerticalScrollIndicator={false}

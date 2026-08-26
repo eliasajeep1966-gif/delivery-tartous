@@ -4,6 +4,7 @@ import { KeyRound, Mail, Save, ShieldCheck, UserRound } from "lucide-react-nativ
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { nativeCaptainContract } from "@/lib/supabase/native-captain-contract";
@@ -73,13 +74,16 @@ export default function AccountSettingsScreen() {
 
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
-      <View className="flex-row items-center justify-between bg-[#0060B8] px-4 py-4">
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} className="h-10 w-10 items-center justify-center rounded-xl bg-white/15" accessibilityLabel="العودة">
-          <UserRound size={20} color="#FFFFFF" />
-        </Pressable>
-        <View className="items-end"><Text className="text-[11px] text-[#DBEAFF]">إعدادات الحساب</Text><Text className="text-xl font-bold text-white">إدارة الحساب</Text></View>
-        <View className="h-10 w-10 items-center justify-center rounded-xl bg-white/15"><ShieldCheck size={21} color="#FFFFFF" /></View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="إدارة الحساب"
+        leadingAction={{
+          accessibilityLabel: "العودة",
+          icon: "arrow-forward",
+          onPress: () =>
+            router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+        }}
+        trailingAction={{ accessibilityLabel: "إدارة الحساب", icon: "shield" }}
+      />
       <ScrollView contentContainerClassName="gap-3 p-4 pb-8" showsVerticalScrollIndicator={false}>
         <View className="rounded-2xl border border-[#D3E3F0] bg-white p-4 shadow-sm"><View className="flex-row items-center justify-end gap-3"><View className="flex-1 items-end"><Text className="text-[17px] font-bold">بيانات الحساب</Text><Text className="mt-1 text-right text-xs text-[#66727E]">يمكنك تعديل بياناتك الشخصية فقط.</Text></View><View className="h-12 w-12 items-center justify-center rounded-2xl bg-[#EAF4FF]"><UserRound size={24} color={BLUE} /></View></View><InfoRow label="البريد الحالي" value={auth.profile?.email ?? auth.session?.user.email ?? "غير متاح"} icon={<Mail size={17} color={BLUE} />} /><InfoRow label="نوع الحساب" value={roleLabel} icon={<ShieldCheck size={17} color={BLUE} />} /></View>
         <Card title="تعديل الاسم" icon={<UserRound size={19} color={BLUE} />}><TextInput value={fullName} onChangeText={setFullName} maxLength={120} placeholder="الاسم الكامل" className="h-11 rounded-xl border border-[#CFE0EC] bg-[#F8FCFF] px-3 text-right text-sm" /><ActionButton label="حفظ الاسم" loading={saving === "name"} disabled={busy} onPress={() => void saveName()} /></Card>

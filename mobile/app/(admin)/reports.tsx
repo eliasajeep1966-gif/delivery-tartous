@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import {
-  BarChart3,
   Building2,
   ClipboardList,
   RefreshCw,
@@ -18,6 +17,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   useNativeAdminWagePeriods,
@@ -81,28 +81,16 @@ export default function AdminReportsScreen() {
 
   return (
     <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
-      <View className="flex-row items-center justify-between bg-[#0060B8] px-4 py-4">
-        <Pressable
-          accessibilityLabel="العودة"
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.replace("/(tabs)")
-          }
-          className="h-10 w-10 items-center justify-center rounded-2xl bg-white/15 active:scale-95"
-        >
-          <RefreshCw
-            size={19}
-            color="#FFFFFF"
-            style={{ transform: [{ rotate: "180deg" }] }}
-          />
-        </Pressable>
-        <View className="items-end">
-          <Text className="text-[11px] text-[#DBEAFF]">لوحة الإدارة</Text>
-          <Text className="text-xl font-bold text-white">التقارير</Text>
-        </View>
-        <View className="h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-          <BarChart3 size={21} color="#FFFFFF" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="التقارير"
+        leadingAction={{
+          accessibilityLabel: "العودة",
+          icon: "arrow-forward",
+          onPress: () =>
+            router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+        }}
+        trailingAction={{ accessibilityLabel: "التقارير", icon: "bar-chart" }}
+      />
       <ScrollView
         className="flex-1"
         contentContainerClassName="gap-4 p-4 pb-8"

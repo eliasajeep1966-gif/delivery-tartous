@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useAdminCaptainsData } from "@/features/admin/use-admin-captains";
@@ -107,24 +108,16 @@ export default function AdminCustodyScreen() {
 
   return (
     <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
-      <View className="flex-row items-center justify-between border-b border-[#D7E7F2] bg-[#0060B8] px-5 py-4">
-        <Pressable
-          accessibilityLabel="العودة"
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.replace("/(tabs)")
-          }
-          className="h-10 w-10 items-center justify-center rounded-2xl active:scale-95"
-        >
-          <MaterialIcons name="arrow-forward" size={24} color="#FFFFFF" />
-        </Pressable>
-        <View className="items-end">
-          <Text className="text-[11px] text-[#DBEAFF]">لوحة الإدارة</Text>
-          <Text className="text-xl font-bold text-white">إدارة الأمانات</Text>
-        </View>
-        <View className="h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-          <MaterialIcons name="inventory-2" size={22} color="#FFFFFF" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="إدارة الأمانات"
+        leadingAction={{
+          accessibilityLabel: "العودة",
+          icon: "arrow-forward",
+          onPress: () =>
+            router.canGoBack() ? router.back() : router.replace("/(tabs)"),
+        }}
+        trailingAction={{ accessibilityLabel: "إدارة الأمانات", icon: "inventory-2" }}
+      />
 
       <ScrollView
         className="flex-1"
