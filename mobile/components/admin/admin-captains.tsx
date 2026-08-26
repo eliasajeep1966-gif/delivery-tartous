@@ -1,4 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -107,10 +108,6 @@ function CaptainCard({
           >
             {isAvailable ? "متاح" : "غير متاح"}
           </Text>
-        </View>
-        <View className="mr-3 items-end border-r border-[#E8F0F5] pr-3">
-          <Text className="text-[18px] font-bold text-[#0878D1]">—</Text>
-          <Text className="mt-0.5 text-[8px] text-[#7893A4]">طلبات مكتملة</Text>
         </View>
       </View>
     </Pressable>
@@ -423,19 +420,40 @@ export function AdminCaptainsScreen() {
         contentContainerClassName="gap-3 p-5 pb-8"
         ListHeaderComponent={
           <View className="gap-4">
-            <View className="rounded-[26px] border border-[#D3E8F3] bg-white px-4 pb-4 pt-4 shadow-sm">
+            <LinearGradient
+              colors={["#EEF7FF", "#FFFFFF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderColor: "#D8EBF7",
+                borderRadius: 24,
+                borderWidth: 1,
+                overflow: "hidden",
+                padding: 16,
+                shadowColor: "#0C679D",
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.08,
+                shadowRadius: 14,
+              }}
+            >
+              <View className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#16CEFF]" />
               <View className="flex-row-reverse items-start justify-between">
                 <View className="flex-1 items-end">
-                  <Text className="text-[19px] font-bold text-[#063B78]">
+                  <Text className="text-[20px] font-bold text-[#123D60]">
                     الكباتن
                   </Text>
-                  <Text className="mt-1 text-right text-[10px] text-[#6F8A9C]">
-                    سجل إدارة فريق التوصيل
+                  <Text className="mt-1 text-right text-[11px] text-[#608098]">
+                    إدارة فريق التوصيل من مكان واحد.
                   </Text>
                 </View>
-                <View className="rounded-2xl bg-[#EAF8FE] p-3">
+                <View className="rounded-2xl border border-[#C9EAF7] bg-white/80 p-3">
                   <MaterialIcons name="groups" size={22} color="#0878D1" />
                 </View>
+              </View>
+              <View className="mt-4 self-end rounded-xl bg-[#E4F8EE] px-3 py-1.5">
+                <Text className="text-[10px] font-bold text-[#08745A]">
+                  تحديث يدوي عند الدخول أو بالسحب
+                </Text>
               </View>
               <View className="mt-4 flex-row-reverse divide-x divide-x-reverse divide-[#D9E8F0]">
                 <CaptainPulseMetric
@@ -457,7 +475,7 @@ export function AdminCaptainsScreen() {
                   value={data.isLoading ? "—" : snapshot.openCustodies}
                 />
               </View>
-            </View>
+            </LinearGradient>
 
             <View className="rounded-[22px] border border-[#E1EDF4] bg-white p-2 shadow-sm">
               <View className="flex-row-reverse items-center rounded-[15px] bg-[#F7FBFE] px-3">
