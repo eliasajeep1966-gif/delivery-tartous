@@ -14,6 +14,7 @@ export type NativeCaptainWagePeriodRow = {
   captain_id: string;
   captain_name: string;
   captain_net_total: number;
+  company_total: number;
   gross_total: number;
   order_count: number;
   paid_total: number;

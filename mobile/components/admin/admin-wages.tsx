@@ -234,7 +234,7 @@ export function AdminWages() {
   const totals = selectedRows.reduce(
     (sum, row) => ({
       captain: sum.captain + row.captain_net_total,
-      company: sum.company + row.settlement_total,
+      company: sum.company + row.company_total,
       gross: sum.gross + row.gross_total,
       orders: sum.orders + row.order_count,
       paid: sum.paid + row.paid_total,
@@ -667,7 +667,7 @@ export function AdminWages() {
                 />
                 <CaptainLedgerCell
                   label="حصة الشركة"
-                  value={captain.settlement_total}
+                  value={captain.company_total}
                   color={BLUE}
                 />
                 <CaptainLedgerCell
