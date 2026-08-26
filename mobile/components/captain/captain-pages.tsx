@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   Linking,
-  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -222,9 +221,6 @@ export function CaptainCustodyPage() {
   const [rows, setRows] = useState<CaptainCustody[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCustody, setSelectedCustody] = useState<CaptainCustody | null>(
-    null,
-  );
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -242,224 +238,43 @@ export function CaptainCustodyPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, [load]);
-
-  const activeRows = useMemo(
-    () => rows.filter((row) => !row.returned_at),
-    [rows],
-  );
-  const returnedRows = useMemo(
-    () => rows.filter((row) => Boolean(row.returned_at)),
-    [rows],
-  );
-  const displayRows = useMemo(
-    () => [...activeRows, ...returnedRows],
-    [activeRows, returnedRows],
-  );
-
   return (
-    <>
-      <Page
-        title="أماناتي"
-        subtitle="كشف العهدة المسجل على حسابك"
-        refreshing={loading}
-        onRefresh={() => void load()}
-      >
-        {error ? (
-          <Message text={error} />
-        ) : rows.length ? (
-          <>
-            <View style={styles.custodySummary}>
-              <CustodySummary
-                icon="inventory-2"
-                label="على العهدة"
-                value={activeRows.length}
-                active
-              />
-              <CustodySummary
-                icon="check-circle-outline"
-                label="مُرجعة"
-                value={returnedRows.length}
-              />
-            </View>
-            <View style={styles.custodyHeading}>
+    <Page
+      title="أماناتي"
+      subtitle="الأغراض المسجلة على عهدتك"
+      refreshing={loading}
+      onRefresh={() => void load()}
+    >
+      {error ? (
+        <Message text={error} />
+      ) : rows.length ? (
+        rows.map((row, index) => (
+          <Animated.View
+            entering={FadeInDown.delay(70 + index * 30).duration(190)}
+            key={row.id}
+            style={styles.card}
+          >
+            <View style={styles.between}>
               <View>
-                <Text style={styles.custodyTitle}>سجل الأمانات</Text>
-                <Text style={styles.custodyHint}>
-                  تظهر الأمانات الموجودة معك أولًا
-                </Text>
+                <Text style={styles.muted}>أمانة #{row.id.slice(0, 8)}</Text>
+                <Text style={styles.title}>{row.item_name}</Text>
               </View>
-              <Text style={styles.custodyCount}>{rows.length} عناصر</Text>
+              <Text style={row.returned_at ? styles.paid : styles.unpaid}>
+                {row.returned_at ? "مُرجعة" : "على العهدة"}
+              </Text>
             </View>
-            {displayRows.map((row, index) => {
-              const returned = Boolean(row.returned_at);
-              return (
-                <Animated.View
-                  entering={FadeInDown.delay(80 + index * 35).duration(190)}
-                  key={row.id}
-                >
-                  <MotionPressable
-                    accessibilityLabel={`عرض تفاصيل ${row.item_name}`}
-                    onPress={() => setSelectedCustody(row)}
-                    style={[
-                      styles.custodyItem,
-                      returned && styles.custodyItemReturned,
-                    ]}
-                  >
-                    <View style={styles.custodyItemTop}>
-                      <View
-                        style={[
-                          styles.custodyItemIcon,
-                          returned && styles.custodyItemIconReturned,
-                        ]}
-                      >
-                        <MaterialIcons
-                          name={returned ? "assignment-turned-in" : "inventory-2"}
-                          size={20}
-                          color={returned ? "#6A8392" : BLUE}
-                        />
-                      </View>
-                      <View style={styles.custodyItemCopy}>
-                        <Text numberOfLines={1} style={styles.custodyItemTitle}>
-                          {row.item_name}
-                        </Text>
-                        <Text style={styles.custodyItemCode}>سجل عهدة</Text>
-                      </View>
-                      <View style={styles.custodyItemEnd}>
-                        <Text
-                          style={
-                            returned
-                              ? styles.custodyStatusReturned
-                              : styles.custodyStatusActive
-                          }
-                        >
-                          {returned ? "مُرجعة" : "على العهدة"}
-                        </Text>
-                        <MaterialIcons
-                          name="chevron-left"
-                          size={22}
-                          color="#6B90A5"
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.custodyItemFooter}>
-                      <View style={styles.custodyDate}>
-                        <MaterialIcons
-                          name="calendar-today"
-                          size={13}
-                          color="#6B90A5"
-                        />
-                        <Text style={styles.custodyDateText}>
-                          استلمت {date(row.assigned_at)}
-                        </Text>
-                      </View>
-                      {row.item_details ? (
-                        <Text
-                          numberOfLines={1}
-                          style={styles.custodyPreview}
-                        >
-                          {row.item_details}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </MotionPressable>
-                </Animated.View>
-              );
-            })}
-          </>
-        ) : (
-          <Message text="لا توجد أمانات مسجلة." />
-        )}
-      </Page>
-
-      <Modal
-        transparent
-        visible={Boolean(selectedCustody)}
-        animationType="none"
-        onRequestClose={() => setSelectedCustody(null)}
-      >
-        <View style={styles.custodySheetBackdrop}>
-          <MotionPressable
-            haptic="none"
-            onPress={() => setSelectedCustody(null)}
-            style={styles.custodySheetDismiss}
-          />
-          {selectedCustody ? (
-            <Animated.View
-              entering={FadeInDown.duration(210)}
-              style={styles.custodySheet}
-            >
-              <View style={styles.custodySheetHandle} />
-              <View style={styles.custodySheetHeader}>
-                <View style={styles.custodySheetIcon}>
-                  <MaterialIcons name="inventory-2" size={22} color={BLUE} />
-                </View>
-                <View style={styles.custodySheetCopy}>
-                  <Text style={styles.custodySheetKicker}>تفاصيل العهدة</Text>
-                  <Text style={styles.custodySheetTitle}>
-                    {selectedCustody.item_name}
-                  </Text>
-                </View>
-                <MotionPressable
-                  accessibilityLabel="إغلاق تفاصيل العهدة"
-                  onPress={() => setSelectedCustody(null)}
-                  style={styles.custodySheetClose}
-                >
-                  <MaterialIcons name="close" size={20} color={DEEP_BLUE} />
-                </MotionPressable>
-              </View>
-              <View style={styles.custodySheetStatusRow}>
-                <Text style={styles.custodySheetStatusLabel}>حالة العهدة</Text>
-                <Text
-                  style={
-                    selectedCustody.returned_at
-                      ? styles.custodyStatusReturned
-                      : styles.custodyStatusActive
-                  }
-                >
-                  {selectedCustody.returned_at ? "مُرجعة" : "على العهدة"}
-                </Text>
-              </View>
-              <View style={styles.custodySheetInfo}>
-                <MaterialIcons
-                  name="calendar-today"
-                  size={16}
-                  color="#5D8297"
-                />
-                <View style={styles.custodySheetInfoCopy}>
-                  <Text style={styles.custodySheetInfoLabel}>تاريخ الاستلام</Text>
-                  <Text style={styles.custodySheetInfoValue}>
-                    {date(selectedCustody.assigned_at)}
-                  </Text>
-                </View>
-              </View>
-              {selectedCustody.returned_at ? (
-                <View style={styles.custodySheetInfo}>
-                  <MaterialIcons
-                    name="assignment-returned"
-                    size={17}
-                    color="#5D8297"
-                  />
-                  <View style={styles.custodySheetInfoCopy}>
-                    <Text style={styles.custodySheetInfoLabel}>تاريخ الإرجاع</Text>
-                    <Text style={styles.custodySheetInfoValue}>
-                      {date(selectedCustody.returned_at)}
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-              {selectedCustody.item_details ? (
-                <View style={styles.custodyDescription}>
-                  <Text style={styles.custodyDescriptionLabel}>وصف الغرض</Text>
-                  <Text style={styles.custodyDescriptionText}>
-                    {selectedCustody.item_details}
-                  </Text>
-                </View>
-              ) : null}
-            </Animated.View>
-          ) : null}
-        </View>
-      </Modal>
-    </>
+            {row.item_details ? (
+              <Text style={styles.line}>{row.item_details}</Text>
+            ) : null}
+            <Text style={styles.muted}>
+              استلمت بتاريخ: {date(row.assigned_at)}
+            </Text>
+          </Animated.View>
+        ))
+      ) : (
+        <Message text="لا توجد أمانات مسجلة." />
+      )}
+    </Page>
   );
 }
 
@@ -657,42 +472,6 @@ function Metric({ label, value }: { label: string; value: string }) {
     </View>
   );
 }
-function CustodySummary({
-  icon,
-  label,
-  value,
-  active = false,
-}: {
-  icon: "inventory-2" | "check-circle-outline";
-  label: string;
-  value: number;
-  active?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.custodySummaryCard,
-        active && styles.custodySummaryCardActive,
-      ]}
-    >
-      <View
-        style={[
-          styles.custodySummaryIcon,
-          active && styles.custodySummaryIconActive,
-        ]}
-      >
-        <MaterialIcons
-          name={icon}
-          size={19}
-          color={active ? BLUE : "#638293"}
-        />
-      </View>
-      <Text style={styles.custodySummaryValue}>{value}</Text>
-      <Text style={styles.custodySummaryLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function Message({ text }: { text: string }) {
   return (
     <View style={styles.message}>
@@ -759,305 +538,6 @@ const styles = StyleSheet.create({
     fontFamily: "Cairo_400Regular",
     fontSize: 10,
     marginTop: 2,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodySummary: {
-    flexDirection: "row-reverse",
-    gap: 9,
-  },
-  custodySummaryCard: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderColor: "#D5EAF1",
-    borderRadius: 16,
-    borderWidth: 1,
-    flex: 1,
-    minHeight: 92,
-    padding: 12,
-  },
-  custodySummaryCardActive: {
-    backgroundColor: "#F0FBFF",
-    borderColor: "#A6E8FC",
-  },
-  custodySummaryIcon: {
-    alignItems: "center",
-    backgroundColor: "#EEF5F8",
-    borderRadius: 10,
-    height: 32,
-    justifyContent: "center",
-    width: 32,
-  },
-  custodySummaryIconActive: { backgroundColor: "#DDF7FF" },
-  custodySummaryValue: {
-    color: DEEP_BLUE,
-    fontFamily: "Cairo_700Bold",
-    fontSize: 18,
-    marginTop: 3,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodySummaryLabel: {
-    color: "#6A8392",
-    fontFamily: "Cairo_600SemiBold",
-    fontSize: 10,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodyHeading: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    marginTop: 4,
-  },
-  custodyTitle: {
-    color: DEEP_BLUE,
-    fontFamily: "Cairo_700Bold",
-    fontSize: 14,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodyHint: {
-    color: "#7892A3",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 9,
-    marginTop: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodyCount: {
-    backgroundColor: "#EAF9FF",
-    borderColor: "#BCEBFA",
-    borderRadius: 11,
-    borderWidth: 1,
-    color: BLUE,
-    fontFamily: "Cairo_700Bold",
-    fontSize: 9,
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    writingDirection: "rtl",
-  },
-  custodyItem: {
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderColor: "#CFEAF5",
-    borderRadius: 18,
-    borderWidth: 1,
-    minHeight: 108,
-    overflow: "hidden",
-    paddingHorizontal: 13,
-    paddingVertical: 12,
-  },
-  custodyItemReturned: {
-    backgroundColor: "rgba(250,252,253,0.9)",
-    borderColor: "#DFE9EE",
-  },
-  custodyItemTop: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-  },
-  custodyItemIcon: {
-    alignItems: "center",
-    backgroundColor: "#E8F9FF",
-    borderColor: "#BCEBFA",
-    borderRadius: 13,
-    borderWidth: 1,
-    height: 42,
-    justifyContent: "center",
-    width: 42,
-  },
-  custodyItemIconReturned: {
-    backgroundColor: "#F0F4F6",
-    borderColor: "#DCE6EA",
-  },
-  custodyItemCopy: { flex: 1, marginHorizontal: 10 },
-  custodyItemTitle: {
-    color: "#164866",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 13,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodyItemCode: {
-    color: "#7A95A5",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 9,
-    marginTop: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodyItemEnd: { alignItems: "flex-end", gap: 2 },
-  custodyStatusActive: {
-    backgroundColor: "#E8F9FF",
-    borderColor: "#A6E8FC",
-    borderRadius: 9,
-    borderWidth: 1,
-    color: "#0878D1",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 9,
-    overflow: "hidden",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    writingDirection: "rtl",
-  },
-  custodyStatusReturned: {
-    backgroundColor: "#F1F5F7",
-    borderColor: "#DCE5E9",
-    borderRadius: 9,
-    borderWidth: 1,
-    color: "#627E8D",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 9,
-    overflow: "hidden",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    writingDirection: "rtl",
-  },
-  custodyItemFooter: {
-    alignItems: "center",
-    borderTopColor: "#E7F0F4",
-    borderTopWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 9,
-    justifyContent: "space-between",
-    marginTop: 10,
-    paddingTop: 8,
-  },
-  custodyDate: { alignItems: "center", flexDirection: "row-reverse", gap: 5 },
-  custodyDateText: {
-    color: "#698696",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 9,
-    writingDirection: "rtl",
-  },
-  custodyPreview: {
-    color: "#54778D",
-    flex: 1,
-    fontFamily: "Cairo_400Regular",
-    fontSize: 9,
-    textAlign: "left",
-    writingDirection: "rtl",
-  },
-  custodySheetBackdrop: {
-    backgroundColor: "rgba(4,31,50,0.38)",
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  custodySheetDismiss: { ...StyleSheet.absoluteFill },
-  custodySheet: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#BCEBFA",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    gap: 12,
-    padding: 16,
-    paddingBottom: 24,
-  },
-  custodySheetHandle: {
-    alignSelf: "center",
-    backgroundColor: "#CBE6F0",
-    borderRadius: 3,
-    height: 5,
-    width: 46,
-  },
-  custodySheetHeader: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-  },
-  custodySheetIcon: {
-    alignItems: "center",
-    backgroundColor: "#E8F9FF",
-    borderColor: "#BCEBFA",
-    borderRadius: 14,
-    borderWidth: 1,
-    height: 46,
-    justifyContent: "center",
-    width: 46,
-  },
-  custodySheetCopy: { flex: 1, marginHorizontal: 10 },
-  custodySheetKicker: {
-    color: BLUE,
-    fontFamily: "Cairo_700Bold",
-    fontSize: 9,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodySheetTitle: {
-    color: DEEP_BLUE,
-    fontFamily: "Cairo_700Bold",
-    fontSize: 16,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodySheetClose: {
-    alignItems: "center",
-    backgroundColor: "#F0F8FC",
-    borderColor: "#D1ECF6",
-    borderRadius: 15,
-    borderWidth: 1,
-    height: 48,
-    justifyContent: "center",
-    width: 48,
-  },
-  custodySheetStatusRow: {
-    alignItems: "center",
-    backgroundColor: "#F8FCFE",
-    borderColor: "#DFEFF5",
-    borderRadius: 13,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    padding: 11,
-  },
-  custodySheetStatusLabel: {
-    color: "#5D8297",
-    fontFamily: "Cairo_600SemiBold",
-    fontSize: 10,
-    writingDirection: "rtl",
-  },
-  custodySheetInfo: {
-    alignItems: "center",
-    backgroundColor: "#F8FCFE",
-    borderRadius: 13,
-    flexDirection: "row-reverse",
-    padding: 11,
-  },
-  custodySheetInfoCopy: { flex: 1, marginHorizontal: 8 },
-  custodySheetInfoLabel: {
-    color: "#7A95A5",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 9,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodySheetInfoValue: {
-    color: "#234F69",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    marginTop: 2,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodyDescription: {
-    backgroundColor: "#F8FCFE",
-    borderColor: "#DFEFF5",
-    borderRadius: 13,
-    borderWidth: 1,
-    padding: 11,
-  },
-  custodyDescriptionLabel: {
-    color: "#5D8297",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  custodyDescriptionText: {
-    color: "#4F7185",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 11,
-    lineHeight: 19,
-    marginTop: 4,
     textAlign: "right",
     writingDirection: "rtl",
   },
