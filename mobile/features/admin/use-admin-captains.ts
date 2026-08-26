@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
-
 import {
   nativeCaptainAdminContract,
   type NativeCaptain,
@@ -33,19 +31,8 @@ export function useAdminCaptains() {
 
   useEffect(() => {
     const initialLoad = setTimeout(() => void reload(), 0);
-    const polling = setInterval(() => void reload(true), 15_000);
-    return () => {
-      clearTimeout(initialLoad);
-      clearInterval(polling);
-    };
+    return () => clearTimeout(initialLoad);
   }, [reload]);
-
-  useRealtimeOrders({
-    enabled: true,
-    onCaptain: () => void reload(true),
-    onOrder: () => void reload(true),
-    onProfile: () => void reload(true),
-  });
 
   const setActive = useCallback(
     async (captainId: string, isActive: boolean) => {
