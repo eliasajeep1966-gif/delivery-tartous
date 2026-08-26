@@ -762,16 +762,20 @@ function ActivityDeliveryJourney({ timing }: { timing: DeliveryTiming | null }) 
 
   return (
     <View style={styles.activityJourney}>
-      <View style={styles.activityJourneyTop}>
-        <Text style={styles.activityJourneyLabel}>تفاصيل التوصيل</Text>
-        {durationLabel ? (
+      {durationLabel ? (
+        <View style={styles.activityDurationRow}>
           <View style={styles.activityDurationBadge}>
-            <MaterialIcons name="timer" size={12} color="#08755C" />
+            <MaterialIcons name="timer" size={14} color="#08755C" />
             <Text style={styles.activityDurationText}>{durationLabel}</Text>
           </View>
-        ) : null}
-      </View>
-      <View style={styles.activityJourneyTrack}>
+        </View>
+      ) : null}
+      <View
+        style={[
+          styles.activityJourneyTrack,
+          !durationLabel && styles.activityJourneyTrackWithoutDuration,
+        ]}
+      >
         {moments.map((moment, index) => (
           <View key={moment.label} style={styles.activityJourneyStep}>
             <View style={styles.activityJourneyMoment}>
@@ -997,16 +1001,16 @@ const styles = StyleSheet.create({
   activityDate: { color: "#718B9D", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
   activityActorRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 3 },
   activityActorName: { color: "#4B7691", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
-  activityJourney: { backgroundColor: "#F7FBFD", borderColor: "#DCEAF1", borderRadius: 10, borderWidth: 1, marginTop: 6, paddingHorizontal: 8, paddingVertical: 6 },
-  activityJourneyTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
-  activityJourneyLabel: { color: "#4D697D", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
-  activityDurationBadge: { alignItems: "center", backgroundColor: "#EAF9F3", borderRadius: 7, flexDirection: "row-reverse", gap: 3, paddingHorizontal: 6, paddingVertical: 2 },
-  activityDurationText: { color: "#08755C", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
-  activityJourneyTrack: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 5 },
+  activityJourney: { backgroundColor: "#F7FBFD", borderColor: "#DCEAF1", borderRadius: 10, borderWidth: 1, marginTop: 6, paddingHorizontal: 8, paddingVertical: 7 },
+  activityDurationRow: { alignItems: "flex-end", flexDirection: "row-reverse" },
+  activityDurationBadge: { alignItems: "center", backgroundColor: "#EAF9F3", borderRadius: 8, flexDirection: "row-reverse", gap: 4, paddingHorizontal: 8, paddingVertical: 4 },
+  activityDurationText: { color: "#08755C", fontSize: 12, fontWeight: "800", writingDirection: "rtl" },
+  activityJourneyTrack: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 7 },
+  activityJourneyTrackWithoutDuration: { marginTop: 0 },
   activityJourneyStep: { alignItems: "center", flex: 1, flexDirection: "row-reverse" },
   activityJourneyMoment: { alignItems: "flex-end" },
-  activityJourneyMomentLabel: { color: "#5C7486", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
-  activityJourneyMomentTime: { color: "#1B415A", fontSize: 11, fontWeight: "800", marginTop: 1, writingDirection: "rtl" },
+  activityJourneyMomentLabel: { color: "#5C7486", fontSize: 11, fontWeight: "700", writingDirection: "rtl" },
+  activityJourneyMomentTime: { color: "#1B415A", fontSize: 13, fontWeight: "800", marginTop: 1, writingDirection: "rtl" },
   activityJourneyConnector: { alignItems: "center", flex: 1, flexDirection: "row", justifyContent: "center", marginHorizontal: 4 },
   activityJourneyLine: { backgroundColor: "#8ACBB9", flex: 1, height: 1, maxWidth: 24 },
   activityPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
