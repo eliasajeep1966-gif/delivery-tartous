@@ -73,29 +73,37 @@ function CaptainCard({
   captain: NativeCaptain;
   onPress: () => void;
 }) {
+  const custodyCount = openCustodyCount(captain);
   const isAvailable = captain.availability === "available";
+  const enabled = captain.isActive;
   return (
     <Pressable
       onPress={onPress}
-      className="overflow-hidden rounded-[20px] border border-[#DDEAF2] bg-white shadow-sm"
+      className="overflow-hidden rounded-[22px] border border-[#D9EAF4] bg-white shadow-sm"
     >
-      <View className="flex-row-reverse items-center px-3 py-3">
-        <View className="ml-3 h-[58px] w-[58px] items-center justify-center rounded-2xl border border-[#CDE9F7] bg-[#F5FBFE]">
-          <Image
-            source={captainPlaceholder}
-            className="h-[42px] w-[46px]"
-            resizeMode="contain"
-          />
+      <View className="flex-row-reverse items-stretch">
+        <View className="w-[27%] items-center justify-center border-l border-[#D8ECF6] bg-[#EAF8FE] py-3">
+          <View className="h-[68px] w-[58px] items-center justify-center rounded-bl-[24px] rounded-tr-[24px] border border-[#BEE5F5] bg-white">
+            <Image
+              source={captainPlaceholder}
+              className="h-[42px] w-[46px]"
+              resizeMode="contain"
+            />
+          </View>
+          <Text className="mt-1.5 text-center text-[8px] font-bold text-[#5B91A9]">
+            ملف الكابتن
+          </Text>
         </View>
-        <View className="flex-1">
+
+        <View className="flex-1 px-3 pb-2.5 pt-3">
           <View className="flex-row-reverse items-center">
             <View
               className={`ml-2 h-2.5 w-2.5 rounded-full ${isAvailable ? "bg-[#22C55E]" : "bg-[#94A3B8]"}`}
             />
-            <Text className="flex-1 text-right text-[15px] font-bold text-[#063B78]">
+            <Text className="flex-1 text-right text-[16px] font-bold text-[#063B78]">
               {captain.name}
             </Text>
-            <MaterialIcons name="chevron-left" size={19} color="#89A2B2" />
+            <MaterialIcons name="chevron-left" size={19} color="#7D9AAE" />
           </View>
           <Text
             numberOfLines={1}
@@ -103,11 +111,40 @@ function CaptainCard({
           >
             {captain.email ?? "لا يوجد بريد مسجل"}
           </Text>
-          <Text
-            className={`mt-1 text-right text-[10px] font-bold ${isAvailable ? "text-emerald-700" : "text-slate-500"}`}
-          >
-            {isAvailable ? "متاح" : "غير متاح"}
-          </Text>
+
+          <View className="mt-2.5 flex-row-reverse items-center justify-between border-t border-[#E6EFF4] pt-2.5">
+            <View className="flex-row-reverse items-center gap-1.5">
+              <View
+                className={`h-2 w-2 rounded-full ${isAvailable ? "bg-[#22C55E]" : "bg-[#94A3B8]"}`}
+              />
+              <Text
+                className={`text-[10px] font-bold ${isAvailable ? "text-emerald-700" : "text-slate-500"}`}
+              >
+                {isAvailable ? "متاح" : "غير متاح"}
+              </Text>
+            </View>
+            <View className="flex-row-reverse items-center gap-1.5">
+              <View
+                className={`h-2 w-2 rounded-full ${enabled ? "bg-[#0878D1]" : "bg-[#EF4444]"}`}
+              />
+              <Text
+                className={`text-[10px] font-bold ${enabled ? "text-[#0878D1]" : "text-red-600"}`}
+              >
+                {enabled ? "مفعل" : "معطل"}
+              </Text>
+            </View>
+          </View>
+
+          {custodyCount ? (
+            <View className="mt-2 flex-row-reverse items-center gap-1.5 rounded-lg border border-[#F7DEB2] bg-[#FFF8EB] px-2 py-1.5">
+              <MaterialIcons name="inventory-2" size={13} color="#B87916" />
+              <Text className="flex-1 text-right text-[9px] font-bold text-[#A06411]">
+                {custodyCount === 1
+                  ? "أمانة مفتوحة واحدة"
+                  : `${custodyCount} أمانات مفتوحة`}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </Pressable>
