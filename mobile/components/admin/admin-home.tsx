@@ -335,9 +335,11 @@ export function AdminHome() {
           assignmentError instanceof NativeAdminRequestTimeoutError
             ? "تم إنشاء الطلب، وتعذر تأكيد تعيين الكابتن. افتح الطلبات وتحقق من حالته قبل تنفيذ أي إجراء."
             : `تم إنشاء الطلب #${created.orderNumber}، لكن تعيين الكابتن لم ينجح. عيّنه من تفاصيل الطلب.`;
-        Alert.alert("تحقق من التعيين", message, [
-          { text: "فتح الطلبات", onPress: openOrders },
-        ]);
+        showToast({
+          message,
+          tone: "error",
+          durationMs: 5000,
+        });
       }
       await refetch();
       return true;

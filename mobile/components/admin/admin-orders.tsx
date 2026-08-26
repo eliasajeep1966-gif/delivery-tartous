@@ -245,10 +245,11 @@ export function AdminOrders() {
       setSelectedCaptainId(null);
       await refreshOrderData();
     } catch (error) {
-      Alert.alert(
-        "تعذر التعيين",
-        error instanceof Error ? error.message : "تعذر تعيين الكابتن للطلب.",
-      );
+      showToast({
+        message: error instanceof Error ? error.message : "تعذر تعيين الكابتن للطلب.",
+        tone: "error",
+        durationMs: 5000,
+      });
     } finally {
       setIsSaving(false);
     }
