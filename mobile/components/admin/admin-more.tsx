@@ -75,7 +75,6 @@ export function AdminMore() {
       containerClassName="bg-[#F8FAFC]"
     >
       <DeliveryAppHeader
-        contextLabel="المزيد"
         leadingAction={{
           accessibilityLabel: "العودة للرئيسية",
           icon: "arrow-back",

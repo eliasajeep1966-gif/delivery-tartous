@@ -57,7 +57,6 @@ export function AdminCompanyWages() {
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
-        contextLabel="أجور الشركة"
         leadingAction={{
           accessibilityLabel: "العودة إلى أجور الكباتن",
           icon: "arrow-forward",

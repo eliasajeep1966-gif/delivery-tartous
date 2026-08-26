@@ -75,7 +75,6 @@ export default function AccountSettingsScreen() {
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
-        contextLabel="إدارة الحساب"
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",

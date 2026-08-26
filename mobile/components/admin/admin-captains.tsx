@@ -270,7 +270,6 @@ export function AdminCaptainsScreen() {
   return (
     <ScreenContainer className="bg-[#F3FBFF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
-        contextLabel="الكباتن"
         leadingAction={{
           accessibilityLabel: "العودة للرئيسية",
           icon: "arrow-forward",

@@ -116,7 +116,6 @@ export function AdminUsers() {
       containerClassName="bg-[#EAF5FF]"
     >
       <DeliveryAppHeader
-        contextLabel="إدارة المستخدمين"
         leadingAction={{
           accessibilityLabel: "العودة إلى المزيد",
           icon: "arrow-forward",

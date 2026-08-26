@@ -91,7 +91,6 @@ export default function OfficeSettingsScreen() {
   return (
     <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
       <DeliveryAppHeader
-        contextLabel="إعدادات المكتب"
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",

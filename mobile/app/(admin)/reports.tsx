@@ -82,7 +82,6 @@ export default function AdminReportsScreen() {
   return (
     <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
       <DeliveryAppHeader
-        contextLabel="التقارير"
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",

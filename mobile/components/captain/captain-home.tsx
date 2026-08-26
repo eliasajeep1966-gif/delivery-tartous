@@ -112,7 +112,6 @@ export function CaptainHome() {
       containerClassName="bg-transparent"
     >
       <DeliveryAppHeader
-        contextLabel="حساب الكابتن"
         leadingAction={{
           accessibilityLabel: "الإعدادات",
           icon: "settings",

@@ -404,7 +404,6 @@ export function AdminWages() {
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
       <DeliveryAppHeader
-        contextLabel="أجور الكباتن"
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",

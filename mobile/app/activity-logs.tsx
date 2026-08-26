@@ -17,7 +17,6 @@ export default function ActivityLogsScreen() {
   const activities = useMemo(() => { const normalized = query.trim().toLocaleLowerCase(); return data.activities.filter((item) => (filter === "all" || item.category === filter) && (!normalized || `${item.action} ${item.subject} ${item.actor} ${item.details}`.toLocaleLowerCase().includes(normalized))); }, [data.activities, filter, query]);
   return <ScreenContainer edges={["top"]} className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
     <DeliveryAppHeader
-      contextLabel="سجل الحركات"
       leadingAction={{
         accessibilityLabel: "العودة",
         icon: "arrow-forward",

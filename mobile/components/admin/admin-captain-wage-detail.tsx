@@ -92,7 +92,6 @@ export function AdminCaptainWageDetail() {
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
-        contextLabel="كشف حساب الكابتن"
         leadingAction={{
           accessibilityLabel: "العودة إلى أجور الكباتن",
           icon: "arrow-forward",

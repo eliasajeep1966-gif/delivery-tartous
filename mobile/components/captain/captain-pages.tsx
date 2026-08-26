@@ -434,7 +434,7 @@ function Page({
       className="bg-transparent"
       containerClassName="bg-transparent"
     >
-      <DeliveryAppHeader contextLabel={title} />
+      <DeliveryAppHeader />
       <ScrollView
         refreshControl={
           onRefresh ? (

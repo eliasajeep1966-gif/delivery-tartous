@@ -109,7 +109,6 @@ export default function AdminCustodyScreen() {
   return (
     <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
       <DeliveryAppHeader
-        contextLabel="إدارة الأمانات"
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",

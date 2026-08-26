@@ -351,7 +351,6 @@ export function AdminHome() {
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
       <DeliveryAppHeader
-        contextLabel={profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
         leadingAction={{
           accessibilityLabel: "إعدادات الحساب",
           icon: "account-circle",

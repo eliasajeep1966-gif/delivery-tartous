@@ -15,7 +15,6 @@ type HeaderAction = {
 };
 
 type DeliveryAppHeaderProps = {
-  contextLabel: string;
   leadingAction?: HeaderAction;
   trailingAction?: HeaderAction;
 };
@@ -63,12 +62,7 @@ export function DeliveryAppHeader({
       <View style={styles.content}>
         <HeaderActionButton action={leadingAction} />
         <View pointerEvents="none" style={styles.brand}>
-          <Text
-            allowFontScaling={false}
-            ellipsizeMode="clip"
-            numberOfLines={1}
-            style={styles.brandName}
-          >
+          <Text allowFontScaling={false} style={styles.brandName}>
             Delivery Tartous
           </Text>
         </View>
@@ -123,10 +117,11 @@ const styles = StyleSheet.create({
   brandName: {
     color: "#063B78",
     fontFamily: "Parisienne_400Regular",
-    fontSize: 27,
-    lineHeight: 36,
-    paddingHorizontal: 2,
-    paddingVertical: 2,
+    fontSize: 23,
+    lineHeight: 42,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    textAlign: "center",
   },
   notificationDot: {
     backgroundColor: "#15C8FF",

@@ -92,7 +92,6 @@ export default function AdminSupportScreen() {
   return (
     <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
       <DeliveryAppHeader
-        contextLabel="المساعدة والدعم"
         leadingAction={{
           accessibilityLabel: "العودة",
           icon: "arrow-forward",
