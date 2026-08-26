@@ -24,6 +24,7 @@ import {
   classifyAuthError,
   withAuthTimeout,
 } from "@/lib/auth/auth-errors";
+import { sessionNeedsRefresh } from "@/lib/auth/session-refresh";
 import {
   type DeliveryProfile,
   getNativeSupabaseClient,
@@ -316,7 +317,19 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
         });
         return;
       }
-      await loadProfile(data.session, keepsAuthenticatedState);
+
+      let activeSession = data.session;
+      if (sessionNeedsRefresh(activeSession)) {
+        const { data: refreshData, error: refreshError } =
+          await withAuthTimeout(client.auth.refreshSession());
+        if (refreshError) throw refreshError;
+        if (!refreshData.session) {
+          throw new Error("تعذر تجديد جلسة الدخول.");
+        }
+        activeSession = refreshData.session;
+      }
+
+      await loadProfile(activeSession, keepsAuthenticatedState);
     } catch (error) {
       const issue = classifyAuthError(error, "session");
       if (issue.code === "session-invalid" && !keepsAuthenticatedState) {
@@ -567,7 +580,15 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
             return;
           }
 
-          if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+          if (event === "INITIAL_SESSION") {
+            if (sessionNeedsRefresh(session)) {
+              void refresh();
+            } else {
+              void loadProfile(session);
+            }
+            return;
+          }
+          if (event === "SIGNED_IN") {
             void loadProfile(session);
           }
           if (event === "USER_UPDATED") {
