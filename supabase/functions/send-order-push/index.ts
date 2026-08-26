@@ -23,10 +23,20 @@ Deno.serve(async (req: Request) => {
     if (orderError || !order?.assigned_captain_id) throw new Error("Assigned order not found");
     const { data: tokens, error: tokenError } = await admin.from("push_tokens").select("token").eq("user_id", order.assigned_captain_id);
     if (tokenError) throw tokenError;
-    const messages = (tokens ?? []).map((row: { token: string }) => ({ to: row.token, sound: "new_order", title: "طلب جديد", body: `تم إسناد الطلب #${order.order_number} إليك`, data: { orderId: order.id, type: "assigned_order" }, priority: "high", channelId: "orders-v2" }));
+    const messages = (tokens ?? []).map((row: { token: string }) => ({ to: row.token, sound: "new_order.mp3", title: "طلب جديد", body: `تم إسناد الطلب #${order.order_number} إليك`, data: { orderId: order.id, type: "assigned_order" }, priority: "high", channelId: "orders-v2" }));
     if (messages.length) {
       const response = await fetch("https://exp.host/--/api/v2/push/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(messages) });
-      if (!response.ok) throw new Error(`Expo Push API failed: ${response.status}`);
+      const responseBody = await response.text();
+      if (!response.ok) throw new Error(`Expo Push API failed: ${response.status} ${responseBody}`);
+      let ticketResult: unknown;
+      try { ticketResult = JSON.parse(responseBody); } catch { ticketResult = null; }
+      const ticketErrors = Array.isArray((ticketResult as { data?: unknown })?.data)
+        ? ((ticketResult as { data: Array<{ status?: string; message?: string; details?: { error?: string } }> }).data).filter((ticket) => ticket.status === "error")
+        : [];
+      if (ticketErrors.length) {
+        const first = ticketErrors[0];
+        throw new Error(`Expo rejected notification: ${first.message ?? first.details?.error ?? "unknown error"}`);
+      }
     }
     return new Response(JSON.stringify({ sent: messages.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
