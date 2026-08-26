@@ -755,13 +755,17 @@ function ActivityDeliveryJourney({
   if (!presentation) return null;
 
   if (presentation.mode !== "completed") {
-    const text = status === "received"
+    const text = presentation.mode === "received"
       ? `تم الاستلام ${presentation.receivedTime}`
-      : `قيد التوصيل · ${presentation.label}`;
+      : `تم الاستلام ${presentation.receivedTime} · قيد التوصيل ${presentation.inDeliveryTime} · ${presentation.label}`;
 
     return (
       <View style={styles.activityProgressLine}>
-        <MaterialIcons name={status === "received" ? "inventory-2" : "two-wheeler"} size={13} color="#0878D1" />
+        <MaterialIcons
+          name={presentation.mode === "received" ? "inventory-2" : "two-wheeler"}
+          size={13}
+          color="#0878D1"
+        />
         <Text style={styles.activityProgressText}>{text}</Text>
       </View>
     );

@@ -56,7 +56,7 @@ async function enrichActivitiesWithDeliveryTiming(
     .from("order_status_history")
     .select("order_id,next_status,changed_at")
     .in("order_id", orderIds)
-    .in("next_status", ["received", "completed"]);
+    .in("next_status", ["received", "in_delivery", "completed"]);
   if (error) throw new Error(error.message);
 
   const historyByOrder = new Map<string, { status: string; timestamp: string }[]>();

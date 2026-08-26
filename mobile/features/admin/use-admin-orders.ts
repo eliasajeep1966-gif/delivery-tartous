@@ -2,6 +2,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type AdminOrderStatus } from "@/lib/admin/admin-home-mappers";
+import {
+  deriveDeliveryTiming,
+  type DeliveryStatusEvent,
+  type DeliveryTiming,
+} from "@/lib/admin/delivery-duration";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
@@ -19,6 +24,7 @@ export type AdminOrderListItem = {
   createdAt: string;
   assignedCaptainId: string | null;
   assignedCaptainName: string | null;
+  deliveryTiming: DeliveryTiming | null;
 };
 
 type Cursor = { createdAt: string; id: string };
@@ -31,6 +37,12 @@ const validStatuses: readonly AdminOrderStatus[] = ["pending", "assigned", "rece
 
 function isOrderStatus(value: unknown): value is AdminOrderStatus {
   return typeof value === "string" && validStatuses.includes(value as AdminOrderStatus);
+}
+
+function canShowDeliveryTiming(
+  status: AdminOrderStatus,
+): status is "received" | "in_delivery" | "completed" {
+  return status === "received" || status === "in_delivery" || status === "completed";
 }
 
 function stringValue(value: unknown, fallback = ""): string {
@@ -49,6 +61,24 @@ export function ordersKeysetFilter(cursor: Cursor | null): string | null {
 function statusesForFilter(filter: AdminOrdersFilter): readonly AdminOrderStatus[] | null {
   if (filter === "all") return null;
   return filter === "delivery_active" ? deliveryStatuses : [filter];
+}
+
+function groupStatusHistory(
+  rows: readonly { order_id: unknown; next_status: unknown; changed_at: unknown }[],
+) {
+  const historyByOrder = new Map<string, DeliveryStatusEvent[]>();
+  for (const row of rows) {
+    if (
+      typeof row.order_id !== "string" ||
+      typeof row.next_status !== "string" ||
+      typeof row.changed_at !== "string"
+    )
+      continue;
+    const entries = historyByOrder.get(row.order_id) ?? [];
+    entries.push({ status: row.next_status, timestamp: row.changed_at });
+    historyByOrder.set(row.order_id, entries);
+  }
+  return historyByOrder;
 }
 
 async function loadOrdersPage(filter: AdminOrdersFilter, cursor: Cursor | null): Promise<OrdersPage> {
@@ -77,9 +107,36 @@ async function loadOrdersPage(filter: AdminOrdersFilter, cursor: Cursor | null):
     return [[profile.id, name] as const];
   }));
 
+  const timedOrderIds = currentRows.flatMap((row) =>
+    typeof row.id === "string" && isOrderStatus(row.status) && canShowDeliveryTiming(row.status)
+      ? [row.id]
+      : [],
+  );
+  const { data: statusRows, error: statusError } = timedOrderIds.length
+    ? await client
+        .from("order_status_history")
+        .select("order_id,next_status,changed_at")
+        .in("order_id", timedOrderIds)
+        .in("next_status", ["received", "in_delivery", "completed"])
+    : { data: [], error: null };
+  if (statusError) throw new Error(statusError.message);
+  const historyByOrder = groupStatusHistory(statusRows ?? []);
+
   const items = currentRows.flatMap((row) => {
     if (typeof row.id !== "string" || !isOrderStatus(row.status) || typeof row.order_number !== "number" || typeof row.created_at !== "string") return [];
     const assignedCaptainId = typeof row.assigned_captain_id === "string" ? row.assigned_captain_id : null;
+    const statusAt = row.status === "completed"
+      ? stringValue(row.completed_at, stringValue(row.updated_at))
+      : stringValue(row.updated_at);
+    const deliveryTiming =
+      canShowDeliveryTiming(row.status) && statusAt
+        ? deriveDeliveryTiming(
+            row.status,
+            statusAt,
+            historyByOrder.get(row.id) ?? [],
+          )
+        : null;
+
     return [{
       id: row.id,
       orderNumber: row.order_number,
@@ -92,6 +149,7 @@ async function loadOrdersPage(filter: AdminOrdersFilter, cursor: Cursor | null):
       createdAt: row.created_at,
       assignedCaptainId,
       assignedCaptainName: assignedCaptainId ? captainNames.get(assignedCaptainId) ?? null : null,
+      deliveryTiming,
     }];
   });
 

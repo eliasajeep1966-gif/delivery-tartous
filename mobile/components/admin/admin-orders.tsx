@@ -30,6 +30,10 @@ import {
   useAdminOrders,
 } from "@/features/admin/use-admin-orders";
 import { type AdminOrderStatus } from "@/lib/admin/admin-home-mappers";
+import {
+  presentDeliveryTiming,
+  type DeliveryTiming,
+} from "@/lib/admin/delivery-duration";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 import { notifyCaptainOfOrder } from "@/lib/notifications";
 
@@ -461,7 +465,7 @@ function OrderRow({
       <View style={styles.orderBody}>
         <View style={styles.orderTop}>
           <View style={styles.orderIdentity}>
-            <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
+            <Text style={styles.orderNumber}>طلب #{item.orderNumber}</Text>
             <Text style={styles.orderDate}>{formatCompactDate(item.createdAt)}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.background }]}>
@@ -488,9 +492,88 @@ function OrderRow({
             {item.assignedCaptainName ?? "بانتظار تعيين كابتن"}
           </Text>
         </View>
+        <OrderDeliveryJourney status={item.status} timing={item.deliveryTiming} />
       </View>
       <MaterialIcons name="chevron-left" size={19} color="#91A8B8" style={styles.orderArrow} />
     </Pressable>
+  );
+}
+
+function OrderDeliveryJourney({
+  status,
+  timing,
+}: {
+  status: AdminOrderStatus;
+  timing: DeliveryTiming | null;
+}) {
+  const presentation = timing ? presentDeliveryTiming(timing) : null;
+  if (!presentation) return null;
+
+  if (presentation.mode === "received") {
+    return (
+      <View style={styles.orderJourneyActive}>
+        <View style={styles.orderJourneyActiveIcon}>
+          <MaterialIcons name="inventory-2" size={14} color="#6D28D9" />
+        </View>
+        <View style={styles.orderJourneyActiveCopy}>
+          <Text style={styles.orderJourneyActiveLabel}>تم الاستلام</Text>
+          <Text style={styles.orderJourneyActiveTime}>{presentation.receivedTime}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (presentation.mode === "in_delivery") {
+    return (
+      <View style={styles.orderJourneyActive}>
+        <View style={styles.orderJourneyActiveIcon}>
+          <MaterialIcons name="two-wheeler" size={14} color="#0878D1" />
+        </View>
+        <View style={styles.orderJourneyActiveCopy}>
+          <Text style={styles.orderJourneyActiveLabel}>
+            تم الاستلام {presentation.receivedTime} · قيد التوصيل {presentation.inDeliveryTime}
+          </Text>
+          <Text style={styles.orderJourneyActiveTime}>{presentation.label}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.orderJourney}>
+      <View style={styles.orderJourneyTop}>
+        <Text style={styles.orderJourneyTitle}>رحلة التوصيل</Text>
+        <View style={styles.orderDurationBadge}>
+          <MaterialIcons name="timer" size={12} color="#08755C" />
+          <Text style={styles.orderDurationText}>{presentation.label}</Text>
+        </View>
+      </View>
+      <View style={styles.orderJourneyTrack}>
+        <JourneyMoment label="استلام" time={presentation.receivedTime} />
+        <JourneyConnector />
+        <JourneyMoment label="قيد التوصيل" time={presentation.inDeliveryTime!} />
+        <JourneyConnector />
+        <JourneyMoment label="تم التوصيل" time={presentation.completedTime!} />
+      </View>
+    </View>
+  );
+}
+
+function JourneyMoment({ label, time }: { label: string; time: string }) {
+  return (
+    <View style={styles.orderJourneyMoment}>
+      <Text numberOfLines={1} style={styles.orderJourneyMomentLabel}>{label}</Text>
+      <Text style={styles.orderJourneyMomentTime}>{time}</Text>
+    </View>
+  );
+}
+
+function JourneyConnector() {
+  return (
+    <View style={styles.orderJourneyConnector}>
+      <View style={styles.orderJourneyLine} />
+      <MaterialIcons name="arrow-back" size={12} color="#41A78C" />
+    </View>
   );
 }
 
@@ -1030,15 +1113,15 @@ const styles = StyleSheet.create({
   orderCard: {
     backgroundColor: "#FFFFFF",
     borderColor: "#E2EBF1",
-    borderRadius: 15,
+    borderRadius: 18,
     borderWidth: 1,
-    marginBottom: 8,
-    minHeight: 112,
+    marginBottom: 10,
+    minHeight: 122,
     overflow: "hidden",
-    paddingBottom: 10,
+    paddingBottom: 12,
     paddingLeft: 31,
     paddingRight: 15,
-    paddingTop: 10,
+    paddingTop: 11,
     position: "relative",
     shadowColor: "#164865",
     shadowOffset: { width: 0, height: 2 },
@@ -1075,6 +1158,104 @@ const styles = StyleSheet.create({
   captainRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 6 },
   captainText: { color: "#0878D1", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
   captainTextMuted: { color: "#8096A6" },
+  orderJourneyActive: {
+    alignItems: "center",
+    backgroundColor: "#F1F8FC",
+    borderColor: "#D6EAF4",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 7,
+    marginTop: 9,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  orderJourneyActiveIcon: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    height: 25,
+    justifyContent: "center",
+    width: 25,
+  },
+  orderJourneyActiveCopy: { alignItems: "flex-end", flex: 1 },
+  orderJourneyActiveLabel: {
+    color: "#285C79",
+    fontSize: 10,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  orderJourneyActiveTime: {
+    color: "#0878D1",
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  orderJourney: {
+    backgroundColor: "#F4FBF8",
+    borderColor: "#D8EEE5",
+    borderRadius: 11,
+    borderWidth: 1,
+    marginTop: 9,
+    padding: 9,
+  },
+  orderJourneyTop: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+  },
+  orderJourneyTitle: {
+    color: "#286451",
+    fontSize: 10,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  orderDurationBadge: {
+    alignItems: "center",
+    backgroundColor: "#E3F6EF",
+    borderRadius: 10,
+    flexDirection: "row-reverse",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  orderDurationText: {
+    color: "#08755C",
+    fontSize: 9,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  orderJourneyTrack: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  orderJourneyMoment: { alignItems: "center", flex: 1 },
+  orderJourneyMomentLabel: {
+    color: "#527666",
+    fontSize: 8,
+    fontWeight: "700",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  orderJourneyMomentTime: {
+    color: "#146549",
+    fontSize: 9,
+    fontWeight: "800",
+    marginTop: 2,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  orderJourneyConnector: {
+    alignItems: "center",
+    flexDirection: "row",
+    width: 27,
+  },
+  orderJourneyLine: { backgroundColor: "#9CD4BF", flex: 1, height: 1 },
   orderDate: { color: "#7892A4", fontSize: 9, writingDirection: "rtl" },
   orderArrow: { left: 8, position: "absolute", top: 46 },
   orderPressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },

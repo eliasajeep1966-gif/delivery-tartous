@@ -195,7 +195,7 @@ export const nativeCaptainContract = {
         .from("order_status_history")
         .select("order_id,next_status,changed_at")
         .in("order_id", uniqueOrderIds)
-        .in("next_status", ["received", "completed"]);
+        .in("next_status", ["received", "in_delivery", "completed"]);
       return unwrap(
         result as Result<CaptainOrderStatusEvent[]>,
         "تعذر تحميل أوقات الاستلام والتوصيل.",

@@ -7,13 +7,15 @@ export type DeliveryStatusEvent = {
 
 export type DeliveryTiming = {
   receivedAt: string;
+  inDeliveryAt: string | null;
   completedAt: string | null;
 };
 
 export type DeliveryDurationPresentation = {
-  mode: "active" | "completed";
-  label: string;
+  mode: "received" | "in_delivery" | "completed";
+  label: string | null;
   receivedTime: string;
+  inDeliveryTime: string | null;
   completedTime: string | null;
 };
 
@@ -26,7 +28,7 @@ function timestamp(value: string): number | null {
 
 function latestEventBefore(
   events: readonly DeliveryStatusEvent[],
-  status: "received" | "completed",
+  status: "received" | "in_delivery" | "completed",
   limit: number,
 ): DeliveryStatusEvent | null {
   let result: DeliveryStatusEvent | null = null;
@@ -44,8 +46,8 @@ function latestEventBefore(
 }
 
 /**
- * Derives a delivery window from immutable status history. The function never
- * substitutes created_at or updated_at when a real receive/complete event is absent.
+ * Derives a delivery journey exclusively from immutable status-history events.
+ * It never substitutes created_at or updated_at for a missing transition.
  */
 export function deriveDeliveryTiming(
   status: DeliveryDurationStatus,
@@ -58,24 +60,53 @@ export function deriveDeliveryTiming(
   const received = latestEventBefore(events, "received", statusTimestamp);
   if (!received) return null;
 
-  if (status === "received" || status === "in_delivery") {
-    return { receivedAt: received.timestamp, completedAt: null };
+  const receivedTimestamp = timestamp(received.timestamp);
+  if (receivedTimestamp === null) return null;
+
+  const inDelivery = latestEventBefore(events, "in_delivery", statusTimestamp);
+  const inDeliveryTimestamp = inDelivery ? timestamp(inDelivery.timestamp) : null;
+  if (inDeliveryTimestamp !== null && inDeliveryTimestamp < receivedTimestamp) {
+    return null;
+  }
+
+  if (status === "received") {
+    return {
+      receivedAt: received.timestamp,
+      inDeliveryAt: null,
+      completedAt: null,
+    };
+  }
+
+  if (!inDelivery) {
+    // The status tells us delivery has started, but no immutable transition was
+    // found. Do not fabricate its time from the mutable order row.
+    return null;
+  }
+
+  if (status === "in_delivery") {
+    return {
+      receivedAt: received.timestamp,
+      inDeliveryAt: inDelivery.timestamp,
+      completedAt: null,
+    };
   }
 
   const completed = latestEventBefore(events, "completed", statusTimestamp);
   if (!completed) return null;
 
-  const receivedTimestamp = timestamp(received.timestamp);
   const completedTimestamp = timestamp(completed.timestamp);
   if (
-    receivedTimestamp === null ||
     completedTimestamp === null ||
-    completedTimestamp < receivedTimestamp
+    completedTimestamp < inDeliveryTimestamp!
   ) {
     return null;
   }
 
-  return { receivedAt: received.timestamp, completedAt: completed.timestamp };
+  return {
+    receivedAt: received.timestamp,
+    inDeliveryAt: inDelivery.timestamp,
+    completedAt: completed.timestamp,
+  };
 }
 
 function arabicNumber(value: number): string {
@@ -131,21 +162,42 @@ export function presentDeliveryTiming(
   const receivedTime = formatDeliveryClock(timing.receivedAt);
   if (!receivedTime) return null;
 
+  const inDeliveryTime = timing.inDeliveryAt
+    ? formatDeliveryClock(timing.inDeliveryAt)
+    : null;
+  if (timing.inDeliveryAt && !inDeliveryTime) return null;
+
   if (timing.completedAt) {
     const completedTime = formatDeliveryClock(timing.completedAt);
     const label = formatDeliveryDuration(timing.receivedAt, timing.completedAt);
-    if (!completedTime || !label) return null;
-    return { mode: "completed", label, receivedTime, completedTime };
+    if (!completedTime || !label || !inDeliveryTime) return null;
+    return {
+      mode: "completed",
+      label,
+      receivedTime,
+      inDeliveryTime,
+      completedTime,
+    };
   }
 
-  const nowValue = new Date(now).toISOString();
-  const label = formatDeliveryDuration(timing.receivedAt, nowValue);
-  if (!label) return null;
+  if (timing.inDeliveryAt) {
+    const nowValue = new Date(now).toISOString();
+    const label = formatDeliveryDuration(timing.inDeliveryAt, nowValue);
+    if (!label) return null;
+    return {
+      mode: "in_delivery",
+      label: `منذ ${label}`,
+      receivedTime,
+      inDeliveryTime,
+      completedTime: null,
+    };
+  }
 
   return {
-    mode: "active",
-    label: `منذ ${label}`,
+    mode: "received",
+    label: null,
     receivedTime,
+    inDeliveryTime: null,
     completedTime: null,
   };
 }
