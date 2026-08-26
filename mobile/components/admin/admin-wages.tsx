@@ -32,6 +32,7 @@ import {
 import {
   useNativeAdminWagePeriods,
   useNativeCaptainWageDetails,
+  useNativeOfficeExpensePeriods,
 } from "@/features/admin/use-admin-finance";
 
 const BLUE = "#0878D1";
@@ -178,6 +179,9 @@ export function AdminWages() {
   );
   const [payingCaptainId, setPayingCaptainId] = useState<string | null>(null);
   const details = useNativeCaptainWageDetails(selectedCaptainId);
+  const expensePeriod: NativeFinancePeriod =
+    dashboardFilter === "custom" ? "daily" : dashboardFilter;
+  const officeExpenses = useNativeOfficeExpensePeriods(expensePeriod);
   const dataOpacity = useSharedValue(1);
   const profitScale = useSharedValue(1.1);
   const profitTranslateY = useSharedValue(-14);
@@ -242,12 +246,21 @@ export function AdminWages() {
     }),
     { captain: 0, company: 0, gross: 0, orders: 0, paid: 0, unpaid: 0 },
   );
+  const selectedExpenseTotal =
+    officeExpenses.data?.find(
+      (row) =>
+        row.period_start ===
+        (dashboardFilter === "custom" ? customDateKey : selectedKey),
+    )?.expense_total ?? 0;
+  const netCompanyTotal = totals.company - Number(selectedExpenseTotal);
   const isPeriodPending =
-    dashboardFilter === "custom"
+    (dashboardFilter === "custom"
       ? customDateRows.isPending
-      : wagePeriods.isPending;
+      : wagePeriods.isPending) || officeExpenses.isPending;
   const periodError =
-    dashboardFilter === "custom" ? customDateRows.error : wagePeriods.error;
+    dashboardFilter === "custom"
+      ? customDateRows.error ?? officeExpenses.error
+      : wagePeriods.error ?? officeExpenses.error;
   const profitTitle =
     dashboardFilter === "daily"
       ? "أرباح الشركة اليوم"
@@ -424,11 +437,12 @@ export function AdminWages() {
         refreshControl={
           <RefreshControl
             refreshing={
-              dashboardFilter === "custom"
+              (dashboardFilter === "custom"
                 ? customDateRows.isRefetching
-                : wagePeriods.isRefetching
+                : wagePeriods.isRefetching) || officeExpenses.isRefetching
             }
             onRefresh={() => {
+              void officeExpenses.refetch();
               if (dashboardFilter === "custom") {
                 void customDateRows.refetch();
               } else {
@@ -442,7 +456,7 @@ export function AdminWages() {
       >
         <Animated.View style={[styles.profitHero, profitAnimatedStyle]}>
           <View style={styles.profitHeading}>
-            <Text style={styles.profitKicker}>ملخص الشركة للفترة المحددة</Text>
+            <Text style={styles.profitKicker}>صافي حصة الشركة بعد المصاريف</Text>
             <MaterialIcons
               name="account-balance-wallet"
               size={21}
@@ -451,7 +465,7 @@ export function AdminWages() {
           </View>
           <Text style={styles.profitTitle}>{profitTitle}</Text>
           <Text style={styles.profitAmount}>
-            {isPeriodPending ? "—" : money(totals.company)}
+            {isPeriodPending ? "—" : money(netCompanyTotal)}
           </Text>
           <View style={styles.profitFooter}>
             <Text style={styles.profitPeriod}>{selectedLabel}</Text>
