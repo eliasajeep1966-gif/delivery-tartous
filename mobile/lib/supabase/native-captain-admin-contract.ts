@@ -106,7 +106,7 @@ export const nativeCaptainAdminContract = {
     });
 
     return (profilesResult.data ?? [])
-      .flatMap((row) => {
+      .flatMap((row: Record<string, unknown>): NativeCaptain[] => {
         if (typeof row.id !== "string") return [];
         const name =
           typeof row.full_name === "string" && row.full_name.trim()
@@ -128,7 +128,9 @@ export const nativeCaptainAdminContract = {
           },
         ];
       })
-      .sort((left, right) => left.name.localeCompare(right.name, "ar"));
+      .sort((left: NativeCaptain, right: NativeCaptain) =>
+        left.name.localeCompare(right.name, "ar"),
+      );
   },
   async setActive(captainId: string, isActive: boolean): Promise<void> {
     const result = await withTimeout(
