@@ -1,5 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   Linking,
@@ -29,6 +29,7 @@ import {
 import {
   nativeCaptainContract,
   type CaptainCustody,
+  type CaptainOrderStatus,
 } from "@/lib/supabase/native-captain-contract";
 import {
   presentDeliveryTiming,
@@ -66,6 +67,55 @@ const damascusDateKey = (value: Date) => {
   return `${pick("year")}-${pick("month")}-${pick("day")}`;
 };
 
+const orderStatusLabels: Record<CaptainOrderStatus, string> = {
+  pending: "قيد الانتظار",
+  assigned: "تم الإسناد",
+  received: "تم الاستلام",
+  in_delivery: "قيد التوصيل",
+  completed: "تم التوصيل",
+  cancelled: "ملغى",
+  false_order: "طلب كاذب",
+  reversed: "معكوس",
+};
+
+const orderStatusTone: Record<CaptainOrderStatus, { background: string; border: string; color: string }> = {
+  pending: { background: "#FEF3C7", border: "#FCD34D", color: "#92400E" },
+  assigned: { background: "#DBEAFE", border: "#93C5FD", color: "#1D4ED8" },
+  received: { background: "#E0F2FE", border: "#7DD3FC", color: "#0369A1" },
+  in_delivery: { background: "#EDE9FE", border: "#C4B5FD", color: "#6D28D9" },
+  completed: { background: "#DCFCE7", border: "#86EFAC", color: "#15803D" },
+  cancelled: { background: "#F3F4F6", border: "#D1D5DB", color: "#4B5563" },
+  false_order: { background: "#FEE2E2", border: "#FCA5A5", color: "#B91C1C" },
+  reversed: { background: "#FCE7F3", border: "#F9A8D4", color: "#BE185D" },
+};
+
+function orderDayLabel(dateKey: string) {
+  const today = damascusDateKey(new Date());
+  if (dateKey === today) return "اليوم";
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dateKey === damascusDateKey(yesterday)) return "أمس";
+  return new Intl.DateTimeFormat("ar-SY", {
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Damascus",
+    weekday: "long",
+  }).format(new Date(`${dateKey}T12:00:00Z`));
+}
+
+function groupOrdersByDate(orders: readonly CaptainOrderWithTiming[]) {
+  const groups = new Map<string, CaptainOrderWithTiming[]>();
+  for (const order of orders) {
+    const key = damascusDateKey(new Date(order.completed_at ?? order.updated_at));
+    groups.set(key, [...(groups.get(key) ?? []), order]);
+  }
+  return [...groups].map(([dateKey, items]) => ({
+    dateKey,
+    items,
+    label: orderDayLabel(dateKey),
+  }));
+}
+
 export function CaptainOrders() {
   const data = useNativeCaptainOrders();
   const firstOrderNumber = data.total
@@ -75,6 +125,7 @@ export function CaptainOrders() {
     (data.page + 1) * CAPTAIN_ORDERS_PAGE_SIZE,
     data.total,
   );
+  const groupedOrders = useMemo(() => groupOrdersByDate(data.orders), [data.orders]);
 
   return (
     <Page
@@ -99,38 +150,23 @@ export function CaptainOrders() {
             <Text style={styles.ordersPageCount}>{data.total} طلب</Text>
           </View>
 
-          {data.orders.map((order, index) => (
-            <Animated.View
-              entering={FadeInDown.delay(70 + index * 30).duration(190)}
-              key={order.id}
-              style={styles.card}
-            >
-              <View style={styles.between}>
+          {groupedOrders.map((group, groupIndex) => (
+            <View key={group.dateKey} style={styles.orderDateGroup}>
+              <View style={styles.orderDateGroupHeader}>
                 <View>
-                  <Text style={styles.muted}>الطلب #{order.order_number}</Text>
-                  <Text style={styles.title}>{order.customer_name}</Text>
-                  <MotionPressable
-                    onPress={() =>
-                      void Linking.openURL(`tel:${order.customer_phone}`)
-                    }
-                  >
-                    <Text style={styles.phone}>{order.customer_phone}</Text>
-                  </MotionPressable>
+                  <Text style={styles.orderDateGroupTitle}>{group.label}</Text>
+                  <Text style={styles.orderDateGroupHint}>طلبات هذا اليوم</Text>
                 </View>
-                <View style={styles.left}>
-                  <Text style={styles.badge}>{order.status}</Text>
-                  <Text style={styles.amount}>{money(order.fee)}</Text>
-                </View>
+                <Text style={styles.orderDateGroupCount}>{group.items.length} طلب</Text>
               </View>
-              <View style={styles.divider} />
-              <Text style={styles.line}>المصدر: {order.pickup_address}</Text>
-              <Text style={styles.line}>الوجهة: {order.delivery_address}</Text>
-              <OrderDeliveryTiming
-                status={order.status}
-                timing={order.deliveryTiming}
-              />
-              <Text style={styles.muted}>{date(order.updated_at)}</Text>
-            </Animated.View>
+              {group.items.map((order, index) => (
+                <CaptainOrderCard
+                  key={order.id}
+                  order={order}
+                  index={groupIndex * CAPTAIN_ORDERS_PAGE_SIZE + index}
+                />
+              ))}
+            </View>
           ))}
 
           {data.pageCount > 1 ? (
@@ -169,6 +205,51 @@ export function CaptainOrders() {
         <Message text="لا توجد طلبات مسندة إلى حسابك حالياً." />
       )}
     </Page>
+  );
+}
+
+function CaptainOrderCard({
+  order,
+  index,
+}: {
+  order: CaptainOrderWithTiming;
+  index: number;
+}) {
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(70 + index * 24).duration(190)}
+      style={styles.card}
+    >
+      <View style={styles.between}>
+        <View style={styles.orderPrimaryCopy}>
+          <Text style={styles.muted}>الطلب #{order.order_number}</Text>
+          <Text numberOfLines={1} style={styles.title}>{order.customer_name}</Text>
+          <MotionPressable onPress={() => void Linking.openURL(`tel:${order.customer_phone}`)}>
+            <Text style={styles.phone}>{order.customer_phone}</Text>
+          </MotionPressable>
+        </View>
+        <View style={styles.left}>
+          <CaptainOrderStatusBadge status={order.status} />
+          <Text style={styles.amount}>{money(order.fee)}</Text>
+        </View>
+      </View>
+      <View style={styles.divider} />
+      <Text style={styles.line}>المصدر: {order.pickup_address}</Text>
+      <Text style={styles.line}>الوجهة: {order.delivery_address}</Text>
+      <OrderDeliveryTiming status={order.status} timing={order.deliveryTiming} />
+      <Text style={styles.muted}>{date(order.completed_at ?? order.updated_at)}</Text>
+    </Animated.View>
+  );
+}
+
+function CaptainOrderStatusBadge({ status }: { status: CaptainOrderStatus }) {
+  const tone = orderStatusTone[status];
+  return (
+    <View style={[styles.orderStatusBadge, { backgroundColor: tone.background, borderColor: tone.border }]}>
+      <Text style={[styles.orderStatusBadgeText, { color: tone.color }]}>
+        {orderStatusLabels[status]}
+      </Text>
+    </View>
   );
 }
 
@@ -299,16 +380,15 @@ export function CaptainWages() {
         <LoadingCards includeMetrics />
       ) : (
         <>
-          <View style={styles.metrics}>
-            <Metric label="الإجمالي" value={money(data.totals.gross)} />
-            <Metric
-              label="صافي الكابتن (70%)"
-              value={money(data.totals.captain)}
-            />
-            <Metric label="حصة الشركة" value={money(data.totals.company)} />
-            <Metric label="التسوية" value={money(data.totals.settlement)} />
-            <Metric label="المسدّد" value={money(data.totals.paid)} />
-            <Metric label="المتبقي" value={money(data.totals.unpaid)} />
+          <View style={styles.wageHero}>
+            <View>
+              <Text style={styles.wageHeroKicker}>أجوري ضمن الفترة المختارة</Text>
+              <Text style={styles.wageHeroValue}>{money(data.totals.captain)}</Text>
+              <Text style={styles.wageHeroHint}>من {data.total} طلب مكتمل</Text>
+            </View>
+            <View style={styles.wageHeroIcon}>
+              <MaterialIcons name="account-balance-wallet" size={25} color="#0878D1" />
+            </View>
           </View>
 
           {data.rows.length ? (
@@ -335,20 +415,10 @@ export function CaptainWages() {
                       <Text style={styles.line}>{date(row.completed_at)}</Text>
                     </View>
                     <View style={styles.left}>
-                      <Text style={styles.amount}>
-                        {money(row.captain_amount)} (70%)
-                      </Text>
-                      <Text style={styles.company}>
-                        الشركة: {money(row.company_amount)}
-                      </Text>
+                      <Text style={styles.wageRowAmount}>{money(row.captain_amount)}</Text>
+                      <Text style={styles.wageRowHint}>أجرك من هذا الطلب</Text>
                     </View>
                   </View>
-                  <View style={styles.divider} />
-                  <Text style={row.is_fully_paid ? styles.paid : styles.unpaid}>
-                    {row.is_fully_paid
-                      ? "تم تسليم الأجر"
-                      : `متبقي ${money(row.unpaid_amount)}`}
-                  </Text>
                 </Animated.View>
               ))}
 
@@ -459,7 +529,7 @@ export function CaptainCustodyPage() {
                 <Text style={styles.muted}>أمانة #{row.id.slice(0, 8)}</Text>
                 <Text style={styles.title}>{row.item_name}</Text>
               </View>
-              <Text style={row.returned_at ? styles.paid : styles.unpaid}>
+              <Text style={row.returned_at ? styles.custodyReturned : styles.custodyHeld}>
                 {row.returned_at ? "مُرجعة" : "على العهدة"}
               </Text>
             </View>
@@ -873,6 +943,41 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     writingDirection: "rtl",
   },
+  orderDateGroup: { gap: 8, marginTop: 4 },
+  orderDateGroupHeader: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    marginTop: 5,
+    paddingHorizontal: 3,
+  },
+  orderDateGroupTitle: {
+    color: "#174F74",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  orderDateGroupHint: {
+    color: "#718C9E",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  orderDateGroupCount: {
+    backgroundColor: "#E8F8FF",
+    borderColor: "#BCEBFA",
+    borderRadius: 9,
+    borderWidth: 1,
+    color: "#0878D1",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    writingDirection: "rtl",
+  },
   ordersPagination: {
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.9)",
@@ -923,7 +1028,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   between: { flexDirection: "row-reverse", justifyContent: "space-between" },
+  orderPrimaryCopy: { flex: 1, paddingLeft: 8 },
   left: { alignItems: "flex-end" },
+  orderStatusBadge: {
+    alignItems: "center",
+    borderRadius: 11,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  orderStatusBadgeText: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
   title: {
     color: "#194B6E",
     fontFamily: "Cairo_700Bold",
@@ -1096,14 +1216,73 @@ const styles = StyleSheet.create({
     padding: 12,
     width: "48.5%",
   },
-  paid: {
+  wageHero: {
+    alignItems: "center",
+    backgroundColor: "#EAF9FF",
+    borderColor: "#BCEBFA",
+    borderRadius: 19,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    minHeight: 104,
+    padding: 15,
+  },
+  wageHeroKicker: {
+    color: "#5A7C91",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageHeroValue: {
+    color: "#075D9F",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 22,
+    marginTop: 3,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageHeroHint: {
+    color: "#63869A",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 2,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageHeroIcon: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#CDEBF6",
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  wageRowAmount: {
+    color: "#075D9F",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    textAlign: "left",
+    writingDirection: "rtl",
+  },
+  wageRowHint: {
+    color: "#63869A",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 2,
+    textAlign: "left",
+    writingDirection: "rtl",
+  },
+  custodyReturned: {
     color: "#047857",
     fontFamily: "Cairo_700Bold",
     fontSize: 10,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  unpaid: {
+  custodyHeld: {
     color: "#B45309",
     fontFamily: "Cairo_700Bold",
     fontSize: 10,

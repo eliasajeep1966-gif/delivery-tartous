@@ -1,5 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
@@ -22,8 +24,12 @@ import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
-import { useNativeCaptainDashboard } from "@/features/captain/use-native-captain-dashboard";
+import {
+  type CaptainOrderWithTiming,
+  useNativeCaptainDashboard,
+} from "@/features/captain/use-native-captain-dashboard";
 import type { CaptainOrderStatus } from "@/lib/supabase/native-captain-contract";
+import { presentDeliveryTiming } from "@/lib/admin/delivery-duration";
 
 const DEEP_BLUE = "#063B78";
 const BLUE = "#0878D1";
@@ -33,10 +39,24 @@ const statusLabels: Record<CaptainOrderStatus, string> = {
   assigned: "تم إسناد الطلب",
   received: "تم الاستلام",
   in_delivery: "قيد التوصيل",
-  completed: "مكتمل",
+  completed: "تم التوصيل",
   cancelled: "ملغى",
   false_order: "طلب كاذب",
   reversed: "معكوس",
+};
+
+const statusTone: Record<
+  CaptainOrderStatus,
+  { background: string; border: string; color: string }
+> = {
+  pending: { background: "#FEF3C7", border: "#FCD34D", color: "#92400E" },
+  assigned: { background: "#DBEAFE", border: "#93C5FD", color: "#1D4ED8" },
+  received: { background: "#E0F2FE", border: "#7DD3FC", color: "#0369A1" },
+  in_delivery: { background: "#EDE9FE", border: "#C4B5FD", color: "#6D28D9" },
+  completed: { background: "#DCFCE7", border: "#86EFAC", color: "#15803D" },
+  cancelled: { background: "#F3F4F6", border: "#D1D5DB", color: "#4B5563" },
+  false_order: { background: "#FEE2E2", border: "#FCA5A5", color: "#B91C1C" },
+  reversed: { background: "#FCE7F3", border: "#F9A8D4", color: "#BE185D" },
 };
 
 function money(value: number) {
@@ -187,37 +207,49 @@ export function CaptainHome() {
                 thumbColor="#FFFFFF"
               />
             </Animated.View>
-            <Animated.View
-              entering={FadeInDown.delay(70).duration(210)}
-              style={styles.currentCard}
-            >
-              <View style={styles.currentHeader}>
-                <MaterialIcons name="two-wheeler" size={22} color="#FFFFFF" />
-                <View>
+            <Animated.View entering={FadeInDown.delay(70).duration(210)}>
+              <LinearGradient
+                colors={["rgba(4,51,101,0.95)", "rgba(7,107,177,0.86)", "rgba(15,174,217,0.74)"]}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.currentCard}
+              >
+                <BlurView
+                  intensity={18}
+                  pointerEvents="none"
+                  style={StyleSheet.absoluteFill}
+                  tint="light"
+                />
+                <View style={styles.currentHeader}>
+                <View style={styles.currentHeaderIcon}>
+                  <MaterialIcons name="two-wheeler" size={22} color="#FFFFFF" />
+                </View>
+                <View style={styles.currentHeaderCopy}>
                   <Text style={styles.currentTitle}>الطلب الحالي</Text>
                   <Text style={styles.currentSubtitle}>
-                    {current
-                      ? `الطلب #${current.order_number} · ${statusLabels[current.status]}`
-                      : "لا يوجد طلب نشط الآن"}
+                    {current ? `الطلب #${current.order_number}` : "لا يوجد طلب نشط الآن"}
                   </Text>
                 </View>
+                {current ? <StatusBadge status={current.status} prominent /> : null}
               </View>
               {current ? (
                 <View style={styles.cardBody}>
-                  <StopCard
-                    title="المصدر"
-                    icon="inventory-2"
-                    stop={pickup}
-                    fallback={current.pickup_address}
-                    onCall={call}
-                  />
-                  <StopCard
-                    title="الوجهة"
-                    icon="location-on"
-                    stop={delivery}
-                    fallback={current.delivery_address}
-                    onCall={call}
-                  />
+                  <View style={styles.stopsGrid}>
+                    <StopCard
+                      title="المصدر"
+                      icon="inventory-2"
+                      stop={pickup}
+                      fallback={current.pickup_address}
+                      onCall={call}
+                    />
+                    <StopCard
+                      title="الوجهة"
+                      icon="location-on"
+                      stop={delivery}
+                      fallback={current.delivery_address}
+                      onCall={call}
+                    />
+                  </View>
                   <Animated.View
                     key={current.status}
                     entering={FadeInDown.duration(170)}
@@ -262,6 +294,7 @@ export function CaptainHome() {
                   ستظهر تفاصيل الطلب هنا عند إسناده إليك.
                 </Text>
               )}
+              </LinearGradient>
             </Animated.View>
             <Animated.View entering={FadeInDown.delay(110).duration(210)}>
               <Text style={styles.sectionTitle}>ملخص اليوم</Text>
@@ -273,8 +306,12 @@ export function CaptainHome() {
                 />
                 <Metric
                   icon="account-balance-wallet"
-                  value={money(dashboard.metrics?.completed_gross ?? 0)}
-                  label="قيمة مكتملة"
+                  value={
+                    dashboard.todayCaptainWage === null
+                      ? "—"
+                      : money(dashboard.todayCaptainWage)
+                  }
+                  label="أجوري اليوم"
                 />
               </View>
             </Animated.View>
@@ -284,27 +321,7 @@ export function CaptainHome() {
                 <Text style={styles.link}>{dashboard.orderCount} طلبات</Text>
               </View>
               {dashboard.recentOrders.map((order, index) => (
-                <Animated.View
-                  entering={FadeInDown.delay(180 + index * 35).duration(190)}
-                  key={order.id}
-                  style={styles.orderRow}
-                >
-                  <View>
-                    <Text style={styles.orderNumber}>
-                      #{order.order_number}
-                    </Text>
-                    <Text style={styles.orderName}>{order.customer_name}</Text>
-                    <Text style={styles.orderDate}>
-                      {date(order.updated_at)}
-                    </Text>
-                  </View>
-                  <View style={styles.orderMeta}>
-                    <Text style={styles.badge}>
-                      {statusLabels[order.status]}
-                    </Text>
-                    <Text style={styles.fee}>{money(order.fee)}</Text>
-                  </View>
-                </Animated.View>
+                <RecentOrderRow key={order.id} order={order} index={index} />
               ))}
             </Animated.View>
           </>
@@ -359,6 +376,7 @@ export function CaptainHome() {
 
 function OrderTimeline({ status }: { status: CaptainOrderStatus }) {
   const currentIndex = orderSteps.findIndex((step) => step.status === status);
+  const stepColors = ["#3B82F6", "#0EA5E9", "#8B5CF6", "#16A34A"];
 
   return (
     <View style={styles.timeline}>
@@ -366,36 +384,36 @@ function OrderTimeline({ status }: { status: CaptainOrderStatus }) {
         <Text style={styles.sectionTitle}>خطوات الطلب</Text>
         <Text style={styles.timelineHint}>تتحدث بعد كل تأكيد</Text>
       </View>
-      {orderSteps.map((step, index) => {
-        const done = currentIndex >= index;
-        const current = currentIndex === index;
-        return (
-          <View key={step.status} style={styles.timelineRow}>
-            <View style={[styles.timelineDot, done && styles.timelineDotDone]}>
-              {done ? (
-                <MaterialIcons name="check" size={13} color="#FFFFFF" />
-              ) : null}
-            </View>
-            {index < orderSteps.length - 1 ? (
+      <View style={styles.timelineSteps}>
+        {orderSteps.map((step, index) => {
+          const done = currentIndex >= index;
+          const current = currentIndex === index;
+          const color = stepColors[index];
+          return (
+            <View key={step.status} style={styles.timelineStep}>
               <View
                 style={[
-                  styles.timelineLine,
-                  currentIndex > index && styles.timelineLineDone,
+                  styles.timelineDot,
+                  { borderColor: color },
+                  done && { backgroundColor: color },
                 ]}
-              />
-            ) : null}
-            <Text
-              style={[
-                styles.timelineText,
-                done && styles.timelineTextDone,
-                current && styles.timelineTextCurrent,
-              ]}
-            >
-              {step.label}
-            </Text>
-          </View>
-        );
-      })}
+              >
+                {done ? <MaterialIcons name="check" size={13} color="#FFFFFF" /> : null}
+              </View>
+              <Text
+                style={[
+                  styles.timelineText,
+                  done && { color, fontFamily: "Cairo_700Bold" },
+                  current && styles.timelineTextCurrent,
+                ]}
+              >
+                {step.label}
+              </Text>
+
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -437,6 +455,78 @@ function StopCard({
     </View>
   );
 }
+function StatusBadge({
+  status,
+  prominent = false,
+}: {
+  status: CaptainOrderStatus;
+  prominent?: boolean;
+}) {
+  const tone = statusTone[status];
+  return (
+    <View
+      style={[
+        styles.statusBadge,
+        prominent && styles.statusBadgeProminent,
+        { backgroundColor: tone.background, borderColor: tone.border },
+      ]}
+    >
+      <Text
+        style={[
+          styles.statusBadgeText,
+          prominent && styles.statusBadgeTextProminent,
+          { color: tone.color },
+        ]}
+      >
+        {statusLabels[status]}
+      </Text>
+    </View>
+  );
+}
+
+function RecentOrderRow({
+  order,
+  index,
+}: {
+  order: CaptainOrderWithTiming;
+  index: number;
+}) {
+  const timing = order.deliveryTiming
+    ? presentDeliveryTiming(order.deliveryTiming)
+    : null;
+  const timingText = timing
+    ? timing.mode === "completed"
+      ? `مدة التوصيل: ${timing.label}`
+      : timing.mode === "received"
+        ? `تم الاستلام ${timing.receivedTime}`
+        : `قيد التوصيل · ${timing.label}`
+    : "لا توجد مدة مسجلة";
+
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(180 + index * 35).duration(190)}
+      style={styles.orderRow}
+    >
+      <View style={styles.orderCopy}>
+        <View style={styles.orderTitleRow}>
+          <Text style={styles.orderNumber}>الطلب #{order.order_number}</Text>
+          <Text style={styles.fee}>{money(order.fee)}</Text>
+        </View>
+        <Text numberOfLines={1} style={styles.orderName}>{order.customer_name}</Text>
+        <View style={styles.orderTimingRow}>
+          <MaterialIcons name="event" size={13} color="#64869A" />
+          <Text style={styles.orderDate}>{date(order.completed_at ?? order.updated_at)}</Text>
+        </View>
+        <View style={styles.orderTimingRow}>
+          <MaterialIcons name="timer" size={13} color="#0877B8" />
+          <Text style={styles.orderDuration}>{timingText}</Text>
+        </View>
+      </View>
+      <StatusBadge status={order.status} prominent />
+    </Animated.View>
+  );
+}
+
 function Metric({
   icon,
   value,
@@ -558,45 +648,55 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   currentCard: {
-    backgroundColor: "rgba(255,255,255,0.97)",
-    borderColor: "#B3E8FA",
-    borderRadius: 20,
+    borderColor: "rgba(220,248,255,0.74)",
+    borderRadius: 24,
     borderWidth: 1,
     overflow: "hidden",
-    shadowColor: "#0A668A",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
+    shadowColor: "#075B91",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
   },
   currentHeader: {
     alignItems: "center",
-    backgroundColor: DEEP_BLUE,
-    borderBottomColor: NEON,
-    borderBottomWidth: 2,
+    borderBottomColor: "rgba(215,248,255,0.34)",
+    borderBottomWidth: 1,
     flexDirection: "row-reverse",
     gap: 9,
-    minHeight: 68,
+    minHeight: 76,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
+  currentHeaderIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.3)",
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  currentHeaderCopy: { flex: 1 },
   currentTitle: {
     color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
-    fontSize: 13,
+    fontSize: 15,
     textAlign: "right",
     writingDirection: "rtl",
   },
   currentSubtitle: {
-    color: "#D9EEFF",
+    color: "rgba(232,249,255,0.84)",
     fontFamily: "Cairo_400Regular",
     fontSize: 9,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  cardBody: { gap: 10, padding: 13 },
+  cardBody: { backgroundColor: "rgba(245,253,255,0.2)", gap: 11, padding: 13 },
+  stopsGrid: { flexDirection: "row-reverse", gap: 8 },
   timeline: {
-    backgroundColor: "#F8FCFE",
-    borderColor: "#DCECF4",
+    backgroundColor: "rgba(255,255,255,0.88)",
+    borderColor: "rgba(202,239,250,0.82)",
     borderRadius: 12,
     borderWidth: 1,
     gap: 8,
@@ -608,10 +708,17 @@ const styles = StyleSheet.create({
     fontSize: 9,
     writingDirection: "rtl",
   },
-  timelineRow: {
+  timelineSteps: { gap: 7, marginTop: 1 },
+  timelineStep: {
     alignItems: "center",
+    backgroundColor: "rgba(246,252,254,0.88)",
+    borderColor: "#DCECF4",
+    borderRadius: 10,
+    borderWidth: 1,
     flexDirection: "row-reverse",
-    minHeight: 25,
+    gap: 8,
+    minHeight: 31,
+    paddingHorizontal: 8,
   },
   timelineDot: {
     alignItems: "center",
@@ -627,35 +734,24 @@ const styles = StyleSheet.create({
     backgroundColor: BLUE,
     borderColor: BLUE,
   },
-  timelineLine: {
-    backgroundColor: "#D8E7EE",
-    height: 2,
-    marginHorizontal: 5,
-    width: 18,
-  },
-  timelineLineDone: {
-    backgroundColor: BLUE,
-  },
   timelineText: {
-    color: "#8AA0AD",
+    color: "#7892A3",
     flex: 1,
     fontFamily: "Cairo_400Regular",
     fontSize: 10,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  timelineTextDone: {
-    color: "#0874BD",
-    fontFamily: "Cairo_700Bold",
-  },
   timelineTextCurrent: {
     color: BLUE,
   },
   stopCard: {
-    backgroundColor: "#F8FCFE",
-    borderColor: "#DCECF4",
-    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: "rgba(202,239,250,0.9)",
+    borderRadius: 14,
     borderWidth: 1,
+    flex: 1,
+    minHeight: 145,
     padding: 10,
   },
   stopTitle: {
@@ -785,56 +881,79 @@ const styles = StyleSheet.create({
     fontSize: 10,
     writingDirection: "rtl",
   },
-  orderRow: {
+  statusBadge: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeProminent: {
+    borderRadius: 12,
+    minHeight: 34,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusBadgeText: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    writingDirection: "rtl",
+  },
+  statusBadgeTextProminent: { fontSize: 12 },
+  orderRow: {
+    alignItems: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.94)",
     borderColor: "#D5EDF6",
-    borderRadius: 15,
+    borderRadius: 17,
     borderWidth: 1,
     flexDirection: "row-reverse",
+    gap: 10,
     justifyContent: "space-between",
-    marginTop: 8,
-    minHeight: 76,
+    marginTop: 9,
+    minHeight: 116,
     padding: 12,
+  },
+  orderCopy: { flex: 1, gap: 4 },
+  orderTitleRow: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
   },
   orderNumber: {
     color: "#154F79",
     fontFamily: "Cairo_700Bold",
-    fontSize: 11,
+    fontSize: 12,
     textAlign: "right",
+    writingDirection: "rtl",
   },
   orderName: {
     color: "#38586F",
     fontFamily: "Cairo_700Bold",
     fontSize: 11,
-    marginTop: 2,
     textAlign: "right",
     writingDirection: "rtl",
   },
+  orderTimingRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
   orderDate: {
-    color: "#7892A3",
+    color: "#64869A",
     fontFamily: "Cairo_400Regular",
     fontSize: 9,
-    marginTop: 3,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  orderMeta: { alignItems: "flex-end" },
-  badge: {
-    backgroundColor: "#E8F6FF",
-    borderRadius: 5,
-    color: BLUE,
+  orderDuration: {
+    color: "#0874AE",
     fontFamily: "Cairo_700Bold",
     fontSize: 9,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    textAlign: "right",
     writingDirection: "rtl",
   },
   fee: {
     color: "#075D9F",
     fontFamily: "Cairo_700Bold",
     fontSize: 10,
-    marginTop: 5,
+    writingDirection: "rtl",
   },
   state: {
     alignItems: "center",

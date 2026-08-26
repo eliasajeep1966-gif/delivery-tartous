@@ -78,9 +78,10 @@ export function useNativeCaptainDashboard() {
   const { profile, session } = useDeliveryAuth();
   const captainId = session?.user.id ?? profile?.id ?? null;
   const [metrics, setMetrics] = useState<CaptainHomeMetrics | null>(null);
+  const [todayCaptainWage, setTodayCaptainWage] = useState<number | null>(null);
   const [orderCount, setOrderCount] = useState(0);
   const [currentOrder, setCurrentOrder] = useState<CaptainOrder | null>(null);
-  const [recentOrders, setRecentOrders] = useState<CaptainOrder[]>([]);
+  const [recentOrders, setRecentOrders] = useState<CaptainOrderWithTiming[]>([]);
   const [currentStops, setCurrentStops] = useState<CaptainOrderStop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,6 +101,7 @@ export function useNativeCaptainDashboard() {
       const requestVersion = ++reloadVersion.current;
       if (!captainId) {
         setMetrics(null);
+        setTodayCaptainWage(null);
         setOrderCount(0);
         setCurrentOrder(null);
         setRecentOrders([]);
@@ -114,13 +116,22 @@ export function useNativeCaptainDashboard() {
         setError(null);
       }
       try {
-        const nextDashboard = await nativeCaptainContract.reads.dashboard();
+        const [nextDashboard, wagePage] = await Promise.all([
+          nativeCaptainContract.reads.dashboard(),
+          nativeCaptainContract.reads
+            .wagesPage("daily", { limit: 1, offset: 0, customDate: null })
+            .catch(() => null),
+        ]);
+        const recentOrdersWithTiming = await enrichCaptainOrdersWithDeliveryTiming(
+          nextDashboard.recent_orders,
+        );
         if (!mounted.current || requestVersion !== reloadVersion.current)
           return;
         setMetrics(nextDashboard.metrics);
+        setTodayCaptainWage(wagePage?.totals.captain ?? null);
         setOrderCount(nextDashboard.order_count);
         setCurrentOrder(nextDashboard.active_order);
-        setRecentOrders(nextDashboard.recent_orders);
+        setRecentOrders(recentOrdersWithTiming);
         setCurrentStops(nextDashboard.active_stops);
       } catch (cause) {
         if (mounted.current && !silent)
@@ -248,7 +259,11 @@ export function useNativeCaptainDashboard() {
               : current,
         );
         setRecentOrders((current) =>
-          current.map((order) => (order.id === updated.id ? updated : order)),
+          current.map((order) =>
+            order.id === updated.id
+              ? { ...updated, deliveryTiming: order.deliveryTiming }
+              : order,
+          ),
         );
         if (nextStatus === "completed" || nextStatus === "false_order")
           setCurrentStops([]);
@@ -276,6 +291,7 @@ export function useNativeCaptainDashboard() {
     () => ({
       profile,
       metrics,
+      todayCaptainWage,
       orderCount,
       currentOrder,
       currentStops,
@@ -298,6 +314,7 @@ export function useNativeCaptainDashboard() {
       loading,
       currentOrder,
       metrics,
+      todayCaptainWage,
       orderCount,
       orderSaving,
       profile,
