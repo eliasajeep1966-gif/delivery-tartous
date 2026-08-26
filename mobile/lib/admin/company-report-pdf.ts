@@ -1,8 +1,9 @@
+import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 
-import { formatReportDate } from "@/lib/admin/report-period";
+import { formatReportDate } from "./report-period";
 
 export type PdfReportMetric = {
   label: string;
@@ -111,6 +112,44 @@ function buildSimplePdfHtml(report: SimplePdfReport): string {
 </html>`;
 }
 
+export function pdfReportFileName(title: string, now = new Date()): string {
+  const normalizedTitle = title
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  const timestamp = now.toISOString().replace(/[:.]/g, "-");
+  return `${normalizedTitle || "delivery-tartous-report"}-${timestamp}.pdf`;
+}
+
+async function savePdfForSharing(
+  title: string,
+  base64: string | undefined,
+): Promise<string> {
+  if (!base64) {
+    throw new Error("تعذر قراءة ملف PDF الذي أنشأه التطبيق.");
+  }
+
+  const documentsDirectory = FileSystem.documentDirectory;
+  if (!documentsDirectory) {
+    throw new Error("مساحة حفظ ملفات PDF غير متاحة على هذا الجهاز.");
+  }
+
+  const reportsDirectory = `${documentsDirectory}delivery-tartous-reports/`;
+  await FileSystem.makeDirectoryAsync(reportsDirectory, { intermediates: true });
+  const destinationUri = `${reportsDirectory}${pdfReportFileName(title)}`;
+  await FileSystem.writeAsStringAsync(destinationUri, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const info = await FileSystem.getInfoAsync(destinationUri);
+  if (!info.exists || info.size === 0) {
+    throw new Error("تعذر حفظ ملف PDF في ملفات التطبيق.");
+  }
+
+  return destinationUri;
+}
+
 export async function createAndShareSimplePdfReport(
   report: SimplePdfReport,
 ): Promise<void> {
@@ -121,9 +160,11 @@ export async function createAndShareSimplePdfReport(
     return;
   }
 
-  const file = await Print.printToFileAsync({ html });
+  const generated = await Print.printToFileAsync({ html, base64: true });
+  const shareableUri = await savePdfForSharing(report.title, generated.base64);
+
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(file.uri, {
+    await Sharing.shareAsync(shareableUri, {
       UTI: "com.adobe.pdf",
       mimeType: "application/pdf",
       dialogTitle: report.title,
@@ -131,5 +172,5 @@ export async function createAndShareSimplePdfReport(
     return;
   }
 
-  await Print.printAsync({ uri: file.uri });
+  await Print.printAsync({ uri: shareableUri });
 }
