@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Href, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -12,6 +13,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
+import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 
 const items = [
   {
@@ -58,6 +60,27 @@ const items = [
 export function AdminMore() {
   const router = useRouter();
   const { profile, signOut } = useDeliveryAuth();
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!profile?.id) return () => {
+      active = false;
+    };
+
+    void Promise.resolve(getNativeSupabaseClient().rpc("is_application_owner"))
+      .then(({ data, error }) => {
+        if (active) setIsOwner(!error && data === true);
+      })
+      .catch(() => {
+        if (active) setIsOwner(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [profile?.id]);
+
   const open = (path?: string, label?: string) => {
     if (path) {
       router.push(path as Href);
@@ -122,6 +145,16 @@ export function AdminMore() {
           bg="#ECFEFF"
           onPress={() => open("/(admin)/support", "المساعدة والدعم")}
         />
+        {isOwner ? (
+          <MenuItem
+            title="مسح بيانات التطبيق"
+            description="حذف كامل البيانات عبر كلمة مرور المالك"
+            icon="delete-forever"
+            color="#BA1A1A"
+            bg="#FFF0F0"
+            onPress={() => open("/owner-data-reset", "مسح بيانات التطبيق")}
+          />
+        ) : null}
         <Text style={styles.sectionTitle}>الحساب</Text>
         <MenuItem
           title="إعدادات الحساب"
