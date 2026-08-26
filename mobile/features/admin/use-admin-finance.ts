@@ -453,8 +453,8 @@ export type NativeCompanyExpensePeriodRow = {
 };
 
 export type NativeCompanyReportRangeSummary = {
-  period_start: string;
-  period_end: string;
+  period_start: string | null;
+  period_end: string | null;
   order_count: number;
   gross_total: number;
   company_total: number;
@@ -463,9 +463,23 @@ export type NativeCompanyReportRangeSummary = {
   net_company_total: number;
 };
 
+export type NativeCaptainPdfReportSummary = {
+  captain_id: string;
+  captain_name: string;
+  period_start: string | null;
+  period_end: string | null;
+  order_count: number;
+  gross_total: number;
+  captain_total: number;
+};
+
 function finiteNumber(value: unknown): number {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function optionalText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 export const nativeOfficeExpensesContract = {
@@ -519,8 +533,8 @@ export const nativeOfficeExpensesContract = {
 export const nativeCompanyPdfReportContract = {
   reads: {
     async rangeSummary(input: {
-      startDate: string;
-      endDate: string;
+      startDate: string | null;
+      endDate: string | null;
     }): Promise<NativeCompanyReportRangeSummary> {
       const row = first(
         (await getNativeSupabaseClient().rpc(
@@ -534,14 +548,41 @@ export const nativeCompanyPdfReportContract = {
       );
 
       return {
-        period_start: row.period_start,
-        period_end: row.period_end,
+        period_start: optionalText(row.period_start),
+        period_end: optionalText(row.period_end),
         order_count: finiteNumber(row.order_count),
         gross_total: finiteNumber(row.gross_total),
         company_total: finiteNumber(row.company_total),
         captain_net_total: finiteNumber(row.captain_net_total),
         expense_total: finiteNumber(row.expense_total),
         net_company_total: finiteNumber(row.net_company_total),
+      };
+    },
+    async captainSummary(input: {
+      captainId: string;
+      startDate: string | null;
+      endDate: string | null;
+    }): Promise<NativeCaptainPdfReportSummary> {
+      const row = first(
+        (await getNativeSupabaseClient().rpc(
+          "get_captain_report_range_summary",
+          {
+            p_captain_id: input.captainId,
+            p_start_date: input.startDate,
+            p_end_date: input.endDate,
+          },
+        )) as RpcResult<NativeCaptainPdfReportSummary[]>,
+        "تعذر تحميل ملخص تقرير الكابتن.",
+      );
+
+      return {
+        captain_id: row.captain_id,
+        captain_name: optionalText(row.captain_name) ?? "كابتن بدون اسم",
+        period_start: optionalText(row.period_start),
+        period_end: optionalText(row.period_end),
+        order_count: finiteNumber(row.order_count),
+        gross_total: finiteNumber(row.gross_total),
+        captain_total: finiteNumber(row.captain_total),
       };
     },
   },

@@ -4,16 +4,18 @@ import { Platform } from "react-native";
 
 import { formatReportDate } from "@/lib/admin/report-period";
 
-export type CompanyPdfReport = {
+export type PdfReportMetric = {
+  label: string;
+  value: string;
+  highlighted?: boolean;
+};
+
+export type SimplePdfReport = {
   title: string;
-  startDate: string;
-  endDate: string;
-  grossTotal: number;
-  orderCount: number;
-  companyTotal: number;
-  captainTotal: number;
-  expenseTotal?: number;
-  netTotal: number;
+  subject?: string;
+  startDate: string | null;
+  endDate: string | null;
+  metrics: PdfReportMetric[];
   generatedBy: string | null;
 };
 
@@ -26,14 +28,25 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
-function amount(value: number): string {
+export function money(value: number): string {
   const safeValue = Number.isFinite(value) ? value : 0;
   return `${new Intl.NumberFormat("ar-SY-u-nu-latn", {
     maximumFractionDigits: 2,
   }).format(safeValue)} ل.س`;
 }
 
-function dateTime(value: Date): string {
+export function orderCount(value: number): string {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return `${new Intl.NumberFormat("ar-SY-u-nu-latn").format(safeValue)} طلب`;
+}
+
+function periodLabel(startDate: string | null, endDate: string | null): string {
+  if (!startDate || !endDate) return "كامل السجل المسجل";
+  if (startDate === endDate) return formatReportDate(startDate);
+  return `من ${formatReportDate(startDate)} إلى ${formatReportDate(endDate)}`;
+}
+
+function generatedAt(value: Date): string {
   return new Intl.DateTimeFormat("ar-SY-u-nu-latn", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -41,28 +54,18 @@ function dateTime(value: Date): string {
   }).format(value);
 }
 
-function metric(label: string, value: string, highlighted = false): string {
-  return `
-    <div class="metric ${highlighted ? "metric-highlight" : ""}">
-      <div class="metric-label">${escapeHtml(label)}</div>
-      <div class="metric-value">${escapeHtml(value)}</div>
-    </div>
-  `;
-}
-
-function buildCompanyReportHtml(report: CompanyPdfReport): string {
-  const expenses = report.expenseTotal ?? 0;
-  const hasExpenses = report.expenseTotal !== undefined;
-  const period = `${formatReportDate(report.startDate)} — ${formatReportDate(report.endDate)}`;
+function buildSimplePdfHtml(report: SimplePdfReport): string {
   const preparedBy = report.generatedBy?.trim() || "إدارة Delivery Tartous";
-  const metrics = [
-    metric("إجمالي الأجور", amount(report.grossTotal)),
-    metric("إجمالي الطلبات", `${new Intl.NumberFormat("ar-SY-u-nu-latn").format(report.orderCount)} طلب`),
-    metric("حصة الكباتن", amount(report.captainTotal)),
-    metric("صافي المكتب قبل المصاريف", amount(report.companyTotal)),
-    ...(hasExpenses ? [metric("إجمالي المصاريف", amount(expenses))] : []),
-    metric(hasExpenses ? "الصافي بعد المصاريف" : "صافي المكتب", amount(report.netTotal), true),
-  ].join("");
+  const metrics = report.metrics
+    .map(
+      (item) => `
+        <div class="metric ${item.highlighted ? "metric-highlight" : ""}">
+          <div class="metric-label">${escapeHtml(item.label)}</div>
+          <div class="metric-value">${escapeHtml(item.value)}</div>
+        </div>
+      `,
+    )
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -77,7 +80,8 @@ function buildCompanyReportHtml(report: CompanyPdfReport): string {
       .header { background: #0878d1; color: #ffffff; padding: 24px; }
       .brand { font-size: 12px; font-weight: 700; opacity: .88; }
       .title { font-size: 24px; font-weight: 700; margin: 5px 0 0; }
-      .period { font-size: 13px; margin-top: 9px; opacity: .94; }
+      .subject { font-size: 14px; font-weight: 700; margin-top: 8px; }
+      .period { font-size: 12px; margin-top: 6px; opacity: .94; }
       .content { padding: 20px; }
       .section-label { color: #5b7b92; font-size: 11px; font-weight: 700; margin-bottom: 7px; }
       .metrics { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -86,7 +90,6 @@ function buildCompanyReportHtml(report: CompanyPdfReport): string {
       .metric-label { color: #58758b; font-size: 11px; font-weight: 700; }
       .metric-value { color: #123d60; font-size: 17px; font-weight: 700; margin-top: 4px; }
       .metric-highlight .metric-value { color: #08755c; }
-      .note { background: #fff9e8; border: 1px solid #f6e5b6; border-radius: 10px; color: #715b20; font-size: 10px; margin-top: 17px; padding: 10px 12px; }
       .footer { border-top: 1px solid #e4edf3; color: #69869a; font-size: 10px; margin-top: 18px; padding-top: 12px; }
     </style>
   </head>
@@ -95,23 +98,23 @@ function buildCompanyReportHtml(report: CompanyPdfReport): string {
       <section class="header">
         <div class="brand">DELIVERY TARTOUS</div>
         <h1 class="title">${escapeHtml(report.title)}</h1>
-        <div class="period">الفترة: ${escapeHtml(period)}</div>
+        ${report.subject ? `<div class="subject">${escapeHtml(report.subject)}</div>` : ""}
+        <div class="period">الفترة: ${escapeHtml(periodLabel(report.startDate, report.endDate))}</div>
       </section>
       <section class="content">
-        <div class="section-label">ملخص الأداء المالي</div>
+        <div class="section-label">الملخص</div>
         <div class="metrics">${metrics}</div>
-        ${hasExpenses ? '<div class="note">الصافي في هذا التقرير يساوي حصة المكتب من الطلبات ناقص مصاريف المكتب المسجلة ضمن الفترة.</div>' : ""}
-        <div class="footer">أُنشئ بتاريخ ${escapeHtml(dateTime(new Date()))} بواسطة ${escapeHtml(preparedBy)}</div>
+        <div class="footer">أُنشئ بتاريخ ${escapeHtml(generatedAt(new Date()))} بواسطة ${escapeHtml(preparedBy)}</div>
       </section>
     </main>
   </body>
 </html>`;
 }
 
-export async function createAndShareCompanyReportPdf(
-  report: CompanyPdfReport,
+export async function createAndShareSimplePdfReport(
+  report: SimplePdfReport,
 ): Promise<void> {
-  const html = buildCompanyReportHtml(report);
+  const html = buildSimplePdfHtml(report);
 
   if (Platform.OS === "web") {
     await Print.printToFileAsync({ html });

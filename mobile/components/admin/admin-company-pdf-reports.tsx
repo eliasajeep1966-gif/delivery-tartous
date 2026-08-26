@@ -1,5 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,43 +12,30 @@ import {
   View,
 } from "react-native";
 
+import { useAdminCaptains } from "@/features/admin/use-admin-captains";
+import { nativeCompanyPdfReportContract } from "@/features/admin/use-admin-finance";
 import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import {
-  createAndShareCompanyReportPdf,
+  createAndShareSimplePdfReport,
+  money,
+  orderCount,
 } from "@/lib/admin/company-report-pdf";
 import {
-  assertDateRange,
   currentDamascusDateKey,
   damascusDateKey,
   formatReportDate,
-  periodLabel,
-  rangeForPeriod,
-  type CompanyReportPeriod,
+  optionalDateRange,
 } from "@/lib/admin/report-period";
-import { nativeCompanyPdfReportContract } from "@/features/admin/use-admin-finance";
 
-type ReportMode = "period" | "company";
-type PickerTarget = "period" | "start" | "end" | null;
-
-const PERIODS: { id: CompanyReportPeriod; label: string }[] = [
-  { id: "daily", label: "يومي" },
-  { id: "weekly", label: "أسبوعي" },
-  { id: "monthly", label: "شهري" },
-  { id: "annual", label: "سنوي" },
-];
-
-function displayDate(value: string) {
-  return formatReportDate(value);
-}
+type ReportMode = "captain" | "company";
+type PickerTarget = "start" | "end" | null;
 
 function pickerValue(value: string): Date {
   return new Date(`${value}T12:00:00Z`);
 }
 
-function reportTitle(mode: ReportMode, period: CompanyReportPeriod): string {
-  return mode === "period"
-    ? `ملخص مالي ${periodLabel(period)}`
-    : "تقرير الشركة المالي";
+function dateLabel(value: string): string {
+  return formatReportDate(value);
 }
 
 export function AdminCompanyPdfReports({
@@ -61,24 +48,24 @@ export function AdminCompanyPdfReports({
   userName: string | null;
 }) {
   const today = currentDamascusDateKey();
-  const [mode, setMode] = useState<ReportMode>("period");
-  const [period, setPeriod] = useState<CompanyReportPeriod>("monthly");
-  const [periodDate, setPeriodDate] = useState(today);
+  const { captains, error: captainsError, isLoading: isLoadingCaptains } =
+    useAdminCaptains();
+  const [mode, setMode] = useState<ReportMode>("captain");
+  const [captainId, setCaptainId] = useState<string | null>(null);
+  const [showCaptains, setShowCaptains] = useState(false);
+  const [useDateFilter, setUseDateFilter] = useState(false);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const selectedDate =
-    pickerTarget === "period"
-      ? periodDate
-      : pickerTarget === "start"
-        ? startDate
-        : endDate;
+  const selectedCaptain = useMemo(
+    () => captains.find((captain) => captain.id === captainId) ?? null,
+    [captainId, captains],
+  );
 
-  const selectCalendarDate = (date: Date) => {
+  const selectDate = (date: Date) => {
     const value = damascusDateKey(date);
-    if (pickerTarget === "period") setPeriodDate(value);
     if (pickerTarget === "start") setStartDate(value);
     if (pickerTarget === "end") setEndDate(value);
     setPickerTarget(null);
@@ -86,30 +73,59 @@ export function AdminCompanyPdfReports({
 
   const createReport = async () => {
     if (isGenerating) return;
+    if (mode === "captain" && !selectedCaptain) {
+      Alert.alert("اختر الكابتن", "اختر كابتناً أولاً قبل طباعة التقرير.");
+      return;
+    }
 
     try {
-      const range =
-        mode === "period"
-          ? rangeForPeriod(period, periodDate)
-          : assertDateRange(startDate, endDate);
+      const range = optionalDateRange(useDateFilter, startDate, endDate);
       setIsGenerating(true);
+
+      if (mode === "captain" && selectedCaptain) {
+        const summary =
+          await nativeCompanyPdfReportContract.reads.captainSummary({
+            captainId: selectedCaptain.id,
+            startDate: range.startDate,
+            endDate: range.endDate,
+          });
+        await createAndShareSimplePdfReport({
+          title: "كشف كابتن مختصر",
+          subject: summary.captain_name,
+          startDate: summary.period_start,
+          endDate: summary.period_end,
+          metrics: [
+            { label: "إجمالي الطلبات", value: orderCount(summary.order_count) },
+            { label: "إجمالي أجر الطلبات", value: money(summary.gross_total) },
+            {
+              label: "صافي الكابتن",
+              value: money(summary.captain_total),
+              highlighted: true,
+            },
+          ],
+          generatedBy: userName,
+        });
+        return;
+      }
 
       const summary = await nativeCompanyPdfReportContract.reads.rangeSummary(
         range,
       );
-      const companyReport = mode === "company";
-      await createAndShareCompanyReportPdf({
-        title: reportTitle(mode, period),
+      await createAndShareSimplePdfReport({
+        title: "تقرير الشركة المختصر",
         startDate: summary.period_start,
         endDate: summary.period_end,
-        grossTotal: summary.gross_total,
-        orderCount: summary.order_count,
-        companyTotal: summary.company_total,
-        captainTotal: summary.captain_net_total,
-        expenseTotal: companyReport ? summary.expense_total : undefined,
-        netTotal: companyReport
-          ? summary.net_company_total
-          : summary.company_total,
+        metrics: [
+          { label: "إجمالي الطلبات", value: orderCount(summary.order_count) },
+          { label: "إجمالي أجر الطلبات", value: money(summary.gross_total) },
+          { label: "أجور الكباتن", value: money(summary.captain_net_total) },
+          { label: "مصاريف المكتب", value: money(summary.expense_total) },
+          {
+            label: "صافي الشركة",
+            value: money(summary.net_company_total),
+            highlighted: true,
+          },
+        ],
         generatedBy: userName,
       });
     } catch (error) {
@@ -123,16 +139,7 @@ export function AdminCompanyPdfReports({
     }
   };
 
-  const rangePreview =
-    mode === "period"
-      ? rangeForPeriod(period, periodDate)
-      : (() => {
-          try {
-            return assertDateRange(startDate, endDate);
-          } catch {
-            return null;
-          }
-        })();
+  const selectedDate = pickerTarget === "start" ? startDate : endDate;
 
   return (
     <>
@@ -158,173 +165,233 @@ export function AdminCompanyPdfReports({
             </Pressable>
             <View style={styles.headerText}>
               <Text style={styles.headerTitle}>طباعة تقارير PDF</Text>
-              <Text style={styles.headerSubtitle}>
-                متاحة للمدير والمشرف فقط
-              </Text>
+              <Text style={styles.headerSubtitle}>تقارير مختصرة فقط</Text>
             </View>
             <View style={styles.headerIcon}>
               <MaterialIcons name="picture-as-pdf" size={22} color="#FFFFFF" />
             </View>
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.introCard}>
-              <View style={styles.introIcon}>
-                <MaterialIcons name="print" size={23} color="#0878D1" />
-              </View>
-              <View style={styles.introText}>
-                <Text style={styles.introTitle}>اختر شكل التقرير</Text>
-                <Text style={styles.introDescription}>
-                  سيُنشأ الملف من الأرقام المالية المعتمدة في النظام ثم يفتح خيار الطباعة أو المشاركة.
-                </Text>
-              </View>
-            </View>
-
+          <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.modeRow}>
-              <ModeCard
-                active={mode === "period"}
-                description="الأجور والطلبات وصافي المكتب"
-                icon="calendar-month"
-                onPress={() => setMode("period")}
-                title="ملخص فترة محددة"
+              <ReportChoice
+                active={mode === "captain"}
+                description="كابتن واحد: الطلبات، أجر الطلبات، وصافيه"
+                icon="person"
+                onPress={() => setMode("captain")}
+                title="تقرير كابتن"
               />
-              <ModeCard
+              <ReportChoice
                 active={mode === "company"}
-                description="الطلبات والمصاريف والصافي"
-                icon="date-range"
+                description="طلبات الشركة، أجور الكباتن، المصاريف، والصافي"
+                icon="business"
                 onPress={() => setMode("company")}
                 title="تقرير الشركة"
               />
             </View>
 
-            {mode === "period" ? (
-              <View style={styles.formCard}>
-                <Text style={styles.sectionTitle}>ملخص مالي لفترة محددة</Text>
-                <Text style={styles.sectionDescription}>
-                  اختر نوع الفترة ثم أي تاريخ داخلها. سيحسب النظام حدود الفترة تلقائياً.
-                </Text>
-                <View style={styles.periodChoices}>
-                  {PERIODS.map((item) => {
-                    const selected = item.id === period;
-                    return (
-                      <Pressable
-                        key={item.id}
-                        onPress={() => setPeriod(item.id)}
-                        style={({ pressed }) => [
-                          styles.periodChoice,
-                          selected && styles.periodChoiceActive,
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.periodChoiceText,
-                            selected && styles.periodChoiceTextActive,
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <DateRow
-                  label="تاريخ ضمن الفترة"
-                  onPress={() => setPickerTarget("period")}
-                  value={displayDate(periodDate)}
-                />
-                {rangePreview ? (
-                  <View style={styles.preview}>
-                    <MaterialIcons name="info-outline" size={17} color="#397095" />
-                    <Text style={styles.previewText}>
-                      ستُطبع الفترة من {displayDate(rangePreview.startDate)} إلى {displayDate(rangePreview.endDate)}.
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              <View style={styles.formCard}>
-                <Text style={styles.sectionTitle}>تقرير الشركة بين تاريخين</Text>
-                <Text style={styles.sectionDescription}>
-                  يتضمن إجمالي الطلبات والأجور، المصاريف المسجلة، والصافي بعد المصاريف.
-                </Text>
-                <DateRow
-                  label="من تاريخ"
-                  onPress={() => setPickerTarget("start")}
-                  value={displayDate(startDate)}
-                />
-                <DateRow
-                  label="إلى تاريخ"
-                  onPress={() => setPickerTarget("end")}
-                  value={displayDate(endDate)}
-                />
-                {rangePreview ? (
-                  <View style={styles.preview}>
-                    <MaterialIcons name="info-outline" size={17} color="#397095" />
-                    <Text style={styles.previewText}>
-                      سيُحسب صافي الشركة بعد خصم مصاريف المكتب المسجلة ضمن هذا المدى.
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.validationText}>
-                    يجب أن يكون تاريخ البداية قبل تاريخ النهاية أو مساوياً له.
+            <View style={styles.formCard}>
+              {mode === "captain" ? (
+                <>
+                  <Text style={styles.sectionTitle}>اختر الكابتن</Text>
+                  <Pressable
+                    disabled={isLoadingCaptains}
+                    onPress={() => setShowCaptains(true)}
+                    style={({ pressed }) => [
+                      styles.selectRow,
+                      pressed && styles.pressed,
+                      isLoadingCaptains && styles.disabled,
+                    ]}
+                  >
+                    <View style={styles.selectIcon}>
+                      {isLoadingCaptains ? (
+                        <ActivityIndicator color="#0878D1" size="small" />
+                      ) : (
+                        <MaterialIcons name="person-search" size={20} color="#0878D1" />
+                      )}
+                    </View>
+                    <View style={styles.selectText}>
+                      <Text style={styles.selectLabel}>الكابتن</Text>
+                      <Text style={styles.selectValue} numberOfLines={1}>
+                        {selectedCaptain?.name ??
+                          (isLoadingCaptains ? "جارٍ تحميل الكباتن..." : "اضغط لاختيار كابتن")}
+                      </Text>
+                    </View>
+                    <MaterialIcons name="chevron-left" size={22} color="#7894A7" />
+                  </Pressable>
+                  {captainsError ? (
+                    <Text style={styles.errorText}>{captainsError}</Text>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.sectionTitle}>ملخص الشركة</Text>
+                  <Text style={styles.sectionDescription}>
+                    يطبع الأرقام الأساسية للشركة فقط دون تفصيل الطلبات.
                   </Text>
-                )}
-              </View>
-            )}
+                </>
+              )}
 
-            <View style={styles.includedCard}>
-              <Text style={styles.includedTitle}>ماذا سيتضمن الملف؟</Text>
-              <Text style={styles.includedText}>
-                {mode === "period"
-                  ? "إجمالي الأجور، إجمالي الطلبات، حصة الكباتن، وصافي المكتب للفترة المحددة."
-                  : "إجمالي الأجور والطلبات، حصة الكباتن، مصاريف المكتب، والصافي النهائي للفترة."}
+              <Pressable
+                onPress={() => setUseDateFilter((value) => !value)}
+                style={({ pressed }) => [styles.filterRow, pressed && styles.pressed]}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    useDateFilter && styles.checkboxSelected,
+                  ]}
+                >
+                  {useDateFilter ? (
+                    <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                  ) : null}
+                </View>
+                <View style={styles.filterText}>
+                  <Text style={styles.filterTitle}>تحديد فترة</Text>
+                  <Text style={styles.filterDescription}>
+                    {useDateFilter
+                      ? "سيقتصر التقرير على المدة التي تحددها."
+                      : "بدون تحديد سيظهر كامل السجل المسجل."}
+                  </Text>
+                </View>
+              </Pressable>
+
+              {useDateFilter ? (
+                <View style={styles.dates}>
+                  <DateRow
+                    label="من تاريخ"
+                    onPress={() => setPickerTarget("start")}
+                    value={dateLabel(startDate)}
+                  />
+                  <DateRow
+                    label="إلى تاريخ"
+                    onPress={() => setPickerTarget("end")}
+                    value={dateLabel(endDate)}
+                  />
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>ما سيظهر في PDF</Text>
+              <Text style={styles.summaryText}>
+                {mode === "captain"
+                  ? "اسم الكابتن، عدد الطلبات، إجمالي أجر الطلبات، وصافي الكابتن."
+                  : "إجمالي الطلبات، إجمالي أجر الطلبات، أجور الكباتن، مصاريف المكتب، وصافي الشركة."}
               </Text>
             </View>
           </ScrollView>
 
           <View style={styles.footer}>
             <Pressable
-              accessibilityRole="button"
-              disabled={isGenerating || !rangePreview}
+              disabled={isGenerating}
               onPress={() => void createReport()}
               style={({ pressed }) => [
                 styles.printButton,
                 pressed && styles.pressed,
-                (isGenerating || !rangePreview) && styles.printButtonDisabled,
+                isGenerating && styles.disabled,
               ]}
             >
               {isGenerating ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <MaterialIcons name="print" size={21} color="#FFFFFF" />
+                <MaterialIcons name="print" size={20} color="#FFFFFF" />
               )}
               <Text style={styles.printButtonText}>
-                {isGenerating ? "جارٍ إعداد التقرير..." : "إنشاء وطباعة PDF"}
+                {isGenerating ? "جارٍ تجهيز التقرير..." : "إنشاء وطباعة PDF"}
               </Text>
             </Pressable>
             {Platform.OS === "web" ? (
-              <Text style={styles.webHint}>
-                في الويب سيفتح مربع الطباعة في المتصفح.
-              </Text>
+              <Text style={styles.webHint}>سيظهر مربع الطباعة في المتصفح.</Text>
             ) : null}
           </View>
         </View>
       </Modal>
 
+      <CaptainPicker
+        captains={captains}
+        onClose={() => setShowCaptains(false)}
+        onSelect={(nextCaptainId) => {
+          setCaptainId(nextCaptainId);
+          setShowCaptains(false);
+        }}
+        selectedCaptainId={captainId}
+        visible={showCaptains}
+      />
       <FinancialDatePicker
         key={`${pickerTarget ?? "closed"}:${selectedDate}`}
-        hint="اختر التاريخ الذي ستُبنى عليه الفترة أو بداية ونهاية تقرير الشركة."
+        hint="اختر بداية ونهاية الفترة التي تريدها في التقرير."
         onClose={() => setPickerTarget(null)}
-        onSelect={selectCalendarDate}
+        onSelect={selectDate}
         title="اختيار تاريخ التقرير"
         value={pickerValue(selectedDate)}
         visible={pickerTarget !== null}
       />
     </>
+  );
+}
+
+function CaptainPicker({
+  captains,
+  selectedCaptainId,
+  visible,
+  onSelect,
+  onClose,
+}: {
+  captains: { id: string; name: string; isActive: boolean }[];
+  selectedCaptainId: string | null;
+  visible: boolean;
+  onSelect: (captainId: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <View style={styles.pickerBackdrop}>
+        <View style={styles.pickerCard}>
+          <View style={styles.pickerHeader}>
+            <Pressable onPress={onClose} style={styles.closeSmallButton}>
+              <MaterialIcons name="close" size={19} color="#496B81" />
+            </Pressable>
+            <Text style={styles.pickerTitle}>اختر الكابتن</Text>
+            <View style={styles.closeSmallButton} />
+          </View>
+          <ScrollView contentContainerStyle={styles.captainList}>
+            {captains.map((captain) => {
+              const selected = captain.id === selectedCaptainId;
+              return (
+                <Pressable
+                  key={captain.id}
+                  onPress={() => onSelect(captain.id)}
+                  style={({ pressed }) => [
+                    styles.captainRow,
+                    selected && styles.captainRowSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={[styles.avatar, selected && styles.avatarSelected]}>
+                    <Text style={[styles.avatarText, selected && styles.avatarTextSelected]}>
+                      {captain.name.slice(0, 1)}
+                    </Text>
+                  </View>
+                  <View style={styles.captainText}>
+                    <Text style={styles.captainName}>{captain.name}</Text>
+                    <Text style={styles.captainState}>
+                      {captain.isActive ? "حساب فعّال" : "حساب غير فعّال"}
+                    </Text>
+                  </View>
+                  {selected ? (
+                    <MaterialIcons name="check-circle" size={20} color="#0878D1" />
+                  ) : null}
+                </Pressable>
+              );
+            })}
+            {!captains.length ? (
+              <Text style={styles.emptyCaptains}>لا يوجد كباتن متاحون حالياً.</Text>
+            ) : null}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -346,7 +413,7 @@ function DateRow({
         <MaterialIcons name="calendar-today" size={17} color="#0878D1" />
       </View>
       <View style={styles.dateText}>
-        <Text style={styles.dateLabel}>{label}</Text>
+        <Text style={styles.selectLabel}>{label}</Text>
         <Text style={styles.dateValue}>{value}</Text>
       </View>
       <MaterialIcons name="chevron-left" size={22} color="#7894A7" />
@@ -354,7 +421,7 @@ function DateRow({
   );
 }
 
-function ModeCard({
+function ReportChoice({
   active,
   title,
   description,
@@ -396,13 +463,8 @@ const styles = StyleSheet.create({
   headerSubtitle: { color: "#6B899C", fontFamily: "Cairo_400Regular", fontSize: 10, marginTop: 1, textAlign: "right", writingDirection: "rtl" },
   headerIcon: { alignItems: "center", backgroundColor: "#0878D1", borderRadius: 13, height: 42, justifyContent: "center", width: 42 },
   content: { padding: 16, paddingBottom: 24 },
-  introCard: { alignItems: "center", backgroundColor: "#EAF6FF", borderColor: "#C9E4F7", borderRadius: 19, borderWidth: 1, flexDirection: "row-reverse", gap: 11, padding: 14 },
-  introIcon: { alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 13, height: 43, justifyContent: "center", width: 43 },
-  introText: { flex: 1 },
-  introTitle: { color: "#164866", fontFamily: "Cairo_700Bold", fontSize: 14, textAlign: "right", writingDirection: "rtl" },
-  introDescription: { color: "#587990", fontFamily: "Cairo_400Regular", fontSize: 10, lineHeight: 17, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
-  modeRow: { flexDirection: "row-reverse", gap: 9, marginTop: 14 },
-  modeCard: { backgroundColor: "#FFFFFF", borderColor: "#D7E6F0", borderRadius: 17, borderWidth: 1, flex: 1, minHeight: 132, padding: 12 },
+  modeRow: { flexDirection: "row-reverse", gap: 9 },
+  modeCard: { backgroundColor: "#FFFFFF", borderColor: "#D7E6F0", borderRadius: 17, borderWidth: 1, flex: 1, minHeight: 126, padding: 12 },
   modeCardActive: { backgroundColor: "#0878D1", borderColor: "#0878D1" },
   modeIcon: { alignItems: "center", backgroundColor: "#EAF5FC", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },
   modeIconActive: { backgroundColor: "rgba(255,255,255,0.2)" },
@@ -413,27 +475,46 @@ const styles = StyleSheet.create({
   formCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE9F2", borderRadius: 19, borderWidth: 1, marginTop: 14, padding: 15 },
   sectionTitle: { color: "#163E5C", fontFamily: "Cairo_700Bold", fontSize: 15, textAlign: "right", writingDirection: "rtl" },
   sectionDescription: { color: "#6A879A", fontFamily: "Cairo_400Regular", fontSize: 10, lineHeight: 17, marginTop: 4, textAlign: "right", writingDirection: "rtl" },
-  periodChoices: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 7, marginTop: 14 },
-  periodChoice: { alignItems: "center", backgroundColor: "#F4F8FB", borderColor: "#D8E7F0", borderRadius: 11, borderWidth: 1, flexGrow: 1, minWidth: "21%", paddingHorizontal: 8, paddingVertical: 8 },
-  periodChoiceActive: { backgroundColor: "#EAF6FF", borderColor: "#0878D1" },
-  periodChoiceText: { color: "#68859A", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
-  periodChoiceTextActive: { color: "#0878D1" },
-  dateRow: { alignItems: "center", backgroundColor: "#F9FCFE", borderColor: "#DCEAF3", borderRadius: 13, borderWidth: 1, flexDirection: "row-reverse", gap: 9, marginTop: 11, minHeight: 59, paddingHorizontal: 10 },
+  selectRow: { alignItems: "center", backgroundColor: "#F9FCFE", borderColor: "#DCEAF3", borderRadius: 13, borderWidth: 1, flexDirection: "row-reverse", gap: 9, marginTop: 11, minHeight: 60, paddingHorizontal: 10 },
+  selectIcon: { alignItems: "center", backgroundColor: "#EAF5FC", borderRadius: 10, height: 34, justifyContent: "center", width: 34 },
+  selectText: { flex: 1 },
+  selectLabel: { color: "#7894A7", fontFamily: "Cairo_400Regular", fontSize: 9, textAlign: "right", writingDirection: "rtl" },
+  selectValue: { color: "#17445F", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 1, textAlign: "right", writingDirection: "rtl" },
+  errorText: { color: "#A13C47", fontFamily: "Cairo_700Bold", fontSize: 9, marginTop: 8, textAlign: "right", writingDirection: "rtl" },
+  filterRow: { alignItems: "center", backgroundColor: "#F5FAFD", borderRadius: 13, flexDirection: "row-reverse", gap: 10, marginTop: 14, padding: 11 },
+  checkbox: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#9DBFD4", borderRadius: 6, borderWidth: 1, height: 21, justifyContent: "center", width: 21 },
+  checkboxSelected: { backgroundColor: "#0878D1", borderColor: "#0878D1" },
+  filterText: { flex: 1 },
+  filterTitle: { color: "#1A4967", fontFamily: "Cairo_700Bold", fontSize: 11, textAlign: "right", writingDirection: "rtl" },
+  filterDescription: { color: "#6D899B", fontFamily: "Cairo_400Regular", fontSize: 9, marginTop: 1, textAlign: "right", writingDirection: "rtl" },
+  dates: { marginTop: 2 },
+  dateRow: { alignItems: "center", backgroundColor: "#F9FCFE", borderColor: "#DCEAF3", borderRadius: 13, borderWidth: 1, flexDirection: "row-reverse", gap: 9, marginTop: 10, minHeight: 58, paddingHorizontal: 10 },
   dateIcon: { alignItems: "center", backgroundColor: "#EAF5FC", borderRadius: 10, height: 32, justifyContent: "center", width: 32 },
   dateText: { flex: 1 },
-  dateLabel: { color: "#7894A7", fontFamily: "Cairo_400Regular", fontSize: 9, textAlign: "right", writingDirection: "rtl" },
   dateValue: { color: "#17445F", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 1, textAlign: "right", writingDirection: "rtl" },
-  preview: { alignItems: "center", backgroundColor: "#F0F9FE", borderRadius: 10, flexDirection: "row-reverse", gap: 6, marginTop: 12, padding: 10 },
-  previewText: { color: "#3E6D88", flex: 1, fontFamily: "Cairo_400Regular", fontSize: 9, lineHeight: 16, textAlign: "right", writingDirection: "rtl" },
-  validationText: { color: "#A13C47", fontFamily: "Cairo_700Bold", fontSize: 9, marginTop: 10, textAlign: "right", writingDirection: "rtl" },
-  includedCard: { backgroundColor: "#FFFBEE", borderColor: "#F4E6B4", borderRadius: 15, borderWidth: 1, marginTop: 14, padding: 13 },
-  includedTitle: { color: "#77621E", fontFamily: "Cairo_700Bold", fontSize: 11, textAlign: "right", writingDirection: "rtl" },
-  includedText: { color: "#867541", fontFamily: "Cairo_400Regular", fontSize: 10, lineHeight: 17, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
+  summaryCard: { backgroundColor: "#FFFBEE", borderColor: "#F4E6B4", borderRadius: 15, borderWidth: 1, marginTop: 14, padding: 13 },
+  summaryTitle: { color: "#77621E", fontFamily: "Cairo_700Bold", fontSize: 11, textAlign: "right", writingDirection: "rtl" },
+  summaryText: { color: "#867541", fontFamily: "Cairo_400Regular", fontSize: 10, lineHeight: 17, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
   footer: { backgroundColor: "#FFFFFF", borderTopColor: "#DCEAF3", borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   printButton: { alignItems: "center", backgroundColor: "#0878D1", borderRadius: 15, flexDirection: "row-reverse", gap: 8, justifyContent: "center", minHeight: 52 },
-  printButtonDisabled: { opacity: 0.6 },
   printButtonText: { color: "#FFFFFF", fontFamily: "Cairo_700Bold", fontSize: 13, writingDirection: "rtl" },
   webHint: { color: "#718FA1", fontFamily: "Cairo_400Regular", fontSize: 9, marginTop: 6, textAlign: "center", writingDirection: "rtl" },
+  pickerBackdrop: { alignItems: "center", backgroundColor: "rgba(8,35,54,0.46)", flex: 1, justifyContent: "center", padding: 18 },
+  pickerCard: { backgroundColor: "#FFFFFF", borderColor: "#BCEBFA", borderRadius: 22, borderWidth: 1, maxHeight: "76%", maxWidth: 440, padding: 15, width: "100%" },
+  pickerHeader: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
+  closeSmallButton: { alignItems: "center", backgroundColor: "#F0F8FC", borderRadius: 11, height: 38, justifyContent: "center", width: 38 },
+  pickerTitle: { color: "#063B78", fontFamily: "Cairo_700Bold", fontSize: 14, textAlign: "center", writingDirection: "rtl" },
+  captainList: { gap: 7, paddingTop: 12 },
+  captainRow: { alignItems: "center", backgroundColor: "#F9FCFE", borderColor: "#DCEAF3", borderRadius: 13, borderWidth: 1, flexDirection: "row-reverse", gap: 9, minHeight: 60, paddingHorizontal: 10 },
+  captainRowSelected: { backgroundColor: "#EEF8FF", borderColor: "#0878D1" },
+  avatar: { alignItems: "center", backgroundColor: "#EAF5FC", borderRadius: 18, height: 36, justifyContent: "center", width: 36 },
+  avatarSelected: { backgroundColor: "#0878D1" },
+  avatarText: { color: "#0878D1", fontFamily: "Cairo_700Bold", fontSize: 13 },
+  avatarTextSelected: { color: "#FFFFFF" },
+  captainText: { flex: 1 },
+  captainName: { color: "#17445F", fontFamily: "Cairo_700Bold", fontSize: 11, textAlign: "right", writingDirection: "rtl" },
+  captainState: { color: "#718FA1", fontFamily: "Cairo_400Regular", fontSize: 9, marginTop: 1, textAlign: "right", writingDirection: "rtl" },
+  emptyCaptains: { color: "#75818E", fontFamily: "Cairo_400Regular", fontSize: 11, paddingVertical: 18, textAlign: "center", writingDirection: "rtl" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.55 },
 });

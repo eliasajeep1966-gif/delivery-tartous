@@ -2,40 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertDateRange,
-  rangeForPeriod,
+  optionalDateRange,
 } from "../lib/admin/report-period";
 
-describe("rangeForPeriod", () => {
-  it("keeps a daily report within the selected day", () => {
-    expect(rangeForPeriod("daily", "2026-08-26")).toEqual({
-      startDate: "2026-08-26",
-      endDate: "2026-08-26",
+describe("optionalDateRange", () => {
+  it("uses no date bounds when the manager does not choose a period", () => {
+    expect(optionalDateRange(false, "2026-08-01", "2026-08-26")).toEqual({
+      startDate: null,
+      endDate: null,
     });
   });
 
-  it("starts weekly reports on Monday and ends them on Sunday", () => {
-    expect(rangeForPeriod("weekly", "2026-08-26", "2026-12-31")).toEqual({
-      startDate: "2026-08-24",
-      endDate: "2026-08-30",
-    });
-  });
-
-  it("uses the full month for a monthly report", () => {
-    expect(rangeForPeriod("monthly", "2026-02-12", "2026-12-31")).toEqual({
-      startDate: "2026-02-01",
-      endDate: "2026-02-28",
-    });
-  });
-
-  it("uses the full year for an annual report", () => {
-    expect(rangeForPeriod("annual", "2026-08-26", "2026-12-31")).toEqual({
-      startDate: "2026-01-01",
-      endDate: "2026-12-31",
-    });
-  });
-
-  it("does not include dates after today for the current calendar period", () => {
-    expect(rangeForPeriod("monthly", "2026-08-26", "2026-08-26")).toEqual({
+  it("uses the selected inclusive date range when enabled", () => {
+    expect(optionalDateRange(true, "2026-08-01", "2026-08-26")).toEqual({
       startDate: "2026-08-01",
       endDate: "2026-08-26",
     });
@@ -43,9 +22,9 @@ describe("rangeForPeriod", () => {
 });
 
 describe("assertDateRange", () => {
-  it("accepts an inclusive range", () => {
-    expect(assertDateRange("2026-08-01", "2026-08-26")).toEqual({
-      startDate: "2026-08-01",
+  it("accepts a same-day report", () => {
+    expect(assertDateRange("2026-08-26", "2026-08-26")).toEqual({
+      startDate: "2026-08-26",
       endDate: "2026-08-26",
     });
   });

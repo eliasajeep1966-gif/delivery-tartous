@@ -173,7 +173,7 @@ export default function AdminReportsScreen() {
           <View style={styles.pdfReportText}>
             <Text style={styles.pdfReportTitle}>طباعة تقارير PDF</Text>
             <Text style={styles.pdfReportSubtitle}>
-              ملخص فترة محددة أو تقرير شركة بين تاريخين
+              كشف كابتن محدد أو ملخص الشركة
             </Text>
           </View>
           <Text style={styles.pdfReportAction}>فتح</Text>
