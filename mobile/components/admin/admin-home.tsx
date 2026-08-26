@@ -696,6 +696,8 @@ function ActivityRow({
   index: number;
 }) {
   const meta = item.status ? statusStyle[item.status] : null;
+  const actorName = item.subtitle.replace(/^بواسطة\s+/, "");
+
   return (
     <Animated.View
       entering={FadeInDown.delay(Math.min(80 + index * 35, 260)).duration(180)}
@@ -712,7 +714,7 @@ function ActivityRow({
         <View style={styles.activityIconWrap}>
           <MaterialIcons
             name={meta?.label === "مكتمل" ? "task-alt" : "local-shipping"}
-            size={18}
+            size={17}
             color={meta?.color ?? "#367CA7"}
           />
         </View>
@@ -721,78 +723,69 @@ function ActivityRow({
             <Text numberOfLines={1} style={styles.activityTitle}>
               {item.title}
             </Text>
-            {meta ? (
-              <View style={[styles.statusBadge, { backgroundColor: meta.background }]}>
-                <Text style={[styles.statusText, { color: meta.color }]}>
-                  {meta.label}
-                </Text>
-              </View>
-            ) : null}
+            <Text numberOfLines={1} style={styles.activityDate}>
+              {item.timestamp}
+            </Text>
           </View>
-          <Text numberOfLines={1} style={styles.activitySubtitle}>
-            {item.subtitle}
-          </Text>
-          <View style={styles.timeRow}>
-            <MaterialIcons name="schedule" size={12} color="#7692A5" />
-            <Text style={styles.timeText}>{item.timestamp}</Text>
+          <View style={styles.activityActorRow}>
+            <MaterialIcons name="person-outline" size={13} color="#4B7691" />
+            <Text numberOfLines={1} style={styles.activityActorName}>
+              {actorName}
+            </Text>
           </View>
-          <ActivityDeliveryJourney timing={item.deliveryTiming} status={item.status} />
+          <ActivityDeliveryJourney timing={item.deliveryTiming} />
         </View>
-        <MaterialIcons name="chevron-left" size={19} color="#8EAABB" />
+        <MaterialIcons name="chevron-left" size={18} color="#8EAABB" />
       </MotionPressable>
     </Animated.View>
   );
 }
 
-function ActivityDeliveryJourney({
-  timing,
-  status,
-}: {
-  timing: DeliveryTiming | null;
-  status: AdminOrderStatus | null;
-}) {
+function ActivityDeliveryJourney({ timing }: { timing: DeliveryTiming | null }) {
   const presentation = timing ? presentDeliveryTiming(timing) : null;
   if (!presentation) return null;
 
-  if (presentation.mode !== "completed") {
-    const text = presentation.mode === "received"
-      ? `تم الاستلام ${presentation.receivedTime}`
-      : `تم الاستلام ${presentation.receivedTime} · قيد التوصيل ${presentation.inDeliveryTime} · ${presentation.label}`;
-
-    return (
-      <View style={styles.activityProgressLine}>
-        <MaterialIcons
-          name={presentation.mode === "received" ? "inventory-2" : "two-wheeler"}
-          size={13}
-          color="#0878D1"
-        />
-        <Text style={styles.activityProgressText}>{text}</Text>
-      </View>
-    );
-  }
+  const moments = [
+    { label: "استلام", time: presentation.receivedTime },
+    presentation.inDeliveryTime
+      ? { label: "بدء التوصيل", time: presentation.inDeliveryTime }
+      : null,
+    presentation.completedTime
+      ? { label: "تم التوصيل", time: presentation.completedTime }
+      : null,
+  ].filter((moment): moment is { label: string; time: string } => Boolean(moment));
+  const durationLabel = presentation.label
+    ? presentation.mode === "completed"
+      ? `المدة ${presentation.label}`
+      : presentation.label
+    : null;
 
   return (
     <View style={styles.activityJourney}>
       <View style={styles.activityJourneyTop}>
-        <Text style={styles.activityJourneyLabel}>زمن التوصيل</Text>
-        <View style={styles.activityDurationBadge}>
-          <MaterialIcons name="timer" size={12} color="#08755C" />
-          <Text style={styles.activityDurationText}>{presentation.label}</Text>
-        </View>
+        <Text style={styles.activityJourneyLabel}>تفاصيل التوصيل</Text>
+        {durationLabel ? (
+          <View style={styles.activityDurationBadge}>
+            <MaterialIcons name="timer" size={12} color="#08755C" />
+            <Text style={styles.activityDurationText}>{durationLabel}</Text>
+          </View>
+        ) : null}
       </View>
       <View style={styles.activityJourneyTrack}>
-        <View style={styles.activityJourneyMoment}>
-          <Text style={styles.activityJourneyMomentLabel}>استلام</Text>
-          <Text style={styles.activityJourneyMomentTime}>{presentation.receivedTime}</Text>
-        </View>
-        <View style={styles.activityJourneyConnector}>
-          <View style={styles.activityJourneyLine} />
-          <MaterialIcons name="arrow-back" size={13} color="#41A78C" />
-        </View>
-        <View style={styles.activityJourneyMoment}>
-          <Text style={styles.activityJourneyMomentLabel}>توصيل</Text>
-          <Text style={styles.activityJourneyMomentTime}>{presentation.completedTime}</Text>
-        </View>
+        {moments.map((moment, index) => (
+          <View key={moment.label} style={styles.activityJourneyStep}>
+            <View style={styles.activityJourneyMoment}>
+              <Text style={styles.activityJourneyMomentLabel}>{moment.label}</Text>
+              <Text style={styles.activityJourneyMomentTime}>{moment.time}</Text>
+            </View>
+            {index < moments.length - 1 ? (
+              <View style={styles.activityJourneyConnector}>
+                <View style={styles.activityJourneyLine} />
+                <MaterialIcons name="arrow-back" size={12} color="#41A78C" />
+              </View>
+            ) : null}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -995,30 +988,27 @@ const styles = StyleSheet.create({
   sectionSubtitle: { color: "#7894A7", fontSize: 10, fontWeight: "700", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   sectionAction: { alignItems: "center", flexDirection: "row-reverse", gap: 3, paddingVertical: 6 },
   sectionActionText: { color: "#0878D1", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
-  activityCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E4EDF3", borderRadius: 18, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 9, minHeight: 94, overflow: "hidden", paddingHorizontal: 12, paddingVertical: 11, shadowColor: "#153C58", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.045, shadowRadius: 7 },
-  activityAccent: { bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
-  activityIconWrap: { alignItems: "center", backgroundColor: "#F3F8FB", borderRadius: 12, height: 38, justifyContent: "center", width: 38 },
+  activityCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E4EDF3", borderRadius: 16, borderWidth: 1, flexDirection: "row-reverse", gap: 8, marginBottom: 7, minHeight: 78, overflow: "hidden", paddingHorizontal: 10, paddingVertical: 8, shadowColor: "#153C58", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 5 },
+  activityAccent: { bottom: 0, position: "absolute", right: 0, top: 0, width: 3 },
+  activityIconWrap: { alignItems: "center", backgroundColor: "#F3F8FB", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },
   activityContent: { flex: 1 },
-  activityTop: { alignItems: "center", flexDirection: "row-reverse", gap: 6, justifyContent: "space-between" },
-  activityTitle: { color: "#1A4868", flex: 1, fontSize: 12, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  statusBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4 },
-  statusText: { fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
-  activitySubtitle: { color: "#5E7C90", fontSize: 11, fontWeight: "700", marginTop: 5, textAlign: "right", writingDirection: "rtl" },
-  timeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 3, marginTop: 6 },
-  timeText: { color: "#7B96A8", fontSize: 10, writingDirection: "rtl" },
-  activityJourney: { backgroundColor: "#F7FBFD", borderColor: "#DCEAF1", borderRadius: 11, borderWidth: 1, marginTop: 9, paddingHorizontal: 9, paddingVertical: 8 },
+  activityTop: { alignItems: "center", flexDirection: "row-reverse", gap: 7, justifyContent: "space-between" },
+  activityTitle: { color: "#1A4868", flex: 1, fontSize: 13, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  activityDate: { color: "#718B9D", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
+  activityActorRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 3 },
+  activityActorName: { color: "#4B7691", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
+  activityJourney: { backgroundColor: "#F7FBFD", borderColor: "#DCEAF1", borderRadius: 10, borderWidth: 1, marginTop: 6, paddingHorizontal: 8, paddingVertical: 6 },
   activityJourneyTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
   activityJourneyLabel: { color: "#4D697D", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
-  activityDurationBadge: { alignItems: "center", backgroundColor: "#EAF9F3", borderRadius: 8, flexDirection: "row-reverse", gap: 4, paddingHorizontal: 7, paddingVertical: 3 },
+  activityDurationBadge: { alignItems: "center", backgroundColor: "#EAF9F3", borderRadius: 7, flexDirection: "row-reverse", gap: 3, paddingHorizontal: 6, paddingVertical: 2 },
   activityDurationText: { color: "#08755C", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
-  activityProgressLine: { alignItems: "center", flexDirection: "row-reverse", gap: 5, marginTop: 8 },
-  activityProgressText: { color: "#367497", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
-  activityJourneyTrack: { alignItems: "center", flexDirection: "row-reverse", marginTop: 7 },
-  activityJourneyMoment: { alignItems: "flex-end", minWidth: 49 },
-  activityJourneyMomentLabel: { color: "#5C7486", fontSize: 9, fontWeight: "700", writingDirection: "rtl" },
-  activityJourneyMomentTime: { color: "#1B415A", fontSize: 10, fontWeight: "800", marginTop: 1, writingDirection: "rtl" },
-  activityJourneyConnector: { alignItems: "center", flex: 1, flexDirection: "row", justifyContent: "center", marginHorizontal: 5 },
-  activityJourneyLine: { backgroundColor: "#8ACBB9", flex: 1, height: 1, maxWidth: 36 },
+  activityJourneyTrack: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 5 },
+  activityJourneyStep: { alignItems: "center", flex: 1, flexDirection: "row-reverse" },
+  activityJourneyMoment: { alignItems: "flex-end" },
+  activityJourneyMomentLabel: { color: "#5C7486", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
+  activityJourneyMomentTime: { color: "#1B415A", fontSize: 11, fontWeight: "800", marginTop: 1, writingDirection: "rtl" },
+  activityJourneyConnector: { alignItems: "center", flex: 1, flexDirection: "row", justifyContent: "center", marginHorizontal: 4 },
+  activityJourneyLine: { backgroundColor: "#8ACBB9", flex: 1, height: 1, maxWidth: 24 },
   activityPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   loadingActivity: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E3EDF4", borderRadius: 18, borderStyle: "dashed", borderWidth: 1, flexDirection: "row-reverse", gap: 8, justifyContent: "center", minHeight: 100 },
   loadingIcon: { alignItems: "center", backgroundColor: "#EEF7FC", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },
