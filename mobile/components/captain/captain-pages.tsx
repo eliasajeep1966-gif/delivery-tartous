@@ -16,7 +16,10 @@ import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
-import { useNativeCaptainDashboard } from "@/features/captain/use-native-captain-dashboard";
+import {
+  CAPTAIN_ORDERS_PAGE_SIZE,
+  useNativeCaptainOrders,
+} from "@/features/captain/use-native-captain-dashboard";
 import {
   nativeCaptainContract,
   type CaptainCustody,
@@ -26,7 +29,6 @@ import {
 const DEEP_BLUE = "#063B78";
 const BLUE = "#0878D1";
 const NEON = "#16CEFF";
-const CAPTAIN_ORDERS_PAGE_SIZE = 10;
 const money = (value: number) =>
   `${new Intl.NumberFormat("en-US").format(value)} ل.س`;
 const date = (value: string | null) =>
@@ -55,26 +57,13 @@ function inPeriod(value: string, period: Period) {
 }
 
 export function CaptainOrders() {
-  const data = useNativeCaptainDashboard();
-  const [page, setPage] = useState(0);
-  const pageCount = Math.max(
-    1,
-    Math.ceil(data.orders.length / CAPTAIN_ORDERS_PAGE_SIZE),
-  );
-  const safePage = Math.min(page, pageCount - 1);
-  const pageStart = safePage * CAPTAIN_ORDERS_PAGE_SIZE;
-  const visibleOrders = useMemo(
-    () =>
-      data.orders.slice(
-        pageStart,
-        pageStart + CAPTAIN_ORDERS_PAGE_SIZE,
-      ),
-    [data.orders, pageStart],
-  );
-  const firstOrderNumber = data.orders.length ? pageStart + 1 : 0;
+  const data = useNativeCaptainOrders();
+  const firstOrderNumber = data.total
+    ? data.page * CAPTAIN_ORDERS_PAGE_SIZE + 1
+    : 0;
   const lastOrderNumber = Math.min(
-    pageStart + CAPTAIN_ORDERS_PAGE_SIZE,
-    data.orders.length,
+    (data.page + 1) * CAPTAIN_ORDERS_PAGE_SIZE,
+    data.total,
   );
 
   return (
@@ -86,19 +75,21 @@ export function CaptainOrders() {
     >
       {data.error ? (
         <Message text={data.error} />
+      ) : data.loading ? (
+        <Message text="جارٍ تحميل طلباتك..." />
       ) : data.orders.length ? (
         <>
           <View style={styles.ordersPageSummary}>
             <View>
               <Text style={styles.ordersPageTitle}>سجل الطلبات</Text>
               <Text style={styles.ordersPageHint}>
-                عرض {firstOrderNumber}–{lastOrderNumber} من {data.orders.length}
+                عرض {firstOrderNumber}–{lastOrderNumber} من {data.total}
               </Text>
             </View>
-            <Text style={styles.ordersPageCount}>{data.orders.length} طلب</Text>
+            <Text style={styles.ordersPageCount}>{data.total} طلب</Text>
           </View>
 
-          {visibleOrders.map((order, index) => (
+          {data.orders.map((order, index) => (
             <Animated.View
               entering={FadeInDown.delay(70 + index * 30).duration(190)}
               key={order.id}
@@ -128,31 +119,30 @@ export function CaptainOrders() {
             </Animated.View>
           ))}
 
-          {pageCount > 1 ? (
+          {data.pageCount > 1 ? (
             <View style={styles.ordersPagination}>
               <MotionPressable
                 accessibilityLabel="الصفحة السابقة"
-                disabled={safePage === 0}
-                onPress={() => setPage(safePage - 1)}
+                disabled={!data.hasPreviousPage}
+                onPress={data.previousPage}
                 style={[
                   styles.ordersPaginationButton,
-                  safePage === 0 && styles.ordersPaginationButtonDisabled,
+                  !data.hasPreviousPage && styles.ordersPaginationButtonDisabled,
                 ]}
               >
                 <MaterialIcons name="chevron-right" size={22} color={DEEP_BLUE} />
                 <Text style={styles.ordersPaginationButtonText}>السابق</Text>
               </MotionPressable>
               <Text style={styles.ordersPaginationLabel}>
-                صفحة {safePage + 1} من {pageCount}
+                صفحة {data.page + 1} من {data.pageCount}
               </Text>
               <MotionPressable
                 accessibilityLabel="الصفحة التالية"
-                disabled={safePage === pageCount - 1}
-                onPress={() => setPage(safePage + 1)}
+                disabled={!data.hasNextPage}
+                onPress={data.nextPage}
                 style={[
                   styles.ordersPaginationButton,
-                  safePage === pageCount - 1 &&
-                    styles.ordersPaginationButtonDisabled,
+                  !data.hasNextPage && styles.ordersPaginationButtonDisabled,
                 ]}
               >
                 <Text style={styles.ordersPaginationButtonText}>التالي</Text>

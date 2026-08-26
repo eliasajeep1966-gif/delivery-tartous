@@ -20,6 +20,11 @@ export type CaptainOrder = {
   completed_at: string | null;
 };
 
+export type CaptainOrdersPage = {
+  orders: CaptainOrder[];
+  total: number;
+};
+
 export type CaptainOrderStop = {
   id: string;
   order_id: string;
@@ -118,6 +123,26 @@ export const nativeCaptainContract = {
     async orders(captainId: string): Promise<CaptainOrder[]> {
       const result = await client().from("orders").select("*").eq("assigned_captain_id", captainId).order("created_at", { ascending: false }).order("id", { ascending: false });
       return unwrap(result as Result<CaptainOrder[]>, "تعذر تحميل سجل طلباتك.");
+    },
+    async ordersPage(
+      captainId: string,
+      { limit, offset }: { limit: number; offset: number },
+    ): Promise<CaptainOrdersPage> {
+      const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 50);
+      const safeOffset = Math.max(Math.floor(offset), 0);
+      const result = await client()
+        .from("orders")
+        .select("*", { count: "exact" })
+        .eq("assigned_captain_id", captainId)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(safeOffset, safeOffset + safeLimit - 1);
+
+      if (result.error) throw new Error(result.error.message);
+      return {
+        orders: (result.data ?? []) as CaptainOrder[],
+        total: result.count ?? 0,
+      };
     },
     async orderStops(orderId: string): Promise<CaptainOrderStop[]> {
       const result = await client().from("order_stops").select("*").eq("order_id", orderId).order("stop_type", { ascending: true }).order("sequence", { ascending: true });

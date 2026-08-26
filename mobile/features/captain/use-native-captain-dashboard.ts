@@ -240,3 +240,143 @@ export function useNativeCaptainDashboard() {
     ],
   );
 }
+
+
+export const CAPTAIN_ORDERS_PAGE_SIZE = 10;
+
+export function useNativeCaptainOrders() {
+  const { profile, session } = useDeliveryAuth();
+  const captainId = session?.user.id ?? profile?.id ?? null;
+  const [page, setPage] = useState(0);
+  const [orders, setOrders] = useState<CaptainOrder[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(true);
+  const reloadVersion = useRef(0);
+  const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(total / CAPTAIN_ORDERS_PAGE_SIZE),
+  );
+  const safePage = Math.min(page, pageCount - 1);
+  const hasPreviousPage = safePage > 0;
+  const hasNextPage = total > (safePage + 1) * CAPTAIN_ORDERS_PAGE_SIZE;
+
+  const reload = useCallback(
+    async (silent = false) => {
+      const requestVersion = ++reloadVersion.current;
+      if (!captainId) {
+        setOrders([]);
+        setTotal(0);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      if (silent) setRefreshing(true);
+      else {
+        setLoading(true);
+        setError(null);
+      }
+
+      try {
+        const result = await nativeCaptainContract.reads.ordersPage(captainId, {
+          limit: CAPTAIN_ORDERS_PAGE_SIZE,
+          offset: page * CAPTAIN_ORDERS_PAGE_SIZE,
+        });
+        if (!mounted.current || requestVersion !== reloadVersion.current) return;
+
+        const maxPage = Math.max(
+          0,
+          Math.ceil(result.total / CAPTAIN_ORDERS_PAGE_SIZE) - 1,
+        );
+        if (page > maxPage) {
+          setPage(maxPage);
+          return;
+        }
+
+        setOrders(result.orders);
+        setTotal(result.total);
+      } catch (cause) {
+        if (mounted.current && requestVersion === reloadVersion.current) {
+          setError(
+            cause instanceof Error ? cause.message : "تعذر تحميل سجل طلباتك.",
+          );
+        }
+      } finally {
+        if (mounted.current && requestVersion === reloadVersion.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [captainId, page],
+  );
+
+  const scheduleRealtimeReload = useCallback(() => {
+    if (realtimeReloadTimer.current !== null) return;
+    realtimeReloadTimer.current = setTimeout(() => {
+      realtimeReloadTimer.current = null;
+      void reload(true);
+    }, 250);
+  }, [reload]);
+
+  useEffect(() => {
+    mounted.current = true;
+    const initialLoadTimer = setTimeout(() => {
+      void reload();
+    }, 0);
+    return () => {
+      mounted.current = false;
+      reloadVersion.current += 1;
+      clearTimeout(initialLoadTimer);
+      if (realtimeReloadTimer.current !== null) {
+        clearTimeout(realtimeReloadTimer.current);
+        realtimeReloadTimer.current = null;
+      }
+    };
+  }, [reload]);
+
+  useRealtimeOrders({
+    enabled: Boolean(captainId),
+    captainId,
+    onOrder: scheduleRealtimeReload,
+  });
+
+  return useMemo(
+    () => ({
+      orders,
+      total,
+      page: safePage,
+      pageCount,
+      loading,
+      refreshing,
+      error,
+      hasPreviousPage,
+      hasNextPage,
+      reload,
+      previousPage: () => {
+        if (hasPreviousPage) setPage(safePage - 1);
+      },
+      nextPage: () => {
+        if (hasNextPage) setPage(safePage + 1);
+      },
+    }),
+    [
+      error,
+      hasNextPage,
+      hasPreviousPage,
+      loading,
+      orders,
+      pageCount,
+      refreshing,
+      reload,
+      safePage,
+      total,
+    ],
+  );
+}
