@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  type LayoutChangeEvent,
   Modal,
   RefreshControl,
   ScrollView,
@@ -171,7 +170,6 @@ export function AdminWages() {
   const [selectedPeriodStart, setSelectedPeriodStart] = useState("");
   const [customDate, setCustomDate] = useState(() => new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [filterTrackWidth, setFilterTrackWidth] = useState(0);
   const [selectedCaptainId, setSelectedCaptainId] = useState<string | null>(
     null,
   );
@@ -180,7 +178,6 @@ export function AdminWages() {
   );
   const [payingCaptainId, setPayingCaptainId] = useState<string | null>(null);
   const details = useNativeCaptainWageDetails(selectedCaptainId);
-  const filterOffset = useSharedValue(0);
   const dataOpacity = useSharedValue(1);
   const profitScale = useSharedValue(1.1);
   const profitTranslateY = useSharedValue(-14);
@@ -259,11 +256,6 @@ export function AdminWages() {
         : dashboardFilter === "monthly"
           ? "أرباح الشركة هذا الشهر"
           : `أرباح الشركة في ${customDateLabel(customDate)}`;
-  const filterAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: filterTrackWidth ? 1 : 0,
-    transform: [{ translateX: filterOffset.value }],
-    width: filterTrackWidth / FILTER_OPTIONS.length,
-  }));
   const dataAnimatedStyle = useAnimatedStyle(() => ({
     opacity: dataOpacity.value,
   }));
@@ -284,18 +276,6 @@ export function AdminWages() {
   }, [profitScale, profitTranslateY]);
 
   useEffect(() => {
-    const index = FILTER_OPTIONS.findIndex(
-      (option) => option.id === dashboardFilter,
-    );
-    filterOffset.set(
-      withTiming(
-        -(filterTrackWidth / FILTER_OPTIONS.length) * Math.max(index, 0),
-        { duration: 180, easing: Easing.out(Easing.cubic) },
-      ),
-    );
-  }, [dashboardFilter, filterOffset, filterTrackWidth]);
-
-  useEffect(() => {
     if (!isPeriodPending) {
       dataOpacity.set(
         withTiming(1, { duration: 180, easing: Easing.out(Easing.cubic) }),
@@ -303,21 +283,32 @@ export function AdminWages() {
     }
   }, [dataOpacity, isPeriodPending, selectedKey]);
 
+  const openCustomDatePicker = useCallback(() => {
+    dataOpacity.set(
+      withTiming(0.42, { duration: 90, easing: Easing.out(Easing.cubic) }),
+    );
+    if (dashboardFilter !== "custom") {
+      setDashboardFilter("custom");
+      setSelectedPeriodStart("");
+      wagePeriods.changePeriod("daily");
+    }
+    setIsDatePickerOpen(true);
+  }, [dashboardFilter, dataOpacity, wagePeriods]);
+
   const chooseFilter = useCallback(
     (next: WageDashboardFilter) => {
+      if (next === "custom") {
+        openCustomDatePicker();
+        return;
+      }
       dataOpacity.set(
         withTiming(0.42, { duration: 90, easing: Easing.out(Easing.cubic) }),
       );
       setDashboardFilter(next);
       setSelectedPeriodStart("");
-      if (next === "custom") {
-        setIsDatePickerOpen(true);
-        wagePeriods.changePeriod("daily");
-        return;
-      }
       wagePeriods.changePeriod(next);
     },
-    [dataOpacity, wagePeriods],
+    [dataOpacity, openCustomDatePicker, wagePeriods],
   );
 
   const selectCustomDate = useCallback(
@@ -331,9 +322,35 @@ export function AdminWages() {
     [dataOpacity],
   );
 
-  const handleFilterTrackLayout = useCallback((event: LayoutChangeEvent) => {
-    setFilterTrackWidth(event.nativeEvent.layout.width - 10);
-  }, []);
+  const selectedOptionIndex = options.findIndex(
+    (option) => option.period_start === selectedKey,
+  );
+  const canMoveToOlderRange =
+    dashboardFilter === "custom"
+      ? true
+      : selectedOptionIndex >= 0 && selectedOptionIndex < options.length - 1;
+  const canMoveToNewerRange =
+    dashboardFilter === "custom"
+      ? customDateKey < damascusDateKey(new Date())
+      : selectedOptionIndex > 0;
+  const navigateRange = useCallback(
+    (direction: -1 | 1) => {
+      dataOpacity.set(
+        withTiming(0.42, { duration: 90, easing: Easing.out(Easing.cubic) }),
+      );
+      if (dashboardFilter === "custom") {
+        const next = new Date(`${customDateKey}T12:00:00Z`);
+        next.setUTCDate(next.getUTCDate() + direction);
+        if (damascusDateKey(next) <= damascusDateKey(new Date())) {
+          setCustomDate(next);
+        }
+        return;
+      }
+      const target = options[selectedOptionIndex - direction];
+      if (target) setSelectedPeriodStart(target.period_start);
+    },
+    [customDateKey, dashboardFilter, dataOpacity, options, selectedOptionIndex],
+  );
 
   const selectedCaptain =
     selectedRows.find((row) => row.captain_id === selectedCaptainId) ?? null;
@@ -469,93 +486,82 @@ export function AdminWages() {
         </MotionPressable>
 
         <View style={styles.periodHeading}>
-          <Text style={styles.periodTitle}>الفترة المحاسبية</Text>
-          <Text style={styles.periodHint}>اختر طريقة العرض</Text>
+          <View>
+            <Text style={styles.periodTitle}>نطاق كشف الأجور</Text>
+            <Text style={styles.periodHint}>تنقّل بين الفترات المسجلة</Text>
+          </View>
+          <Text style={styles.rangeModeLabel}>
+            {
+              FILTER_OPTIONS.find((option) => option.id === dashboardFilter)
+                ?.label
+            }
+          </Text>
         </View>
-        <View style={styles.periods} onLayout={handleFilterTrackLayout}>
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.periodIndicator, filterAnimatedStyle]}
-          />
-          {FILTER_OPTIONS.map((option) => (
-            <View key={option.id} style={styles.periodSlot}>
-              <MotionPressable
-                onPress={() => chooseFilter(option.id)}
-                style={({ pressed }) => [
-                  styles.period,
-                  pressed && styles.periodPressed,
-                ]}
-              >
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.periodText,
-                    dashboardFilter === option.id && styles.periodTextActive,
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </MotionPressable>
-            </View>
-          ))}
-        </View>
-        {dashboardFilter === "custom" ? (
-          <View style={styles.selectedDateCard}>
-            <View style={styles.selectedDateCopy}>
-              <Text style={styles.selectedDateTitle}>التاريخ المحدد</Text>
-              <Text style={styles.selectedDateValue}>
-                {customDateLabel(customDate)}
+        <View style={styles.rangeControl}>
+          <MotionPressable
+            accessibilityLabel="الفترة الأقدم"
+            disabled={!canMoveToOlderRange}
+            onPress={() => navigateRange(-1)}
+            style={({ pressed }) => [
+              styles.rangeArrow,
+              !canMoveToOlderRange && styles.rangeArrowDisabled,
+              pressed && styles.smallPressed,
+            ]}
+          >
+            <MaterialIcons name="chevron-right" size={24} color={BLUE} />
+          </MotionPressable>
+          <MotionPressable
+            accessibilityLabel="اختيار نطاق تاريخ مخصص"
+            onPress={openCustomDatePicker}
+            style={({ pressed }) => [
+              styles.rangeValue,
+              pressed && styles.rangeValuePressed,
+            ]}
+          >
+            <MaterialIcons name="calendar-month" size={19} color={BLUE} />
+            <View style={styles.rangeValueCopy}>
+              <Text style={styles.rangeValueKicker}>الفترة المعروضة</Text>
+              <Text numberOfLines={1} style={styles.rangeValueText}>
+                {selectedLabel}
               </Text>
             </View>
+          </MotionPressable>
+          <MotionPressable
+            accessibilityLabel="الفترة الأحدث"
+            disabled={!canMoveToNewerRange}
+            onPress={() => navigateRange(1)}
+            style={({ pressed }) => [
+              styles.rangeArrow,
+              !canMoveToNewerRange && styles.rangeArrowDisabled,
+              pressed && styles.smallPressed,
+            ]}
+          >
+            <MaterialIcons name="chevron-left" size={24} color={BLUE} />
+          </MotionPressable>
+        </View>
+        <View style={styles.rangeQuickFilters}>
+          {FILTER_OPTIONS.map((option) => (
             <MotionPressable
-              onPress={() => setIsDatePickerOpen(true)}
+              key={option.id}
+              onPress={() => chooseFilter(option.id)}
               style={({ pressed }) => [
-                styles.datePickerButton,
+                styles.rangeQuickFilter,
+                dashboardFilter === option.id && styles.rangeQuickFilterActive,
                 pressed && styles.smallPressed,
               ]}
             >
-              <MaterialIcons name="calendar-month" size={17} color={BLUE} />
-              <Text style={styles.datePickerButtonText}>اختيار التاريخ</Text>
-            </MotionPressable>
-          </View>
-        ) : null}
-        {dashboardFilter !== "custom" && options.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dateOptions}
-          >
-            {options.map((row) => (
-              <MotionPressable
-                key={row.period_start}
-                onPress={() => {
-                  dataOpacity.set(
-                    withTiming(0.42, {
-                      duration: 90,
-                      easing: Easing.out(Easing.cubic),
-                    }),
-                  );
-                  setSelectedPeriodStart(row.period_start);
-                }}
-                style={({ pressed }) => [
-                  styles.dateChip,
-                  selectedKey === row.period_start && styles.dateChipActive,
-                  pressed && styles.smallPressed,
+              <Text
+                style={[
+                  styles.rangeQuickFilterText,
+                  dashboardFilter === option.id &&
+                    styles.rangeQuickFilterTextActive,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.dateChipText,
-                    selectedKey === row.period_start &&
-                      styles.dateChipTextActive,
-                  ]}
-                >
-                  {periodLabel(activePeriod, row)}
-                </Text>
-              </MotionPressable>
-            ))}
-          </ScrollView>
-        ) : null}
+                {option.label}
+              </Text>
+            </MotionPressable>
+          ))}
+        </View>
         {isPeriodPending ? <Message text="جارٍ تحميل الأجور..." /> : null}
         {periodError ? (
           <Message
@@ -1092,69 +1098,94 @@ const styles = StyleSheet.create({
     fontSize: 9,
     writingDirection: "rtl",
   },
-  periods: {
-    backgroundColor: "#EAF2F8",
-    borderColor: "#DCEBF5",
-    borderRadius: 17,
+  rangeModeLabel: {
+    backgroundColor: "#E7F6FE",
+    borderColor: "#C6E8F8",
+    borderRadius: 11,
     borderWidth: 1,
-    flexDirection: "row-reverse",
-    minHeight: 46,
-    overflow: "hidden",
-    padding: 5,
-    position: "relative",
-  },
-  periodIndicator: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    bottom: 5,
-    elevation: 0,
-    position: "absolute",
-    right: 5,
-    shadowColor: "#4D79A0",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    top: 5,
-    zIndex: 0,
-  },
-  periodSlot: { elevation: 2, flex: 1, zIndex: 2 },
-  period: {
-    alignItems: "center",
-    borderRadius: 12,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 34,
-    elevation: 3,
-    paddingHorizontal: 2,
-    zIndex: 3,
-  },
-  periodPressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
-  periodActive: {
-    backgroundColor: "#0878D1",
-    shadowColor: "#0878D1",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  periodText: {
-    color: "#668498",
+    color: BLUE,
     fontFamily: "Cairo_700Bold",
-    fontSize: 10,
+    fontSize: 9,
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     writingDirection: "rtl",
   },
-  periodTextActive: { color: "#063B78" },
-  dateOptions: { flexDirection: "row-reverse", gap: 8 },
-  dateChip: {
+  rangeControl: {
+    alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderColor: "#DCEAF3",
-    borderRadius: 13,
+    borderColor: "#CFE4F0",
+    borderRadius: 18,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: "row-reverse",
+    minHeight: 62,
+    padding: 6,
+    shadowColor: "#0C679D",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
   },
-  dateChipActive: { backgroundColor: "#EAF8FF", borderColor: "#0878D1" },
-  dateChipText: { color: "#5E7B8E", fontFamily: "Cairo_700Bold", fontSize: 9 },
-  dateChipTextActive: { color: "#0878D1" },
+  rangeArrow: {
+    alignItems: "center",
+    backgroundColor: "#EAF7FD",
+    borderRadius: 13,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  rangeArrowDisabled: { opacity: 0.3 },
+  rangeValue: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row-reverse",
+    gap: 8,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: 7,
+  },
+  rangeValuePressed: { opacity: 0.74 },
+  rangeValueCopy: { flexShrink: 1 },
+  rangeValueKicker: {
+    color: "#7895A7",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 8,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  rangeValueText: {
+    color: "#063B78",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  rangeQuickFilters: {
+    flexDirection: "row-reverse",
+    gap: 7,
+  },
+  rangeQuickFilter: {
+    alignItems: "center",
+    backgroundColor: "#F4F9FC",
+    borderColor: "#D9E9F2",
+    borderRadius: 11,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 35,
+    paddingHorizontal: 4,
+  },
+  rangeQuickFilterActive: {
+    backgroundColor: "#0878D1",
+    borderColor: "#0878D1",
+  },
+  rangeQuickFilterText: {
+    color: "#638297",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
+  rangeQuickFilterTextActive: { color: "#FFFFFF" },
   metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 9 },
   metric: {
     backgroundColor: "#FFFFFF",
@@ -1266,32 +1297,31 @@ const styles = StyleSheet.create({
     writingDirection: "ltr",
   },
   captainLedgerGrid: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FBFDFF",
+    borderBottomColor: "#E7F0F5",
+    borderTopColor: "#E7F0F5",
+    borderBottomWidth: 1,
+    borderTopWidth: 1,
     flexDirection: "row-reverse",
     flexWrap: "wrap",
-    paddingHorizontal: 5,
-    paddingVertical: 6,
+    paddingVertical: 3,
   },
   captainLedgerCell: {
-    borderColor: "#E7F0F5",
-    borderRadius: 12,
-    borderWidth: 1,
-    margin: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    width: "47.5%",
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    width: "50%",
   },
   captainLedgerLabel: {
     color: "#728FA1",
     fontFamily: "Cairo_400Regular",
-    fontSize: 8,
+    fontSize: 9,
     textAlign: "right",
     writingDirection: "rtl",
   },
   captainLedgerValue: {
     fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: 11,
+    marginTop: 1,
     textAlign: "right",
     writingDirection: "ltr",
   },
