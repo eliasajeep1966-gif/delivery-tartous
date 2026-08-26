@@ -27,6 +27,7 @@ import {
   type NativeNewOrderDraft,
 } from "@/components/admin/admin-new-order-modal";
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
@@ -349,37 +350,20 @@ export function AdminHome() {
 
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
-      <LinearGradient
-        colors={["rgba(250,253,255,0.96)", "rgba(219,248,253,0.97)", "rgba(150,226,239,0.98)"]}
-        locations={[0, 0.52, 1]}
-        style={styles.headerShell}
-      >
-        <View style={styles.header}>
-          <MotionPressable
-            onPress={() => router.push("/account-settings" as Href)}
-            style={({ pressed }) => [styles.accountButton, pressed && styles.headerPressed]}
-            accessibilityLabel="إعدادات الحساب"
-          >
-            <MaterialIcons name="account-circle" size={22} color="#0878D1" />
-          </MotionPressable>
-
-          <View style={styles.headerBrand}>
-            <Text style={styles.headerEyebrow}>
-              {profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
-            </Text>
-            <Text style={styles.headerTitle}>دليفري طرطوس</Text>
-          </View>
-
-          <MotionPressable
-            onPress={() => announce("الإشعارات", "لا توجد إشعارات جديدة.")}
-            style={({ pressed }) => [styles.headerRoundButton, pressed && styles.headerPressed]}
-            accessibilityLabel="الإشعارات"
-          >
-            <MaterialIcons name="notifications-none" size={20} color="#0878D1" />
-            <View style={styles.notificationDot} />
-          </MotionPressable>
-        </View>
-      </LinearGradient>
+      <DeliveryAppHeader
+        contextLabel={profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الإدارة"}
+        leadingAction={{
+          accessibilityLabel: "إعدادات الحساب",
+          icon: "account-circle",
+          onPress: () => router.push("/account-settings" as Href),
+        }}
+        trailingAction={{
+          accessibilityLabel: "الإشعارات",
+          badge: true,
+          icon: "notifications-none",
+          onPress: () => announce("الإشعارات", "لا توجد إشعارات جديدة."),
+        }}
+      />
 
       <FlatList
         data={snapshot?.activities ?? []}

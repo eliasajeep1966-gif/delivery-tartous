@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useNativeCaptainDashboard } from "@/features/captain/use-native-captain-dashboard";
@@ -433,6 +434,7 @@ function Page({
       className="bg-transparent"
       containerClassName="bg-transparent"
     >
+      <DeliveryAppHeader contextLabel={title} />
       <ScrollView
         refreshControl={
           onRefresh ? (

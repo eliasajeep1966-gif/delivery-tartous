@@ -6,6 +6,7 @@ import {
   Cairo_700Bold,
   useFonts,
 } from "@expo-google-fonts/cairo";
+import { Parisienne_400Regular } from "@expo-google-fonts/parisienne";
 import {
   Stack,
   useRootNavigationState,
@@ -146,6 +147,7 @@ export default function RootLayout() {
     Cairo_400Regular,
     Cairo_600SemiBold,
     Cairo_700Bold,
+    Parisienne_400Regular,
   });
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;

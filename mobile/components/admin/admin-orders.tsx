@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
@@ -248,26 +249,15 @@ export function AdminOrders() {
 
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.backButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <MaterialIcons name="arrow-forward" size={22} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.headerText}>
-          <Text style={styles.headerEyebrow}>
-            {profile.role === "supervisor" ? "لوحة المشرف" : "لوحة الأدمن"}
-          </Text>
-          <Text style={styles.headerTitle}>الطلبات</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons name="schedule" size={21} color="#FFFFFF" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="الطلبات"
+        leadingAction={{
+          accessibilityLabel: "العودة",
+          icon: "arrow-forward",
+          onPress: () => router.back(),
+        }}
+        trailingAction={{ accessibilityLabel: "جدولة الطلبات", icon: "schedule" }}
+      />
 
       <FlatList
         data={visibleOrders}

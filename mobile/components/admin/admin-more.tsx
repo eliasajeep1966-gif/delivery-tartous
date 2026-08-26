@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 
 const items = [
@@ -73,21 +74,15 @@ export function AdminMore() {
       className="bg-[#F8FAFC]"
       containerClassName="bg-[#F8FAFC]"
     >
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.replace("/(tabs)" as Href)}
-          style={styles.headerButton}
-        >
-          <MaterialIcons name="arrow-back" size={22} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.headerTitle}>
-          <Text style={styles.brand}>Delivery Tartous</Text>
-          <Text style={styles.title}>المزيد</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons name="menu" size={21} color="#FFFFFF" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="المزيد"
+        leadingAction={{
+          accessibilityLabel: "العودة للرئيسية",
+          icon: "arrow-back",
+          onPress: () => router.replace("/(tabs)" as Href),
+        }}
+        trailingAction={{ accessibilityLabel: "المزيد", icon: "menu" }}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

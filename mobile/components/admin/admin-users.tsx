@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useAdminUsers } from "@/features/admin/use-admin-users";
@@ -114,22 +115,15 @@ export function AdminUsers() {
       className="bg-[#F0F7FF]"
       containerClassName="bg-[#EAF5FF]"
     >
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.replace("/(tabs)/more" as Href)}
-          style={styles.headerButton}
-          accessibilityLabel="العودة إلى المزيد"
-        >
-          <MaterialIcons name="arrow-forward" size={24} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.headerTitles}>
-          <Text style={styles.brand}>المزيد والإدارة</Text>
-          <Text style={styles.title}>إدارة المستخدمين</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons name="people" size={21} color="#FFFFFF" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="إدارة المستخدمين"
+        leadingAction={{
+          accessibilityLabel: "العودة إلى المزيد",
+          icon: "arrow-forward",
+          onPress: () => router.replace("/(tabs)/more" as Href),
+        }}
+        trailingAction={{ accessibilityLabel: "إدارة المستخدمين", icon: "people" }}
+      />
 
       <FlatList
         data={visible}

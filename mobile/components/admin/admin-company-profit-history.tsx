@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import {
   type NativeCompanyProfitPeriodRow,
@@ -141,26 +142,21 @@ export function AdminCompanyProfitHistory() {
 
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
-      <View style={styles.header}>
-        <MotionPressable
-          accessibilityLabel="العودة إلى أرباح الشركة"
-          onPress={() =>
+      <DeliveryAppHeader
+        contextLabel="السجل الكامل"
+        leadingAction={{
+          accessibilityLabel: "العودة إلى أرباح الشركة",
+          icon: "arrow-forward",
+          onPress: () =>
             router.canGoBack()
               ? router.back()
-              : router.replace("/company-wages" as never)
-          }
-          style={styles.back}
-        >
-          <MaterialIcons name="arrow-forward" size={22} color="#FFF" />
-        </MotionPressable>
-        <View style={styles.headerText}>
-          <Text style={styles.eyebrow}>الأجور وحساب الشركة</Text>
-          <Text style={styles.headerTitle}>السجل الكامل</Text>
-        </View>
-        <View style={styles.icon}>
-          <MaterialIcons name="account-balance-wallet" size={21} color="#FFF" />
-        </View>
-      </View>
+              : router.replace("/company-wages" as never),
+        }}
+        trailingAction={{
+          accessibilityLabel: "السجل الكامل",
+          icon: "account-balance-wallet",
+        }}
+      />
 
       <FlatList
         data={rows}

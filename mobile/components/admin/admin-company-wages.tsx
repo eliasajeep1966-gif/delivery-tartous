@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import {
   useNativeCompanyProfitHistory,
@@ -55,21 +56,15 @@ export function AdminCompanyWages() {
   );
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
-      <View style={styles.header}>
-        <MotionPressable
-          onPress={() => router.replace("/(tabs)/wages")}
-          style={styles.back}
-        >
-          <MaterialIcons name="arrow-forward" size={22} color="#FFF" />
-        </MotionPressable>
-        <View style={styles.headerText}>
-          <Text style={styles.eyebrow}>الأجور وحساب الشركة</Text>
-          <Text style={styles.headerTitle}>أجور الشركة</Text>
-        </View>
-        <View style={styles.icon}>
-          <MaterialIcons name="store" size={21} color="#FFF" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="أجور الشركة"
+        leadingAction={{
+          accessibilityLabel: "العودة إلى أجور الكباتن",
+          icon: "arrow-forward",
+          onPress: () => router.replace("/(tabs)/wages"),
+        }}
+        trailingAction={{ accessibilityLabel: "أجور الشركة", icon: "store" }}
+      />
       <ScrollView
         refreshControl={
           <RefreshControl

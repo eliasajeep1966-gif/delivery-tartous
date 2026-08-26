@@ -1,4 +1,3 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import {
   nativeAdminFinanceContract,
@@ -91,25 +91,18 @@ export function AdminCaptainWageDetail() {
 
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.replace("/(tabs)/wages")}
-          style={styles.back}
-        >
-          <MaterialIcons name="arrow-forward" size={22} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.headerText}>
-          <Text style={styles.eyebrow}>الأجور والدفعات</Text>
-          <Text style={styles.headerTitle}>كشف حساب الكابتن</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons
-            name="account-balance-wallet"
-            size={21}
-            color="#FFFFFF"
-          />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="كشف حساب الكابتن"
+        leadingAction={{
+          accessibilityLabel: "العودة إلى أجور الكباتن",
+          icon: "arrow-forward",
+          onPress: () => router.replace("/(tabs)/wages"),
+        }}
+        trailingAction={{
+          accessibilityLabel: "كشف حساب الكابتن",
+          icon: "account-balance-wallet",
+        }}
+      />
       <ScrollView
         refreshControl={
           <RefreshControl

@@ -21,6 +21,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -385,32 +386,24 @@ export function AdminWages() {
 
   return (
     <ScreenContainer className="bg-[#F4F7FB]" containerClassName="bg-[#F4F7FB]">
-      <View style={styles.header}>
-        <MotionPressable
-          onPress={() => {
+      <DeliveryAppHeader
+        contextLabel="أجور الكباتن"
+        leadingAction={{
+          accessibilityLabel: "العودة",
+          icon: "arrow-forward",
+          onPress: () => {
             if (router.canGoBack()) {
               router.back();
             } else {
               router.replace("/(tabs)");
             }
-          }}
-          style={styles.backButton}
-        >
-          <MaterialIcons name="arrow-forward" size={21} color="#0878D1" />
-        </MotionPressable>
-        <View style={styles.headerText}>
-          <Text style={styles.headerEyebrow}>متابعة الأجور والدفعات</Text>
-          <Text style={styles.headerTitle}>أجور الكباتن</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <MaterialIcons
-            name="account-balance-wallet"
-            size={21}
-            color="#0878D1"
-          />
-        </View>
-      </View>
-      <View style={styles.neonDivider} />
+          },
+        }}
+        trailingAction={{
+          accessibilityLabel: "أجور الكباتن",
+          icon: "account-balance-wallet",
+        }}
+      />
       <ScrollView
         refreshControl={
           <RefreshControl

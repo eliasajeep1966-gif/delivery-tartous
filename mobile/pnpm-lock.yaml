@@ -11,6 +11,9 @@ importers:
       '@expo-google-fonts/cairo':
         specifier: ^0.4.2
         version: 0.4.2
+      '@expo-google-fonts/parisienne':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo/vector-icons':
         specifier: ^15.0.3
         version: 15.0.3(expo-font@57.0.1)(react-native@0.86.2(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -1363,6 +1366,9 @@ packages:
 
   '@expo-google-fonts/material-symbols@0.4.44':
     resolution: {integrity: sha512-36JP9Chcy/QEVZ9ZGY4i6zInlyFPbQjkIm6gRNuWWltScIj0WR8rddcD57EIjSC5YKCe2ZKLO6eO/N5r8Jit0A==}
+
+  '@expo-google-fonts/parisienne@0.4.1':
+    resolution: {integrity: sha512-RpyvERrwF6haa0oWlRQuMdn+j28KNN6Lo3JwxX0344xTRpmF6I+LrBr2xjOoFUdQ8noUr4EeRSfCpeALROu5aQ==}
 
   '@expo/cli@57.0.17':
     resolution: {integrity: sha512-PQc7if117dNh2qe+CHdlmSWpgwhFiP9CJ7XbwNF0w4KSKxFpJ2qUjDPoAcCMW1VZg1x30mEJ907bT8G1iDIZBQ==}
@@ -6998,6 +7004,8 @@ snapshots:
 
   '@expo-google-fonts/material-symbols@0.4.44': {}
 
+  '@expo-google-fonts/parisienne@0.4.1': {}
+
   '@expo/cli@57.0.17(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.12)(expo-constants@57.0.13)(expo-font@57.0.1)(expo-router@57.0.15)(expo@57.0.15)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.2(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)':
     dependencies:
       '@expo/code-signing-certificates': 0.0.6
@@ -7828,9 +7836,7 @@ snapshots:
       metro-runtime: 0.84.5
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 

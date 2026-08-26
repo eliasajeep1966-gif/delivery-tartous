@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
@@ -110,6 +111,19 @@ export function CaptainHome() {
       className="bg-transparent"
       containerClassName="bg-transparent"
     >
+      <DeliveryAppHeader
+        contextLabel="حساب الكابتن"
+        leadingAction={{
+          accessibilityLabel: "الإعدادات",
+          icon: "settings",
+          onPress: () => router.push("/(tabs)/settings"),
+        }}
+        trailingAction={{
+          accessibilityLabel: "المساعدة",
+          icon: "info-outline",
+          onPress: () => Alert.alert("المساعدة", "تواصل مع الإدارة عند الحاجة."),
+        }}
+      />
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -121,26 +135,6 @@ export function CaptainHome() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topBar}>
-          <MotionPressable
-            onPress={() =>
-              Alert.alert("المساعدة", "تواصل مع الإدارة عند الحاجة.")
-            }
-            style={styles.iconButton}
-          >
-            <MaterialIcons name="info-outline" size={20} color={BLUE} />
-          </MotionPressable>
-          <View style={styles.brand}>
-            <Text style={styles.brandTitle}>دليفري طرطوس</Text>
-            <Text style={styles.brandSubtitle}>حساب الكابتن</Text>
-          </View>
-          <MotionPressable
-            onPress={() => router.push("/(tabs)/settings")}
-            style={styles.iconButton}
-          >
-            <MaterialIcons name="settings" size={20} color={BLUE} />
-          </MotionPressable>
-        </View>
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>مرحباً، {name}</Text>

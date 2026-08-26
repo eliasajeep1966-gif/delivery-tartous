@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useAdminCaptains } from "@/features/admin/use-admin-captains";
@@ -268,18 +269,15 @@ export function AdminCaptainsScreen() {
     );
   return (
     <ScreenContainer className="bg-[#F3FBFF]" containerClassName="bg-[#EAF5FF]">
-      <View className="flex-row items-center justify-between border-b border-[#D7E7F2] bg-white px-5 py-4">
-        <Pressable onPress={() => router.replace("/(tabs)")}>
-          <MaterialIcons name="arrow-forward" size={24} color="#0060B8" />
-        </Pressable>
-        <View className="items-end">
-          <Text className="text-xs text-[#667D90]">لوحة الإدارة</Text>
-          <Text className="text-xl font-bold text-[#173B59]">الكباتن</Text>
-        </View>
-        <View className="rounded-xl bg-[#EAF4FF] p-2">
-          <MaterialIcons name="two-wheeler" size={22} color="#0060B8" />
-        </View>
-      </View>
+      <DeliveryAppHeader
+        contextLabel="الكباتن"
+        leadingAction={{
+          accessibilityLabel: "العودة للرئيسية",
+          icon: "arrow-forward",
+          onPress: () => router.replace("/(tabs)"),
+        }}
+        trailingAction={{ accessibilityLabel: "الكباتن", icon: "two-wheeler" }}
+      />
       <FlatList
         data={visibleCaptains}
         keyExtractor={(item) => item.id}
