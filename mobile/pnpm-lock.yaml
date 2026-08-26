@@ -114,7 +114,7 @@ importers:
         specifier: ~57.0.2
         version: 57.0.2(expo@57.0.15)(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native@0.86.2(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))
       expo-updates:
-        specifier: ~57.0.17
+        specifier: ~57.0.2
         version: 57.0.17(expo@57.0.15)(react-native@0.86.2(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       expo-video:
         specifier: ~57.0.2
@@ -7836,7 +7836,9 @@ snapshots:
       metro-runtime: 0.84.5
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
