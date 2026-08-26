@@ -104,8 +104,8 @@ const config: ExpoConfig = {
         defaultChannel: "orders-v2",
         sounds: [
           "./assets/sounds/new_order.mp3",
-          "./assets/sounds/captain-order-success.mp3",
-          "./assets/sounds/admin-order-success.mp3",
+          "./assets/sounds/captain_order_success.mp3",
+          "./assets/sounds/admin_order_success.mp3",
         ],
       },
     ],
