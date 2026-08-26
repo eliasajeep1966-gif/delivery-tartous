@@ -452,6 +452,22 @@ export type NativeCompanyExpensePeriodRow = {
   net_company_total: number;
 };
 
+export type NativeCompanyReportRangeSummary = {
+  period_start: string;
+  period_end: string;
+  order_count: number;
+  gross_total: number;
+  company_total: number;
+  captain_net_total: number;
+  expense_total: number;
+  net_company_total: number;
+};
+
+function finiteNumber(value: unknown): number {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
 export const nativeOfficeExpensesContract = {
   reads: {
     async periods(period: NativeFinancePeriod): Promise<NativeCompanyExpensePeriodRow[]> {
@@ -496,6 +512,37 @@ export const nativeOfficeExpensesContract = {
         })) as RpcResult<boolean>,
         "تعذر حذف المصروف.",
       );
+    },
+  },
+} as const;
+
+export const nativeCompanyPdfReportContract = {
+  reads: {
+    async rangeSummary(input: {
+      startDate: string;
+      endDate: string;
+    }): Promise<NativeCompanyReportRangeSummary> {
+      const row = first(
+        (await getNativeSupabaseClient().rpc(
+          "get_company_report_range_summary",
+          {
+            p_start_date: input.startDate,
+            p_end_date: input.endDate,
+          },
+        )) as RpcResult<NativeCompanyReportRangeSummary[]>,
+        "تعذر تحميل ملخص تقرير الشركة.",
+      );
+
+      return {
+        period_start: row.period_start,
+        period_end: row.period_end,
+        order_count: finiteNumber(row.order_count),
+        gross_total: finiteNumber(row.gross_total),
+        company_total: finiteNumber(row.company_total),
+        captain_net_total: finiteNumber(row.captain_net_total),
+        expense_total: finiteNumber(row.expense_total),
+        net_company_total: finiteNumber(row.net_company_total),
+      };
     },
   },
 } as const;

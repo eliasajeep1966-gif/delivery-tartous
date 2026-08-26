@@ -65,11 +65,15 @@ export function FinancialDatePicker({
   value,
   onSelect,
   onClose,
+  title = "اختيار تاريخ الأجور",
+  hint = "اختر يومًا لعرض سجل الأجور المسجل فعليًا في ذلك التاريخ.",
 }: {
   visible: boolean;
   value: Date;
   onSelect: (date: Date) => void;
   onClose: () => void;
+  title?: string;
+  hint?: string;
 }) {
   const [displayMonth, setDisplayMonth] = useState(() => monthStart(value));
   const monthDays = useMemo(() => calendarDays(displayMonth), [displayMonth]);
@@ -94,7 +98,7 @@ export function FinancialDatePicker({
             >
               <MaterialIcons name="close" size={19} color="#496B81" />
             </MotionPressable>
-            <Text style={styles.title}>اختيار تاريخ الأجور</Text>
+            <Text style={styles.title}>{title}</Text>
             <View style={styles.headerSpace} />
           </View>
           <View style={styles.monthRow}>
@@ -162,9 +166,7 @@ export function FinancialDatePicker({
               );
             })}
           </View>
-          <Text style={styles.hint}>
-            اختر يومًا لعرض سجل الأجور المسجل فعليًا في ذلك التاريخ.
-          </Text>
+          <Text style={styles.hint}>{hint}</Text>
         </View>
       </View>
     </Modal>

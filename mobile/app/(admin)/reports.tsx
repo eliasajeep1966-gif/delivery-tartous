@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import {
   Building2,
   ClipboardList,
+  FileText,
   RefreshCw,
   TrendingUp,
   Truck,
@@ -22,6 +23,7 @@ import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
+import { AdminCompanyPdfReports } from "@/components/admin/admin-company-pdf-reports";
 import {
   useNativeAdminWagePeriods,
   useNativeCompanyProfitHistory,
@@ -64,6 +66,7 @@ export default function AdminReportsScreen() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
   const [period, setPeriod] = useState<NativeFinancePeriod>("monthly");
+  const [showPdfReports, setShowPdfReports] = useState(false);
   const history = useNativeCompanyProfitHistory(period);
   const wages = useNativeAdminWagePeriods();
   const isBackOffice = profile?.role === "admin" || profile?.role === "supervisor";
@@ -157,6 +160,23 @@ export default function AdminReportsScreen() {
             })}
           </View>
         </LinearGradient>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setShowPdfReports(true)}
+          style={({ pressed }) => [styles.pdfReportButton, pressed && styles.smallPressed]}
+        >
+          <View style={styles.pdfReportIcon}>
+            <FileText size={21} color="#0878D1" />
+          </View>
+          <View style={styles.pdfReportText}>
+            <Text style={styles.pdfReportTitle}>طباعة تقارير PDF</Text>
+            <Text style={styles.pdfReportSubtitle}>
+              ملخص فترة محددة أو تقرير شركة بين تاريخين
+            </Text>
+          </View>
+          <Text style={styles.pdfReportAction}>فتح</Text>
+        </Pressable>
 
         {history.isPending || wages.isPending ? (
           <LoadingState label="جارٍ تحميل التقارير..." />
@@ -253,6 +273,11 @@ export default function AdminReportsScreen() {
           </>
         )}
       </ScrollView>
+      <AdminCompanyPdfReports
+        onClose={() => setShowPdfReports(false)}
+        userName={profile?.full_name ?? profile?.email ?? null}
+        visible={showPdfReports}
+      />
     </ScreenContainer>
   );
 }
@@ -316,6 +341,12 @@ const styles = StyleSheet.create({
   heroTitle: { color: "#123D60", fontSize: 21, fontWeight: "800", marginTop: 17, textAlign: "right", writingDirection: "rtl" },
   heroSubtitle: { color: "#608098", fontSize: 12, lineHeight: 20, marginTop: 5, textAlign: "right", writingDirection: "rtl" },
   periodPicker: { backgroundColor: "rgba(227,240,248,0.8)", borderRadius: 14, flexDirection: "row-reverse", gap: 5, marginTop: 15, padding: 4 },
+  pdfReportButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#CDE5F4", borderRadius: 18, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 18, padding: 12, shadowColor: "#0C679D", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10 },
+  pdfReportIcon: { alignItems: "center", backgroundColor: "#EAF6FF", borderRadius: 12, height: 40, justifyContent: "center", width: 40 },
+  pdfReportText: { flex: 1 },
+  pdfReportTitle: { color: "#164866", fontSize: 13, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  pdfReportSubtitle: { color: "#6F8CA0", fontSize: 9, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  pdfReportAction: { color: "#0878D1", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
   periodChoice: { alignItems: "center", borderRadius: 10, flex: 1, justifyContent: "center", minHeight: 32 },
   periodChoiceSelected: { backgroundColor: "#FFFFFF", shadowColor: "#0C679D", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5 },
   periodText: { color: "#718C9F", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },

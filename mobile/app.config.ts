@@ -102,6 +102,7 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-updates",
+    "expo-sharing",
     [
       "expo-notifications",
       {
