@@ -17,9 +17,7 @@ import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import {
-  useNativeOfficeExpensePeriods,
   useNativeOfficeExpenses,
-  type NativeFinancePeriod,
   type NativeOfficeExpense,
 } from "@/features/admin/use-admin-finance";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
@@ -70,15 +68,11 @@ function groupExpensesByDay(expenses: readonly NativeOfficeExpense[]): ExpenseDa
 export function AdminOfficeExpenses() {
   const router = useRouter();
   const { showToast } = useAppToast();
-  const [period, setPeriod] = useState<Exclude<NativeFinancePeriod, "annual">>(
-    "daily",
-  );
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [expenseDate, setExpenseDate] = useState(today);
   const [notes, setNotes] = useState("");
   const [selectedDay, setSelectedDay] = useState<ExpenseDay | null>(null);
-  const periods = useNativeOfficeExpensePeriods(period);
   const expenses = useNativeOfficeExpenses();
   const expenseDays = useMemo(
     () => groupExpensesByDay(expenses.data ?? []),
@@ -131,11 +125,8 @@ export function AdminOfficeExpenses() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={periods.isRefetching || expenses.isRefetching}
-            onRefresh={() => {
-              void periods.refetch();
-              void expenses.refetch();
-            }}
+            refreshing={expenses.isRefetching}
+            onRefresh={() => void expenses.refetch()}
             tintColor={BLUE}
           />
         }
@@ -193,55 +184,6 @@ export function AdminOfficeExpenses() {
             <Text style={styles.submitText}>حفظ المصروف</Text>
           </MotionPressable>
         </View>
-
-        <View style={styles.sectionHeading}>
-          <Text style={styles.sectionTitle}>صافي الشركة حسب الفترة</Text>
-          <Text style={styles.muted}>بعد خصم المصاريف</Text>
-        </View>
-        <View style={styles.periods}>
-          {(["daily", "weekly", "monthly"] as const).map((value) => (
-            <MotionPressable
-              key={value}
-              onPress={() => setPeriod(value)}
-              style={[styles.period, period === value && styles.active]}
-            >
-              <Text
-                style={[styles.periodText, period === value && styles.activeText]}
-              >
-                {value === "daily"
-                  ? "يومي"
-                  : value === "weekly"
-                    ? "أسبوعي"
-                    : "شهري"}
-              </Text>
-            </MotionPressable>
-          ))}
-        </View>
-        {periods.isPending ? (
-          <Message text="جارٍ تحميل ملخص المصاريف..." />
-        ) : periods.error ? (
-          <Message text="تعذر تحميل ملخص المصاريف." />
-        ) : (
-          (periods.data ?? []).map((row) => (
-            <View key={row.period_start} style={styles.row}>
-              <View>
-                <Text style={styles.rowTitle}>
-                  {dateLabel(row.period_start)}
-                  {period !== "daily"
-                    ? ` — ${dateLabel(row.period_end)}`
-                    : ""}
-                </Text>
-                <Text style={styles.muted}>إجمالي مصاريف الفترة</Text>
-              </View>
-              <View style={styles.end}>
-                <Text style={styles.expense}>
-                  {money(Number(row.expense_total))}
-                </Text>
-                <Text style={styles.muted}>مصروف</Text>
-              </View>
-            </View>
-          ))
-        )}
 
         <View style={styles.sectionHeading}>
           <View>
@@ -402,12 +344,6 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   submit: { alignItems: "center", backgroundColor: BLUE, borderRadius: 11, flexDirection: "row-reverse", gap: 7, justifyContent: "center", minHeight: 44, marginTop: 3 },
   submitText: { color: "#FFF", fontFamily: "Cairo_700Bold", fontSize: 12 },
-  periods: { backgroundColor: "#FFF", borderColor: "#D3E3F0", borderRadius: 15, borderWidth: 1, flexDirection: "row-reverse", gap: 5, padding: 5 },
-  period: { alignItems: "center", borderRadius: 11, flex: 1, justifyContent: "center", minHeight: 40 },
-  active: { backgroundColor: BLUE },
-  periodText: { color: "#5C7C90", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
-  activeText: { color: "#FFF" },
-  row: { backgroundColor: "#FFF", borderColor: "#D3E3F0", borderRadius: 15, borderWidth: 1, flexDirection: "row-reverse", justifyContent: "space-between", padding: 14 },
   rowTitle: { color: "#1C1B1B", fontFamily: "Cairo_700Bold", fontSize: 12, textAlign: "right", writingDirection: "rtl" },
   end: { alignItems: "flex-end" },
   expense: { color: "#B54708", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
