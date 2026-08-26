@@ -1,10 +1,16 @@
 import "react-native-url-polyfill/auto";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createClient, processLock, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  processLock,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+
+import { createChunkedSessionStorage } from "./chunked-session-storage";
 
 export type DeliveryRole = "admin" | "supervisor" | "captain";
 
@@ -26,47 +32,17 @@ export class SupabaseConfigurationError extends Error {
   }
 }
 
+// Expo SecureStore has a small per-value limit. A 900-byte chunk stays safely
+// below that limit while the metadata commit marker keeps token rotation atomic.
 const NATIVE_SESSION_CHUNK_SIZE = 900;
-const NATIVE_SESSION_META_SUFFIX = ".meta";
-const NATIVE_SESSION_CHUNK_SUFFIX = ".chunk.";
-
-type NativeSessionMetadata = {
-  chunks: number;
-};
-
-function nativeSessionMetaKey(key: string) {
-  return `${key}${NATIVE_SESSION_META_SUFFIX}`;
-}
-
-function nativeSessionChunkKey(key: string, index: number) {
-  return `${key}${NATIVE_SESSION_CHUNK_SUFFIX}${index}`;
-}
+const nativeSessionStorage = createChunkedSessionStorage(SecureStore, {
+  chunkSize: NATIVE_SESSION_CHUNK_SIZE,
+});
 
 const authStorage = {
   getItem: async (key: string) => {
     if (Platform.OS === "web") return AsyncStorage.getItem(key);
-
-    const metadataValue = await SecureStore.getItemAsync(nativeSessionMetaKey(key));
-    if (metadataValue) {
-      try {
-        const metadata = JSON.parse(metadataValue) as NativeSessionMetadata;
-        if (Number.isInteger(metadata.chunks) && metadata.chunks > 0) {
-          const chunks = await Promise.all(
-            Array.from({ length: metadata.chunks }, (_, index) =>
-              SecureStore.getItemAsync(nativeSessionChunkKey(key, index)),
-            ),
-          );
-          if (chunks.every((chunk): chunk is string => typeof chunk === "string")) {
-            return chunks.join("");
-          }
-        }
-      } catch {
-        // Fall through to the legacy single-value entry below.
-      }
-    }
-
-    // Read sessions written by the previous storage implementation and migrate them on the next write.
-    return SecureStore.getItemAsync(key);
+    return nativeSessionStorage.getItem(key);
   },
   setItem: async (key: string, value: string) => {
     if (Platform.OS === "web") {
@@ -74,17 +50,7 @@ const authStorage = {
       return;
     }
 
-    const chunks = value.match(new RegExp(`.{1,${NATIVE_SESSION_CHUNK_SIZE}}`, "g")) ?? [""];
-    await Promise.all(
-      chunks.map((chunk, index) =>
-        SecureStore.setItemAsync(nativeSessionChunkKey(key, index), chunk),
-      ),
-    );
-    await SecureStore.setItemAsync(
-      nativeSessionMetaKey(key),
-      JSON.stringify({ chunks: chunks.length } satisfies NativeSessionMetadata),
-    );
-    await SecureStore.deleteItemAsync(key);
+    await nativeSessionStorage.setItem(key, value);
   },
   removeItem: async (key: string) => {
     if (Platform.OS === "web") {
@@ -92,22 +58,7 @@ const authStorage = {
       return;
     }
 
-    const metadataValue = await SecureStore.getItemAsync(nativeSessionMetaKey(key));
-    let chunkCount = 0;
-    try {
-      const metadata = metadataValue ? (JSON.parse(metadataValue) as NativeSessionMetadata) : null;
-      chunkCount = metadata && Number.isInteger(metadata.chunks) ? metadata.chunks : 0;
-    } catch {
-      chunkCount = 0;
-    }
-
-    await Promise.all([
-      SecureStore.deleteItemAsync(key),
-      SecureStore.deleteItemAsync(nativeSessionMetaKey(key)),
-      ...Array.from({ length: chunkCount }, (_, index) =>
-        SecureStore.deleteItemAsync(nativeSessionChunkKey(key, index)),
-      ),
-    ]);
+    await nativeSessionStorage.removeItem(key);
   },
 };
 
@@ -119,8 +70,12 @@ function configurationValue(value: unknown): string {
 
 function getConfiguration() {
   const extra = Constants.expoConfig?.extra;
-  const url = configurationValue(process.env.EXPO_PUBLIC_SUPABASE_URL) || configurationValue(extra?.supabaseUrl);
-  const publishableKey = configurationValue(process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY) || configurationValue(extra?.supabasePublishableKey);
+  const url =
+    configurationValue(process.env.EXPO_PUBLIC_SUPABASE_URL) ||
+    configurationValue(extra?.supabaseUrl);
+  const publishableKey =
+    configurationValue(process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ||
+    configurationValue(extra?.supabasePublishableKey);
 
   if (!url || !publishableKey) {
     throw new SupabaseConfigurationError(
@@ -149,6 +104,8 @@ export function getNativeSupabaseClient(): SupabaseClient {
   return cachedClient;
 }
 
-export function isSupabaseConfigurationError(error: unknown): error is SupabaseConfigurationError {
+export function isSupabaseConfigurationError(
+  error: unknown,
+): error is SupabaseConfigurationError {
   return error instanceof SupabaseConfigurationError;
 }
