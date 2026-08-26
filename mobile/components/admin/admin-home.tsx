@@ -33,7 +33,7 @@ import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
-  type AdminHomeActivity,
+  type AdminHomeActivityWithTiming,
   type AdminHomeMetric,
   type AdminOrderStatus,
   useAdminHome,
@@ -43,6 +43,7 @@ import {
   NativeAdminRequestTimeoutError,
   nativeAdminContract,
 } from "@/lib/supabase/native-admin-contract";
+import { presentDeliveryTiming, type DeliveryTiming } from "@/lib/admin/delivery-duration";
 import { notifyCaptainOfOrder } from "@/lib/notifications";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
@@ -688,7 +689,7 @@ function ActivityRow({
   onPress,
   index,
 }: {
-  item: AdminHomeActivity;
+  item: AdminHomeActivityWithTiming;
   onPress: () => void;
   index: number;
 }) {
@@ -733,10 +734,57 @@ function ActivityRow({
             <MaterialIcons name="schedule" size={12} color="#7692A5" />
             <Text style={styles.timeText}>{item.timestamp}</Text>
           </View>
+          <ActivityDeliveryJourney timing={item.deliveryTiming} status={item.status} />
         </View>
         <MaterialIcons name="chevron-left" size={19} color="#8EAABB" />
       </MotionPressable>
     </Animated.View>
+  );
+}
+
+function ActivityDeliveryJourney({
+  timing,
+  status,
+}: {
+  timing: DeliveryTiming | null;
+  status: AdminOrderStatus | null;
+}) {
+  const presentation = timing ? presentDeliveryTiming(timing) : null;
+  if (!presentation) return null;
+
+  const isCompleted = presentation.mode === "completed";
+  const activeLabel = status === "received" ? "بانتظار التوصيل" : "قيد التوصيل";
+
+  return (
+    <View style={styles.activityJourney}>
+      <View style={styles.activityJourneyTop}>
+        <Text style={styles.activityJourneyLabel}>زمن التوصيل</Text>
+        <View style={[styles.activityDurationBadge, !isCompleted && styles.activityDurationBadgeActive]}>
+          <MaterialIcons name={isCompleted ? "timer" : "timelapse"} size={12} color={isCompleted ? "#08755C" : "#0878D1"} />
+          <Text style={[styles.activityDurationText, !isCompleted && styles.activityDurationTextActive]}>
+            {presentation.label}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.activityJourneyTrack}>
+        <View style={styles.activityJourneyMoment}>
+          <Text style={styles.activityJourneyMomentLabel}>استلام</Text>
+          <Text style={styles.activityJourneyMomentTime}>{presentation.receivedTime}</Text>
+        </View>
+        <View style={styles.activityJourneyConnector}>
+          <View style={[styles.activityJourneyLine, !isCompleted && styles.activityJourneyLineActive]} />
+          <MaterialIcons name="arrow-back" size={13} color={isCompleted ? "#41A78C" : "#0878D1"} />
+        </View>
+        <View style={styles.activityJourneyMoment}>
+          <Text style={[styles.activityJourneyMomentLabel, !isCompleted && styles.activityJourneyActiveLabel]}>
+            {isCompleted ? "توصيل" : activeLabel}
+          </Text>
+          <Text style={[styles.activityJourneyMomentTime, !isCompleted && styles.activityJourneyActiveTime]}>
+            {presentation.completedTime ?? "—"}
+          </Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -948,6 +996,22 @@ const styles = StyleSheet.create({
   activitySubtitle: { color: "#5E7C90", fontSize: 11, fontWeight: "700", marginTop: 5, textAlign: "right", writingDirection: "rtl" },
   timeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 3, marginTop: 6 },
   timeText: { color: "#7B96A8", fontSize: 10, writingDirection: "rtl" },
+  activityJourney: { backgroundColor: "#F7FBFD", borderColor: "#DCEAF1", borderRadius: 11, borderWidth: 1, marginTop: 9, paddingHorizontal: 9, paddingVertical: 8 },
+  activityJourneyTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
+  activityJourneyLabel: { color: "#4D697D", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
+  activityDurationBadge: { alignItems: "center", backgroundColor: "#EAF9F3", borderRadius: 8, flexDirection: "row-reverse", gap: 4, paddingHorizontal: 7, paddingVertical: 3 },
+  activityDurationBadgeActive: { backgroundColor: "#EAF5FF" },
+  activityDurationText: { color: "#08755C", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
+  activityDurationTextActive: { color: "#0878D1" },
+  activityJourneyTrack: { alignItems: "center", flexDirection: "row-reverse", marginTop: 7 },
+  activityJourneyMoment: { alignItems: "flex-end", minWidth: 49 },
+  activityJourneyMomentLabel: { color: "#5C7486", fontSize: 9, fontWeight: "700", writingDirection: "rtl" },
+  activityJourneyMomentTime: { color: "#1B415A", fontSize: 10, fontWeight: "800", marginTop: 1, writingDirection: "rtl" },
+  activityJourneyConnector: { alignItems: "center", flex: 1, flexDirection: "row", justifyContent: "center", marginHorizontal: 5 },
+  activityJourneyLine: { backgroundColor: "#8ACBB9", flex: 1, height: 1, maxWidth: 36 },
+  activityJourneyLineActive: { backgroundColor: "#8BC9EE" },
+  activityJourneyActiveLabel: { color: "#0878D1" },
+  activityJourneyActiveTime: { color: "#0878D1" },
   activityPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   loadingActivity: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E3EDF4", borderRadius: 18, borderStyle: "dashed", borderWidth: 1, flexDirection: "row-reverse", gap: 8, justifyContent: "center", minHeight: 100 },
   loadingIcon: { alignItems: "center", backgroundColor: "#EEF7FC", borderRadius: 11, height: 34, justifyContent: "center", width: 34 },

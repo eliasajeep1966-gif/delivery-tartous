@@ -2,6 +2,8 @@ export type AdminOrderStatus = "pending" | "assigned" | "received" | "in_deliver
 
 export type AdminHomeActivity = {
   id: string;
+  orderId: string | null;
+  occurredAt: string;
   title: string;
   subtitle: string;
   timestamp: string;
@@ -72,6 +74,8 @@ export function mapAdminHomeActivities(value: unknown): AdminHomeActivity[] {
 
     return [{
       id,
+      orderId: text(record.order_id),
+      occurredAt: createdAt,
       title: titleForActivity(action, orderNumber),
       subtitle: `بواسطة ${actorName}`,
       timestamp: activityTime(createdAt),

@@ -7,6 +7,7 @@ describe("Admin Home RPC activity mapper", () => {
     const rows = mapAdminHomeActivities([
       {
         id: "activity-1",
+        order_id: "order-42",
         action: "تم التوصيل",
         order_number: 42,
         actor_name: "أحمد",
@@ -18,6 +19,8 @@ describe("Admin Home RPC activity mapper", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       id: "activity-1",
+      orderId: "order-42",
+      occurredAt: "2026-08-22T12:00:00.000Z",
       title: "تم تسليم الطلب #42",
       subtitle: "بواسطة أحمد",
       status: "completed",
