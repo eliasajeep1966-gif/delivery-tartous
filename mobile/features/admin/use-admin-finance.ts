@@ -3,7 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { nativeAdminContract } from "@/lib/supabase/native-admin-contract";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
@@ -22,6 +22,21 @@ export type NativeCaptainWagePeriodRow = {
   period_start: string;
   settlement_total: number;
   unpaid_total: number;
+};
+
+export type NativeCaptainWageDetailTotals = {
+  gross: number;
+  captain: number;
+  company: number;
+  settlement: number;
+  paid: number;
+  unpaid: number;
+};
+
+export type NativeCaptainWageDetailPage = {
+  rows: NativeCaptainWageDetailRow[];
+  total: number;
+  totals: NativeCaptainWageDetailTotals;
 };
 
 export type NativeCaptainWageDetailRow = {
@@ -139,6 +154,27 @@ export const nativeAdminFinanceContract = {
         (await getNativeSupabaseClient().rpc("get_captain_wage_details_v2", {
           p_captain_id: captainId,
         })) as RpcResult<NativeCaptainWageDetailRow[]>,
+        "تعذر تحميل تفاصيل أجر الكابتن.",
+      );
+    },
+    async captainWageDetailsPage(input: {
+      captainId: string;
+      period: NativeFinancePeriod;
+      limit: number;
+      offset: number;
+      customDate?: string | null;
+    }): Promise<NativeCaptainWageDetailPage> {
+      return unwrap(
+        (await getNativeSupabaseClient().rpc(
+          "get_captain_wage_details_page",
+          {
+            p_captain_id: input.captainId,
+            p_period: input.period,
+            p_limit: Math.min(Math.max(Math.floor(input.limit), 1), 50),
+            p_offset: Math.max(Math.floor(input.offset), 0),
+            p_custom_date: input.customDate ?? null,
+          },
+        )) as RpcResult<NativeCaptainWageDetailPage>,
         "تعذر تحميل تفاصيل أجر الكابتن.",
       );
     },
@@ -279,6 +315,122 @@ export function useNativeCaptainWageDetails(captainId: string | null) {
     staleTime: 20_000,
     retry: 1,
   });
+}
+
+const CAPTAIN_WAGE_DETAIL_PAGE_SIZE = 10;
+type CaptainWageDetailFilter = NativeFinancePeriod | "custom";
+const EMPTY_CAPTAIN_WAGE_TOTALS: NativeCaptainWageDetailTotals = {
+  gross: 0,
+  captain: 0,
+  company: 0,
+  settlement: 0,
+  paid: 0,
+  unpaid: 0,
+};
+
+function damascusDateKey(value: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).formatToParts(value);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+}
+
+export function useNativeAdminCaptainWageDetailPage(captainId: string | null) {
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<CaptainWageDetailFilter>("daily");
+  const [customDate, setCustomDate] = useState(() => damascusDateKey(new Date()));
+  const [page, setPage] = useState(0);
+  const period: NativeFinancePeriod = filter === "custom" ? "daily" : filter;
+  const query = useQuery({
+    queryKey: [
+      "admin-captain-wage-detail-page",
+      captainId,
+      filter,
+      customDate,
+      page,
+    ],
+    queryFn: () =>
+      nativeAdminFinanceContract.reads.captainWageDetailsPage({
+        captainId: captainId ?? "",
+        customDate: filter === "custom" ? customDate : null,
+        limit: CAPTAIN_WAGE_DETAIL_PAGE_SIZE,
+        offset: page * CAPTAIN_WAGE_DETAIL_PAGE_SIZE,
+        period,
+      }),
+    enabled: Boolean(captainId),
+    staleTime: 20_000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    const unsubscribe = nativeAdminContract.realtime.subscribe(() => {
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-captain-wage-detail-page", captainId],
+      });
+    });
+    return unsubscribe;
+  }, [captainId, queryClient]);
+
+  const data = query.data;
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(
+    1,
+    Math.ceil(total / CAPTAIN_WAGE_DETAIL_PAGE_SIZE),
+  );
+  const safePage = Math.min(page, pageCount - 1);
+  const hasPreviousPage = safePage > 0;
+  const hasNextPage = total > (safePage + 1) * CAPTAIN_WAGE_DETAIL_PAGE_SIZE;
+  const selectFilter = useCallback((nextFilter: CaptainWageDetailFilter) => {
+    setPage(0);
+    setFilter(nextFilter);
+  }, []);
+  const selectCustomDate = useCallback((nextDate: string) => {
+    setPage(0);
+    setCustomDate(nextDate);
+    setFilter("custom");
+  }, []);
+
+  return useMemo(
+    () => ({
+      ...query,
+      customDate,
+      filter,
+      hasNextPage,
+      hasPreviousPage,
+      page: safePage,
+      pageCount,
+      rows: data?.rows ?? [],
+      selectCustomDate,
+      selectFilter,
+      total,
+      totals: data?.totals ?? EMPTY_CAPTAIN_WAGE_TOTALS,
+      previousPage: () => {
+        if (hasPreviousPage) setPage(safePage - 1);
+      },
+      nextPage: () => {
+        if (hasNextPage) setPage(safePage + 1);
+      },
+    }),
+    [
+      customDate,
+      data?.rows,
+      data?.totals,
+      filter,
+      hasNextPage,
+      hasPreviousPage,
+      pageCount,
+      query,
+      safePage,
+      selectCustomDate,
+      selectFilter,
+      total,
+    ],
+  );
 }
 
 

@@ -598,7 +598,10 @@ export function AdminWages() {
                 onPress={() =>
                   router.push({
                     pathname: "/captain-wage-detail" as never,
-                    params: { captainId: captain.captain_id },
+                    params: {
+                      captainId: captain.captain_id,
+                      captainName: captain.captain_name,
+                    },
                   } as never)
                 }
                 style={({ pressed }) => [

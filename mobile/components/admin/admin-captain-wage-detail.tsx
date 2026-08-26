@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Pressable,
@@ -13,62 +13,76 @@ import {
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import { useAppToast } from "@/contexts/app-toast-context";
 import {
   nativeAdminFinanceContract,
-  useNativeCaptainWageDetails,
-  useNativeAdminWagePeriods,
-  type NativeFinancePeriod,
+  useNativeAdminCaptainWageDetailPage,
 } from "@/features/admin/use-admin-finance";
 
-const BLUE = "#0060B8";
+const BLUE = "#0878D1";
+const DEEP_BLUE = "#063B78";
+const NEON = "#16CEFF";
+const PAGE_SIZE = 10;
 const money = (value: number) =>
   `${new Intl.NumberFormat("en-US").format(value)} ل.س`;
 const dateLabel = (value: string) =>
   new Intl.DateTimeFormat("ar-SY", {
-    timeZone: "Asia/Damascus",
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Asia/Damascus",
   }).format(new Date(value));
+const customDateLabel = (value: string) =>
+  new Intl.DateTimeFormat("ar-SY-u-nu-latn", {
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00Z`));
+const damascusDateKey = (value: Date) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Damascus",
+    year: "numeric",
+  }).formatToParts(value);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("year")}-${pick("month")}-${pick("day")}`;
+};
 
 export function AdminCaptainWageDetail() {
   const router = useRouter();
   const { showToast } = useAppToast();
-  const { captainId } = useLocalSearchParams<{ captainId: string }>();
-  const details = useNativeCaptainWageDetails(captainId ?? null);
-  const periods = useNativeAdminWagePeriods();
-  const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
-  const [filter, setFilter] = useState<"all" | "remaining" | "paid">("all");
+  const { captainId, captainName: captainNameParam } = useLocalSearchParams<{
+    captainId: string;
+    captainName?: string;
+  }>();
+  const details = useNativeAdminCaptainWageDetailPage(captainId ?? null);
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
-  const rows = useMemo(() => details.data ?? [], [details.data]);
-  const visibleRows = useMemo(
-    () =>
-      rows.filter(
-        (row) =>
-          filter === "all" ||
-          (filter === "paid" ? row.is_fully_paid : !row.is_fully_paid),
-      ),
-    [filter, rows],
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const captainName =
+    typeof captainNameParam === "string" && captainNameParam.trim()
+      ? captainNameParam
+      : "الكابتن";
+  const firstRowNumber = details.total ? details.page * PAGE_SIZE + 1 : 0;
+  const lastRowNumber = Math.min(
+    (details.page + 1) * PAGE_SIZE,
+    details.total,
   );
-  const summary = periods.data?.find((row) => row.captain_id === captainId);
-  const totals = useMemo(
-    () => ({
-      gross: rows.reduce((sum, row) => sum + row.gross_fee, 0),
-      captain: rows.reduce((sum, row) => sum + row.captain_amount, 0),
-      company: rows.reduce((sum, row) => sum + row.company_amount, 0),
-      unpaid: rows.reduce((sum, row) => sum + row.unpaid_amount, 0),
-    }),
-    [rows],
-  );
-  const captainName = summary?.captain_name ?? "الكابتن";
 
   const payout = async () => {
     const value = Number(amount);
-    if (!Number.isFinite(value) || value <= 0 || value > totals.unpaid) {
-      Alert.alert("بيانات الدفعة", "أدخل مبلغاً موجباً لا يتجاوز المتبقي.");
+    if (
+      !Number.isFinite(value) ||
+      value <= 0 ||
+      value > details.totals.unpaid
+    ) {
+      Alert.alert("بيانات الدفعة", "أدخل مبلغاً موجباً ضمن صافي أجر الكابتن.");
       return;
     }
+
     setSaving(true);
     try {
       await nativeAdminFinanceContract.actions.recordPartialPayout(
@@ -77,7 +91,6 @@ export function AdminCaptainWageDetail() {
       );
       setAmount("");
       await details.refetch();
-      await periods.refetch();
       showToast({ message: `تم تسجيل دفعة بقيمة ${money(value)}.` });
     } catch (error) {
       Alert.alert(
@@ -103,14 +116,14 @@ export function AdminCaptainWageDetail() {
         }}
       />
       <ScrollView
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={details.isRefetching}
             onRefresh={() => void details.refetch()}
+            refreshing={details.isRefetching}
             tintColor={BLUE}
           />
         }
-        contentContainerStyle={styles.content}
       >
         <View style={styles.profile}>
           <View style={styles.avatar}>
@@ -118,17 +131,16 @@ export function AdminCaptainWageDetail() {
           </View>
           <View style={styles.profileText}>
             <Text style={styles.name}>{captainName}</Text>
-            <Text style={styles.muted}>
-              {summary?.order_count ?? rows.length} طلبات — كشف حي
-            </Text>
+            <Text style={styles.muted}>{details.total} طلبات في السجل</Text>
           </View>
           <Text style={styles.live}>كشف حي</Text>
         </View>
+
         <View style={styles.summary}>
           {[
-            ["إجمالي الأجور", totals.gross, "#1C1B1B"],
-            ["صافي الكابتن (70%)", totals.captain, "#047857"],
-            ["حصة الشركة (30%)", totals.company, BLUE],
+            ["إجمالي الأجور", details.totals.gross, "#1C1B1B"],
+            ["صافي الكابتن (70%)", details.totals.captain, "#047857"],
+            ["حصة الشركة (30%)", details.totals.company, BLUE],
           ].map(([label, value, color]) => (
             <View key={String(label)} style={styles.summaryCell}>
               <Text style={styles.muted}>{String(label)}</Text>
@@ -138,59 +150,66 @@ export function AdminCaptainWageDetail() {
             </View>
           ))}
         </View>
+
         <View style={styles.periods}>
-          {(["daily", "weekly", "monthly"] as const).map((value) => (
-            <Pressable
-              key={value}
-              onPress={() => {
-                setPeriod(value);
-                periods.changePeriod(value);
-              }}
-              style={[styles.period, period === value && styles.periodActive]}
-            >
-              <Text
+          {(["daily", "weekly", "monthly", "annual", "custom"] as const).map(
+            (value) => (
+              <Pressable
+                key={value}
+                onPress={() => {
+                  details.selectFilter(value);
+                  if (value === "custom") setIsDatePickerOpen(true);
+                }}
                 style={[
-                  styles.periodText,
-                  period === value && styles.periodTextActive,
+                  styles.period,
+                  details.filter === value && styles.periodActive,
                 ]}
               >
-                {value === "daily"
-                  ? "يومي"
-                  : value === "weekly"
-                    ? "أسبوعي"
-                    : "شهري"}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  style={[
+                    styles.periodText,
+                    details.filter === value && styles.periodTextActive,
+                  ]}
+                >
+                  {value === "daily"
+                    ? "يومي"
+                    : value === "weekly"
+                      ? "أسبوعي"
+                      : value === "monthly"
+                        ? "شهري"
+                        : value === "annual"
+                          ? "سنوي"
+                          : "تاريخ"}
+                </Text>
+              </Pressable>
+            ),
+          )}
         </View>
-        <View style={styles.filters}>
-          {(
-            [
-              ["all", "الكل"],
-              ["remaining", "المتبقي"],
-              ["paid", "تم تسليمه"],
-            ] as const
-          ).map(([id, label]) => (
-            <Pressable
-              key={id}
-              onPress={() => setFilter(id)}
-              style={[styles.filter, filter === id && styles.filterActive]}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  filter === id && styles.filterTextActive,
-                ]}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+
+        <Pressable
+          onPress={() => setIsDatePickerOpen(true)}
+          style={styles.dateControl}
+        >
+          <View>
+            <Text style={styles.dateControlKicker}>التاريخ المعروض</Text>
+            <Text style={styles.dateControlValue}>
+              {details.filter === "custom"
+                ? customDateLabel(details.customDate)
+                : "اختر تاريخاً مخصصاً"}
+            </Text>
+          </View>
+          <View style={styles.dateIcon}>
+            <Text style={styles.dateIconText}>تاريخ</Text>
+          </View>
+        </Pressable>
+
         <View style={styles.heading}>
           <Text style={styles.sectionTitle}>سجل الطلبات</Text>
-          <Text style={styles.badge}>{visibleRows.length} طلبات</Text>
+          <Text style={styles.badge}>
+            عرض {firstRowNumber}–{lastRowNumber} من {details.total}
+          </Text>
         </View>
+
         {details.isPending ? (
           <Message text="جارٍ تحميل كشف الحساب..." />
         ) : details.error ? (
@@ -201,15 +220,13 @@ export function AdminCaptainWageDetail() {
                 : "تعذر تحميل التفاصيل."
             }
           />
-        ) : (
-          visibleRows.map((row) => (
+        ) : details.rows.length ? (
+          details.rows.map((row) => (
             <View key={row.financial_ledger_id} style={styles.order}>
               <View style={styles.orderTop}>
                 <View>
                   <Text style={styles.name}>طلب #{row.order_number}</Text>
-                  <Text style={styles.muted}>
-                    {dateLabel(row.completed_at)}
-                  </Text>
+                  <Text style={styles.muted}>{dateLabel(row.completed_at)}</Text>
                 </View>
                 <View style={styles.alignEnd}>
                   <Text style={styles.amount}>
@@ -218,35 +235,60 @@ export function AdminCaptainWageDetail() {
                   <Text style={styles.company}>
                     الشركة: {money(row.company_amount)}
                   </Text>
-                  <Text style={row.is_fully_paid ? styles.paid : styles.unpaid}>
-                    {row.is_fully_paid
-                      ? "تم تسليم الأجر"
-                      : `متبقي ${money(row.unpaid_amount)}`}
-                  </Text>
                 </View>
               </View>
             </View>
           ))
+        ) : (
+          <Message text="لا توجد أجور ضمن الفترة المحددة." />
         )}
+
+        {details.pageCount > 1 ? (
+          <View style={styles.pagination}>
+            <Pressable
+              disabled={!details.hasPreviousPage}
+              onPress={details.previousPage}
+              style={[
+                styles.paginationButton,
+                !details.hasPreviousPage && styles.disabled,
+              ]}
+            >
+              <Text style={styles.paginationButtonText}>السابق</Text>
+            </Pressable>
+            <Text style={styles.paginationLabel}>
+              صفحة {details.page + 1} من {details.pageCount}
+            </Text>
+            <Pressable
+              disabled={!details.hasNextPage}
+              onPress={details.nextPage}
+              style={[
+                styles.paginationButton,
+                !details.hasNextPage && styles.disabled,
+              ]}
+            >
+              <Text style={styles.paginationButtonText}>التالي</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.payout}>
           <Text style={styles.sectionTitle}>تسليم دفعة للكابتن</Text>
-          <Text style={styles.muted}>المتبقي: {money(totals.unpaid)}</Text>
           <View style={styles.payoutRow}>
             <TextInput
-              value={amount}
+              keyboardType="decimal-pad"
               onChangeText={setAmount}
               placeholder="مبلغ الدفعة"
               placeholderTextColor="#8A98A6"
-              keyboardType="decimal-pad"
               style={styles.input}
               textAlign="right"
+              value={amount}
             />
             <Pressable
-              disabled={saving || totals.unpaid <= 0}
+              disabled={saving || details.totals.unpaid <= 0}
               onPress={() => void payout()}
               style={[
                 styles.button,
-                (saving || totals.unpaid <= 0) && styles.disabled,
+                (saving || details.totals.unpaid <= 0) && styles.disabled,
               ]}
             >
               <Text style={styles.buttonText}>
@@ -256,9 +298,22 @@ export function AdminCaptainWageDetail() {
           </View>
         </View>
       </ScrollView>
+
+      {isDatePickerOpen ? (
+        <FinancialDatePicker
+          onClose={() => setIsDatePickerOpen(false)}
+          onSelect={(nextDate) => {
+            details.selectCustomDate(damascusDateKey(nextDate));
+            setIsDatePickerOpen(false);
+          }}
+          value={new Date(`${details.customDate}T12:00:00Z`)}
+          visible
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
+
 function Message({ text }: { text: string }) {
   return (
     <View style={styles.message}>
@@ -266,135 +321,138 @@ function Message({ text }: { text: string }) {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
-  header: {
-    alignItems: "center",
-    backgroundColor: BLUE,
-    flexDirection: "row-reverse",
-    height: 64,
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-  },
-  back: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,.12)",
-    borderRadius: 20,
-    height: 40,
-    justifyContent: "center",
-    width: 40,
-  },
-  headerText: { alignItems: "flex-end", flex: 1, marginHorizontal: 12 },
-  eyebrow: { color: "#DBEAFF", fontSize: 11 },
-  headerTitle: { color: "#FFF", fontSize: 19, fontWeight: "800" },
-  headerIcon: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,.15)",
-    borderRadius: 10,
-    height: 36,
-    justifyContent: "center",
-    width: 36,
-  },
-  content: { gap: 12, padding: 18, paddingBottom: 34 },
-  profile: {
-    alignItems: "center",
-    backgroundColor: "#FFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    padding: 14,
+  alignEnd: { alignItems: "flex-end" },
+  amount: {
+    color: "#1C1B1B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: "right",
   },
   avatar: {
     alignItems: "center",
-    backgroundColor: "#E5EDF3",
+    backgroundColor: "#E5F7FF",
+    borderColor: "#BCEBFA",
     borderRadius: 24,
+    borderWidth: 1,
     height: 48,
     justifyContent: "center",
     width: 48,
   },
-  avatarText: { color: "#53616F", fontSize: 17, fontWeight: "800" },
-  profileText: { flex: 1, marginHorizontal: 10 },
-  name: {
-    color: "#1C1B1B",
-    fontSize: 14,
-    fontWeight: "800",
-    textAlign: "right",
-  },
-  muted: { color: "#66727E", fontSize: 10, marginTop: 3, textAlign: "right" },
-  live: {
-    backgroundColor: "#ECFDF5",
-    borderRadius: 8,
-    color: "#047857",
+  avatarText: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 17 },
+  badge: {
+    backgroundColor: "#E6F8FF",
+    borderColor: "#BCEBFA",
+    borderRadius: 14,
+    borderWidth: 1,
+    color: DEEP_BLUE,
+    fontFamily: "Cairo_700Bold",
     fontSize: 9,
-    fontWeight: "800",
-    padding: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
-  summary: { backgroundColor: "#E1EBF3", flexDirection: "row-reverse", gap: 1 },
-  summaryCell: { backgroundColor: "#FFF", flex: 1, padding: 11 },
-  amount: {
-    color: "#1C1B1B",
-    fontSize: 11,
-    fontWeight: "800",
-    marginTop: 4,
+  button: {
+    alignItems: "center",
+    backgroundColor: BLUE,
+    borderColor: NEON,
+    borderRadius: 11,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  buttonText: { color: "#FFF", fontFamily: "Cairo_700Bold", fontSize: 11 },
+  company: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, marginTop: 3 },
+  content: { gap: 12, padding: 18, paddingBottom: 34 },
+  dateControl: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#BCEBFA",
+    borderRadius: 15,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    minHeight: 62,
+    paddingHorizontal: 12,
+  },
+  dateControlKicker: {
+    color: "#7290A1",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
     textAlign: "right",
   },
-  periods: {
-    backgroundColor: "#FFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 15,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 5,
-    padding: 5,
+  dateControlValue: {
+    color: DEEP_BLUE,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
+    marginTop: 1,
+    textAlign: "right",
   },
-  period: {
+  dateIcon: {
     alignItems: "center",
+    backgroundColor: "#EAF9FF",
+    borderColor: "#BCEBFA",
     borderRadius: 11,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 40,
-  },
-  periodActive: { backgroundColor: BLUE },
-  periodText: { color: "#5C7C90", fontSize: 11, fontWeight: "700" },
-  periodTextActive: { color: "#FFF" },
-  filters: {
-    backgroundColor: "#FFF",
-    borderColor: "#DBE7F2",
-    borderRadius: 15,
     borderWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 5,
-    padding: 5,
-  },
-  filter: {
-    alignItems: "center",
-    borderRadius: 11,
-    flex: 1,
+    height: 38,
     justifyContent: "center",
-    minHeight: 38,
+    width: 50,
   },
-  filterActive: { backgroundColor: BLUE },
-  filterText: { color: "#5B6A78", fontSize: 10, fontWeight: "700" },
-  filterTextActive: { color: "#FFF" },
+  dateIconText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 9 },
+  disabled: { opacity: 0.5 },
   heading: {
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
   },
-  sectionTitle: {
-    color: "#1C1B1B",
-    fontSize: 15,
-    fontWeight: "800",
+  input: {
+    backgroundColor: "#FBFEFF",
+    borderColor: "#C9D9E7",
+    borderRadius: 11,
+    borderWidth: 1,
+    flex: 1,
+    height: 48,
+    paddingHorizontal: 10,
+  },
+  live: {
+    backgroundColor: "#ECFDF5",
+    borderRadius: 8,
+    color: "#047857",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    padding: 7,
+  },
+  message: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#C7DAE8",
+    borderRadius: 16,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 86,
+    padding: 16,
+  },
+  messageText: {
+    color: "#58616B",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  muted: {
+    color: "#66727E",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 10,
+    marginTop: 3,
     textAlign: "right",
   },
-  badge: {
-    backgroundColor: "#DBEEFF",
-    borderRadius: 14,
-    color: BLUE,
-    fontSize: 10,
-    fontWeight: "800",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+  name: {
+    color: "#1C1B1B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    textAlign: "right",
   },
   order: {
     backgroundColor: "#FFF",
@@ -404,10 +462,24 @@ const styles = StyleSheet.create({
     padding: 13,
   },
   orderTop: { flexDirection: "row-reverse", justifyContent: "space-between" },
-  alignEnd: { alignItems: "flex-end" },
-  company: { color: BLUE, fontSize: 10, fontWeight: "700", marginTop: 3 },
-  paid: { color: "#047857", fontSize: 10, fontWeight: "800", marginTop: 3 },
-  unpaid: { color: "#B91C1C", fontSize: 10, fontWeight: "800", marginTop: 3 },
+  pagination: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 8,
+    justifyContent: "space-between",
+  },
+  paginationButton: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#CFEAF5",
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
+    minWidth: 86,
+  },
+  paginationButtonText: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 11 },
+  paginationLabel: { color: "#58788D", fontFamily: "Cairo_600SemiBold", fontSize: 10 },
   payout: {
     backgroundColor: "#FFF",
     borderColor: "#D3E3F0",
@@ -421,39 +493,38 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 10,
   },
-  input: {
-    borderColor: "#C9D9E7",
-    borderRadius: 11,
-    borderWidth: 1,
-    flex: 1,
-    height: 42,
-    paddingHorizontal: 10,
-  },
-  button: {
-    alignItems: "center",
-    backgroundColor: BLUE,
-    borderRadius: 11,
-    height: 42,
-    justifyContent: "center",
-    paddingHorizontal: 12,
-  },
-  buttonText: { color: "#FFF", fontSize: 11, fontWeight: "800" },
-  disabled: { opacity: 0.5 },
-  message: {
+  period: {
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderColor: "#C7DAE8",
-    borderRadius: 16,
-    borderStyle: "dashed",
+    borderColor: "#D1E7F1",
+    borderRadius: 11,
     borderWidth: 1,
-    minHeight: 86,
+    flexGrow: 1,
     justifyContent: "center",
-    padding: 16,
+    minHeight: 44,
+    minWidth: "30%",
+    paddingHorizontal: 8,
   },
-  messageText: {
-    color: "#58616B",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center",
+  periodActive: { backgroundColor: "#E7F8FF", borderColor: NEON },
+  periodText: { color: "#55778C", fontFamily: "Cairo_700Bold", fontSize: 10 },
+  periodTextActive: { color: DEEP_BLUE },
+  periods: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 7 },
+  profile: {
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    borderColor: "#D3E3F0",
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    padding: 14,
   },
+  profileText: { flex: 1, marginHorizontal: 10 },
+  sectionTitle: {
+    color: "#1C1B1B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 15,
+    textAlign: "right",
+  },
+  summary: { backgroundColor: "#E1EBF3", flexDirection: "row-reverse", gap: 1 },
+  summaryCell: { backgroundColor: "#FFF", flex: 1, padding: 11 },
 });
