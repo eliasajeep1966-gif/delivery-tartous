@@ -462,6 +462,16 @@ export type NativeOfficeExpense = {
   created_at: string;
 };
 
+export type NativeOfficeExpenseDayFilter = "all" | "today" | "week" | "month" | "custom";
+
+export type NativeOfficeExpenseDay = {
+  expenseDate: string;
+  expenseTotal: number;
+  expenseCount: number;
+  expenses: NativeOfficeExpense[];
+  hasMore: boolean;
+};
+
 export type NativeCompanyExpensePeriodRow = {
   period_start: string;
   period_end: string;
@@ -500,6 +510,51 @@ function optionalText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function mapOfficeExpense(value: unknown, expenseDate: string): NativeOfficeExpense | null {
+  const row = recordValue(value);
+  const id = optionalText(row?.id);
+  const title = optionalText(row?.title);
+  const createdBy = optionalText(row?.created_by);
+  const createdAt = optionalText(row?.created_at);
+  if (!id || !title || !createdBy || !createdAt) return null;
+
+  return {
+    id,
+    title,
+    amount: finiteNumber(row?.amount),
+    expense_date: expenseDate,
+    notes: optionalText(row?.notes),
+    created_by: createdBy,
+    created_at: createdAt,
+  };
+}
+
+function mapOfficeExpenseDay(value: unknown): NativeOfficeExpenseDay | null {
+  const row = recordValue(value);
+  const expenseDate = optionalText(row?.expense_date);
+  if (!expenseDate) return null;
+  const expenses = Array.isArray(row?.expenses)
+    ? row.expenses.flatMap((expense) => {
+        const mapped = mapOfficeExpense(expense, expenseDate);
+        return mapped ? [mapped] : [];
+      })
+    : [];
+
+  return {
+    expenseDate,
+    expenseTotal: finiteNumber(row?.expense_total),
+    expenseCount: Math.max(0, Math.floor(finiteNumber(row?.expense_count))),
+    expenses,
+    hasMore: row?.has_more === true,
+  };
+}
+
 export const nativeOfficeExpensesContract = {
   reads: {
     async periods(period: NativeFinancePeriod): Promise<NativeCompanyExpensePeriodRow[]> {
@@ -511,13 +566,24 @@ export const nativeOfficeExpensesContract = {
         "تعذر تحميل ملخص مصاريف المكتب.",
       );
     },
-    async list(): Promise<NativeOfficeExpense[]> {
-      return unwrap(
-        (await getNativeSupabaseClient().rpc("list_office_expenses", {
-          p_limit: 100,
-        })) as RpcResult<NativeOfficeExpense[]>,
+    async listDayPage(input: {
+      filter: NativeOfficeExpenseDayFilter;
+      customDate: string | null;
+      beforeDay: string | null;
+    }): Promise<NativeOfficeExpenseDay[]> {
+      const rows = unwrap(
+        (await getNativeSupabaseClient().rpc("get_office_expense_day_page", {
+          p_filter: input.filter,
+          p_custom_date: input.filter === "custom" ? input.customDate : null,
+          p_before_day: input.beforeDay,
+          p_day_limit: 5,
+        })) as RpcResult<unknown[]>,
         "تعذر تحميل سجل مصاريف المكتب.",
       );
+      return rows.flatMap((row) => {
+        const mapped = mapOfficeExpenseDay(row);
+        return mapped ? [mapped] : [];
+      });
     },
   },
   actions: {
@@ -626,12 +692,55 @@ export function useNativeOfficeExpensePeriods(period: NativeFinancePeriod){
 
 export function useNativeOfficeExpenses() {
   const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<NativeOfficeExpenseDayFilter>("all");
+  const [customDate, setCustomDate] = useState<string | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([null]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const beforeDay = cursorHistory[pageIndex] ?? null;
+
+  useEffect(() => {
+    setCursorHistory([null]);
+    setPageIndex(0);
+  }, [filter, customDate]);
+
   const query = useQuery({
-    queryKey: ["admin-office-expenses"],
-    queryFn: () => nativeOfficeExpensesContract.reads.list(),
+    queryKey: ["admin-office-expenses", filter, customDate, beforeDay],
+    queryFn: () => nativeOfficeExpensesContract.reads.listDayPage({
+      filter,
+      customDate,
+      beforeDay,
+    }),
     staleTime: 20_000,
     retry: 1,
   });
+
+  const days = query.data ?? [];
+  const hasNextPage = Boolean(days.at(-1)?.hasMore);
+  const hasPreviousPage = pageIndex > 0;
+
+  const selectFilter = useCallback((nextFilter: Exclude<NativeOfficeExpenseDayFilter, "custom">) => {
+    setCustomDate(null);
+    setFilter(nextFilter);
+  }, []);
+
+  const selectCustomDate = useCallback((nextDate: string) => {
+    setCustomDate(nextDate);
+    setFilter("custom");
+  }, []);
+
+  const nextPage = useCallback(() => {
+    const lastDay = days.at(-1)?.expenseDate;
+    if (!hasNextPage || !lastDay || query.isFetching) return;
+    const nextIndex = pageIndex + 1;
+    setCursorHistory((current) => [...current.slice(0, nextIndex), lastDay]);
+    setPageIndex(nextIndex);
+  }, [days, hasNextPage, pageIndex, query.isFetching]);
+
+  const previousPage = useCallback(() => {
+    if (!hasPreviousPage || query.isFetching) return;
+    setPageIndex((current) => Math.max(0, current - 1));
+  }, [hasPreviousPage, query.isFetching]);
+
   const createExpense = async (input: {
     title: string;
     amount: number;
@@ -643,11 +752,27 @@ export function useNativeOfficeExpenses() {
     await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
     return result;
   };
+
   const deleteExpense = async (id: string) => {
     const result = await nativeOfficeExpensesContract.actions.remove(id);
     await queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
     await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
     return result;
   };
-  return { ...query, createExpense, deleteExpense };
+
+  return {
+    ...query,
+    days,
+    filter,
+    customDate,
+    pageNumber: pageIndex + 1,
+    hasNextPage,
+    hasPreviousPage,
+    selectFilter,
+    selectCustomDate,
+    nextPage,
+    previousPage,
+    createExpense,
+    deleteExpense,
+  };
 }
