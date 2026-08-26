@@ -14,6 +14,7 @@ import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import {
   useNativeCompanyProfitHistory,
+  useNativeOfficeExpensePeriods,
   type NativeFinancePeriod,
 } from "@/features/admin/use-admin-finance";
 
@@ -44,7 +45,10 @@ export function AdminCompanyWages() {
   const router = useRouter();
   const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
   const history = useNativeCompanyProfitHistory(period);
+  const expenseHistory = useNativeOfficeExpensePeriods(period);
   const rows = history.data ?? [];
+  const expenseRows = expenseHistory.data ?? [];
+  const expenseByPeriod = new Map(expenseRows.map((row) => [row.period_start, row]));
   const totals = rows.reduce(
     (sum, row) => ({
       gross: sum.gross + row.gross_total,
@@ -67,8 +71,11 @@ export function AdminCompanyWages() {
       <ScrollView
         refreshControl={
           <RefreshControl
-            refreshing={history.isRefetching}
-            onRefresh={() => void history.refetch()}
+            refreshing={history.isRefetching || expenseHistory.isRefetching}
+            onRefresh={() => {
+              void history.refetch();
+              void expenseHistory.refetch();
+            }}
             tintColor={BLUE}
           />
         }
@@ -93,6 +100,8 @@ export function AdminCompanyWages() {
           {[
             ["إجمالي الأجور", totals.gross, "#1C1B1B"],
             ["حصة الشركة (30%)", totals.company, "#6D28D9"],
+            ["مصاريف المكتب", expenseRows.reduce((sum, row) => sum + Number(row.expense_total), 0), "#B54708"],
+            ["الصافي بعد المصاريف", totals.company - expenseRows.reduce((sum, row) => sum + Number(row.expense_total), 0), "#047857"],
             ["صافي الكباتن", totals.captain, "#047857"],
             ["طلبات الفترة", totals.orders, BLUE],
           ].map(([label, value, color]) => (
@@ -150,9 +159,9 @@ export function AdminCompanyWages() {
           </View>
           <MaterialIcons name="arrow-back" size={19} color={BLUE} />
         </MotionPressable>
-        {history.isPending ? (
-          <Message text="جارٍ تحميل سجل الأرباح..." />
-        ) : history.error ? (
+        {history.isPending || expenseHistory.isPending ? (
+          <Message text="جارٍ تحميل سجل الأرباح والمصاريف..." />
+        ) : history.error || expenseHistory.error ? (
           <Message
             text={
               history.error instanceof Error
@@ -172,6 +181,10 @@ export function AdminCompanyWages() {
               <View style={styles.end}>
                 <Text style={styles.company}>{money(row.company_total)}</Text>
                 <Text style={styles.muted}>حصة الشركة</Text>
+                <Text style={styles.expense}>{money(Number(expenseByPeriod.get(row.period_start)?.expense_total ?? 0))}</Text>
+                <Text style={styles.muted}>مصاريف المكتب</Text>
+                <Text style={styles.net}>{money(row.company_total - Number(expenseByPeriod.get(row.period_start)?.expense_total ?? 0))}</Text>
+                <Text style={styles.muted}>الصافي</Text>
                 <Text style={styles.amount}>{money(row.gross_total)}</Text>
               </View>
             </View>
@@ -340,6 +353,8 @@ const styles = StyleSheet.create({
   },
   end: { alignItems: "flex-end" },
   company: { color: "#6D28D9", fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
+  expense: { color: "#B54708", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
+  net: { color: "#047857", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
   amount: { color: "#1C1B1B", fontFamily: "Cairo_600SemiBold", fontSize: 10, marginTop: 3, writingDirection: "rtl" },
   message: {
     alignItems: "center",

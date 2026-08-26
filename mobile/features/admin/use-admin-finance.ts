@@ -301,7 +301,7 @@ export type NativeCompanyExpensePeriodRow = {
 
 export const nativeOfficeExpensesContract = {
   reads: {
-    async periods(period: Exclude<NativeFinancePeriod, "annual">): Promise<NativeCompanyExpensePeriodRow[]> {
+    async periods(period: NativeFinancePeriod): Promise<NativeCompanyExpensePeriodRow[]> {
       return unwrap(
         (await getNativeSupabaseClient().rpc("get_company_expense_period_summary", {
           p_period: period,
@@ -347,7 +347,7 @@ export const nativeOfficeExpensesContract = {
   },
 } as const;
 
-export function useNativeOfficeExpensePeriods(period: Exclude<NativeFinancePeriod, "annual">) {
+export function useNativeOfficeExpensePeriods(period: NativeFinancePeriod){
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["admin-office-expense-periods", period],

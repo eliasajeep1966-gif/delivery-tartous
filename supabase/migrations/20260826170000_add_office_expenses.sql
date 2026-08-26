@@ -124,8 +124,8 @@ begin
   if not private.has_permission('view_finances') then
     raise exception 'Current user is not allowed to view finances' using errcode = '42501';
   end if;
-  if p_period is null or p_period not in ('daily', 'weekly', 'monthly') then
-    raise exception 'p_period must be daily, weekly, or monthly' using errcode = '22023';
+  if p_period is null or p_period not in ('daily', 'weekly', 'monthly', 'annual') then
+    raise exception 'p_period must be daily, weekly, monthly, or annual' using errcode = '22023';
   end if;
   if p_limit is null or p_limit < 1 or p_limit > 100 then
     raise exception 'p_limit must be between 1 and 100' using errcode = '22023';
@@ -152,6 +152,7 @@ begin
         when 'daily' then business_day
         when 'weekly' then date_trunc('week', business_day::timestamp)::date
         when 'monthly' then date_trunc('month', business_day::timestamp)::date
+        when 'annual' then date_trunc('year', business_day::timestamp)::date
       end as period_start,
       sum(company_amount)::numeric as company_amount,
       sum(expense_amount)::numeric as expense_amount
@@ -163,6 +164,7 @@ begin
       when 'daily' then g.period_start
       when 'weekly' then g.period_start + 6
       when 'monthly' then (g.period_start + interval '1 month - 1 day')::date
+      when 'annual' then (g.period_start + interval '1 year - 1 day')::date
     end,
     coalesce(g.company_amount, 0), coalesce(g.expense_amount, 0),
     coalesce(g.company_amount, 0) - coalesce(g.expense_amount, 0)
