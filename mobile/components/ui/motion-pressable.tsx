@@ -7,7 +7,6 @@ import {
 import {
   Platform,
   Pressable,
-  type PressableStateCallbackType,
 } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -28,8 +27,6 @@ type MotionPressableProps = PropsWithChildren<
   haptic?: HapticTone;
   pressedScale?: number;
 };
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
  * Reusable press feedback for operating controls. It keeps interaction on the
@@ -82,18 +79,17 @@ export function MotionPressable({
   );
 
   return (
-    <AnimatedPressable
-      {...props}
-      disabled={disabled}
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={(state: PressableStateCallbackType) => [
-        typeof style === "function" ? style(state) : style,
-        animatedStyle,
-      ]}
-    >
-      {children}
-    </AnimatedPressable>
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        {...props}
+        disabled={disabled}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={style}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
   );
 }

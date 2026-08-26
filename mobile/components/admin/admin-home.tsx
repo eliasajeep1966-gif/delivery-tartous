@@ -437,35 +437,6 @@ export function AdminHome() {
               </Animated.View>
             ) : null}
 
-            <View style={styles.metricsHeader}>
-              <View>
-                <Text style={styles.overline}>لقطة تشغيلية</Text>
-                <Text style={styles.metricsTitle}>حركة الطلبات اليوم</Text>
-              </View>
-              <MotionPressable
-                onPress={openOrders}
-                style={({ pressed }) => [styles.viewOrdersButton, pressed && styles.smallPressed]}
-              >
-                <Text style={styles.viewOrdersText}>كل الطلبات</Text>
-                <MaterialIcons name="arrow-back" size={14} color="#0878D1" />
-              </MotionPressable>
-            </View>
-
-            <View style={styles.metricGrid}>
-              {home.isPending || !snapshot ? (
-                <MetricSkeletons />
-              ) : (
-                snapshot.metrics.map((metric, index) => (
-                  <MetricCard
-                    key={metric.id}
-                    metric={metric}
-                    onPress={openOrders}
-                    index={index}
-                  />
-                ))
-              )}
-            </View>
-
             <Animated.View entering={FadeInDown.delay(150).duration(220)}>
               <MotionPressable
                 onLayout={handleCreateCardLayout}
@@ -507,6 +478,35 @@ export function AdminHome() {
                 </LinearGradient>
               </MotionPressable>
             </Animated.View>
+
+            <View style={styles.metricsHeader}>
+              <View>
+                <Text style={styles.overline}>لقطة تشغيلية</Text>
+                <Text style={styles.metricsTitle}>حركة الطلبات اليوم</Text>
+              </View>
+              <MotionPressable
+                onPress={openOrders}
+                style={({ pressed }) => [styles.viewOrdersButton, pressed && styles.smallPressed]}
+              >
+                <Text style={styles.viewOrdersText}>كل الطلبات</Text>
+                <MaterialIcons name="arrow-back" size={14} color="#0878D1" />
+              </MotionPressable>
+            </View>
+
+            <View style={styles.metricGrid}>
+              {home.isPending || !snapshot ? (
+                <MetricSkeletons />
+              ) : (
+                snapshot.metrics.map((metric, index) => (
+                  <MetricCard
+                    key={metric.id}
+                    metric={metric}
+                    onPress={openOrders}
+                    index={index}
+                  />
+                ))
+              )}
+            </View>
 
             <SectionHeading
               title="أحدث النشاطات"
