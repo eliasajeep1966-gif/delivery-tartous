@@ -11,6 +11,7 @@ import {
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  interpolate,
   withTiming,
 } from "react-native-reanimated";
 
@@ -26,6 +27,7 @@ type MotionPressableProps = PropsWithChildren<
   style?: PressableProps["style"];
   haptic?: HapticTone;
   pressedScale?: number;
+  pressedOpacity?: number;
 };
 
 /**
@@ -40,28 +42,33 @@ export function MotionPressable({
   onPressIn,
   onPressOut,
   pressedScale = 0.97,
+  pressedOpacity = 0.92,
   style,
   ...props
 }: MotionPressableProps) {
-  const scale = useSharedValue(1);
+  const pressProgress = useSharedValue(0);
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    opacity: interpolate(pressProgress.value, [0, 1], [1, pressedOpacity]),
+    transform: [
+      { translateY: interpolate(pressProgress.value, [0, 1], [0, 1]) },
+      { scale: interpolate(pressProgress.value, [0, 1], [1, pressedScale]) },
+    ],
   }));
 
   const handlePressIn: NonNullable<PressableProps["onPressIn"]> = useCallback(
     (event) => {
-      if (!disabled) scale.set(withTiming(pressedScale, { duration: 85 }));
+      if (!disabled) pressProgress.set(withTiming(1, { duration: 75 }));
       onPressIn?.(event);
     },
-    [disabled, onPressIn, pressedScale, scale],
+    [disabled, onPressIn, pressProgress],
   );
 
   const handlePressOut: NonNullable<PressableProps["onPressOut"]> = useCallback(
     (event) => {
-      scale.set(withTiming(1, { duration: 130 }));
+      pressProgress.set(withTiming(0, { duration: 145 }));
       onPressOut?.(event);
     },
-    [onPressOut, scale],
+    [onPressOut, pressProgress],
   );
 
   const handlePress: NonNullable<PressableProps["onPress"]> = useCallback(

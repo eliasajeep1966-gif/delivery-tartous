@@ -218,35 +218,44 @@ export function CaptainHome() {
                     fallback={current.delivery_address}
                     onCall={call}
                   />
-                  <OrderTimeline status={current.status} />
-                  {dashboard.actionError ? (
-                    <Text style={styles.errorText}>
-                      {dashboard.actionError}
-                    </Text>
-                  ) : null}
-                  {action ? (
-                    <MotionPressable
-                      disabled={dashboard.orderSaving}
-                      onPress={() => void advance()}
-                      style={styles.primaryButton}
-                    >
-                      <Text style={styles.primaryText}>
-                        {dashboard.orderSaving
-                          ? "جارٍ التحديث..."
-                          : action.label}
+                  <Animated.View
+                    key={current.status}
+                    entering={FadeInDown.duration(170)}
+                    style={{ gap: 10 }}
+                  >
+                    <OrderTimeline status={current.status} />
+                    {dashboard.actionError ? (
+                      <Text style={styles.errorText}>
+                        {dashboard.actionError}
                       </Text>
-                    </MotionPressable>
-                  ) : null}
-                  {current.status === "received" ||
-                  current.status === "in_delivery" ? (
-                    <MotionPressable
-                      disabled={dashboard.orderSaving}
-                      onPress={() => setFalseOrderOpen(true)}
-                      style={styles.dangerButton}
-                    >
-                      <Text style={styles.dangerText}>تسجيل طلب كاذب</Text>
-                    </MotionPressable>
-                  ) : null}
+                    ) : null}
+                    {action ? (
+                      <MotionPressable
+                        disabled={dashboard.orderSaving}
+                        haptic="medium"
+                        pressedScale={0.96}
+                        onPress={() => void advance()}
+                        style={styles.primaryButton}
+                      >
+                        <Text style={styles.primaryText}>
+                          {dashboard.orderSaving
+                            ? "جارٍ التحديث..."
+                            : action.label}
+                        </Text>
+                      </MotionPressable>
+                    ) : null}
+                    {current.status === "received" ||
+                    current.status === "in_delivery" ? (
+                      <MotionPressable
+                        disabled={dashboard.orderSaving}
+                        pressedScale={0.97}
+                        onPress={() => setFalseOrderOpen(true)}
+                        style={styles.dangerButton}
+                      >
+                        <Text style={styles.dangerText}>تسجيل طلب كاذب</Text>
+                      </MotionPressable>
+                    ) : null}
+                  </Animated.View>
                 </View>
               ) : (
                 <Text style={styles.emptyText}>
