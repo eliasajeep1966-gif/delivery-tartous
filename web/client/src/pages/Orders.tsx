@@ -32,6 +32,7 @@ import {
 import { getOrdersErrorMessage, type LiveCaptainOption, useAdminOrdersData, useAvailableCaptains } from '@/features/admin/useAdminOrdersData';
 import { orderStatusPresentation, type OrderStatus } from '@/features/admin/types';
 import { WebRequestTimeoutError } from '@/lib/authRequest';
+import { getWebSupabaseClient } from '@/data/supabase/webSupabaseClient';
 
 type StatusFilter = 'all' | OrderStatus | 'delivery_active';
 type VisibleStatusFilter = 'all' | OrderStatus;
@@ -304,6 +305,10 @@ export default function Orders() {
     setAssigningOrderId(orderId);
     try {
       const assignedOrder = await assignOrderCaptain(orderId, captainId);
+      const { error: pushError } = await getWebSupabaseClient().functions.invoke('send-order-push', {
+        body: { orderId: assignedOrder.id },
+      });
+      if (pushError) console.error('Order push notification failed.', pushError);
       replaceOrder(assignedOrder);
       void loadOrderDetails(orderId);
       void reloadAvailableCaptains({ force: true });

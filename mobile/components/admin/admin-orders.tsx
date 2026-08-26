@@ -29,6 +29,7 @@ import {
 } from "@/features/admin/use-admin-orders";
 import { type AdminOrderStatus } from "@/lib/admin/admin-home-mappers";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
+import { notifyCaptainOfOrder } from "@/lib/notifications";
 
 import { nativeAdminContract } from "@/lib/supabase/native-admin-contract";
 
@@ -207,6 +208,7 @@ export function AdminOrders() {
         { p_order_id: selectedOrder.id, p_captain_id: selectedCaptainId },
       );
       if (error) throw new Error(error.message);
+      void notifyCaptainOfOrder(selectedOrder.id);
       showToast({ message: `تم تعيين الكابتن للطلب #${selectedOrder.orderNumber}.` });
       setAssignmentOpen(false);
       setSelectedCaptainId(null);
