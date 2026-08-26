@@ -42,7 +42,7 @@ function openCustodyCount(captain: NativeCaptain) {
   return captain.custodyRecords.filter((record) => !record.returnedAt).length;
 }
 
-function CaptainSummaryMetric({
+function CaptainPulseMetric({
   label,
   value,
   tone,
@@ -53,31 +53,18 @@ function CaptainSummaryMetric({
   tone: "blue" | "green" | "amber";
   icon: React.ComponentProps<typeof MaterialIcons>["name"];
 }) {
-  const tones = {
-    blue: { icon: "bg-[#E7F6FE]", value: "text-[#0878D1]" },
-    green: { icon: "bg-emerald-50", value: "text-emerald-700" },
-    amber: { icon: "bg-amber-50", value: "text-amber-700" },
+  const colors = {
+    blue: "#FFFFFF",
+    green: "#6EE7B7",
+    amber: "#FCD34D",
   } as const;
-  const palette = tones[tone];
   return (
-    <View className="min-h-[76px] flex-1 rounded-2xl border border-[#DCEAF3] bg-white p-3">
-      <View className="flex-row-reverse items-center justify-between">
-        <View className={`rounded-xl p-1.5 ${palette.icon}`}>
-          <MaterialIcons
-            name={icon}
-            size={15}
-            color={
-              tone === "blue"
-                ? "#0878D1"
-                : tone === "green"
-                  ? "#047857"
-                  : "#B45309"
-            }
-          />
-        </View>
-        <Text className={`text-base font-bold ${palette.value}`}>{value}</Text>
+    <View className="flex-1 items-center px-2">
+      <View className="flex-row-reverse items-center gap-1.5">
+        <MaterialIcons name={icon} size={16} color={colors[tone]} />
+        <Text className="text-[20px] font-bold text-white">{value}</Text>
       </View>
-      <Text className="mt-2 text-right text-[9px] font-medium text-[#6E899B]">
+      <Text className="mt-1 text-center text-[9px] font-medium text-[#C6DEED]">
         {label}
       </Text>
     </View>
@@ -92,61 +79,80 @@ function CaptainCard({
   onPress: () => void;
 }) {
   const custodyCount = openCustodyCount(captain);
+  const enabled = captain.isActive;
   return (
     <Pressable
       onPress={onPress}
-      className="overflow-hidden rounded-[20px] border border-[#D7E8F2] bg-white"
+      className="overflow-hidden rounded-[25px] border border-[#E1EEF5] bg-white shadow-sm"
     >
-      <View className="flex-row-reverse items-center gap-3 px-4 py-3.5">
-        <View className="h-11 w-11 items-center justify-center rounded-2xl border border-[#BCE6F8] bg-[#E4F5FD]">
-          <Text className="text-sm font-bold text-[#0878D1]">
-            {captain.initial}
+      <View className="flex-row-reverse items-stretch">
+        <View className="w-[31%] items-center justify-center bg-[#063B78] py-4">
+          <View className="h-[102px] w-[82px] items-center justify-center rounded-bl-[31px] rounded-tr-[31px] border-2 border-[#62D9FF] bg-[#0A4F95] shadow-sm">
+            <MaterialIcons name="person-outline" size={38} color="#D9F5FF" />
+            <Text className="mt-1 text-[22px] font-bold text-white">
+              {captain.initial}
+            </Text>
+          </View>
+          <Text className="mt-2 text-center text-[8px] font-bold text-[#A9E9FF]">
+            ملف الكابتن
           </Text>
         </View>
-        <View className="flex-1">
-          <Text className="text-right text-[15px] font-bold text-[#073D70]">
-            {captain.name}
-          </Text>
+
+        <View className="flex-1 px-4 pb-3 pt-4">
+          <View className="flex-row-reverse items-center">
+            <View
+              className={`ml-2 h-2.5 w-2.5 rounded-full ${enabled ? "bg-[#22C55E]" : "bg-[#EF4444]"}`}
+            />
+            <Text className="flex-1 text-right text-[17px] font-bold text-[#063B78]">
+              {captain.name}
+            </Text>
+            <MaterialIcons name="chevron-left" size={20} color="#7D9AAE" />
+          </View>
           <Text
             numberOfLines={1}
-            className="mt-0.5 text-right text-[10px] text-[#7893A4]"
+            className="mt-1 text-right text-[10px] text-[#8097A7]"
           >
             {captain.email ?? "لا يوجد بريد مسجل"}
           </Text>
-        </View>
-        <View className="items-end">
-          <Text className="text-[17px] font-bold text-[#164C70]">
-            {captain.completedOrders}
-          </Text>
-          <Text className="text-[9px] text-[#7893A4]">إجمالي مكتمل</Text>
-        </View>
-        <MaterialIcons name="chevron-left" size={21} color="#7592A5" />
-      </View>
 
-      <View className="flex-row-reverse border-t border-[#E7F0F5] bg-[#FBFDFF] px-4 py-2.5">
-        <View className="flex-1 flex-row-reverse items-center gap-1.5">
-          <View
-            className={`h-2 w-2 rounded-full ${captain.isActive ? "bg-emerald-500" : "bg-slate-400"}`}
-          />
-          <Text
-            className={`text-[10px] font-bold ${captain.isActive ? "text-emerald-700" : "text-slate-600"}`}
-          >
-            {captain.isActive ? "مفعل" : "معطل"}
-          </Text>
-        </View>
-        <View className="flex-1 flex-row-reverse items-center justify-end gap-1.5">
-          <MaterialIcons
-            name={custodyCount ? "inventory-2" : "verified"}
-            size={14}
-            color={custodyCount ? "#B45309" : "#638297"}
-          />
-          <Text
-            className={`text-[10px] font-bold ${custodyCount ? "text-amber-700" : "text-[#638297]"}`}
-          >
-            {custodyCount
-              ? `${custodyCount} أمانات مفتوحة`
-              : "لا أمانات مفتوحة"}
-          </Text>
+          <View className="mt-3 flex-row-reverse border-t border-[#E6EFF4] pt-3">
+            <View className="flex-1 flex-row-reverse items-center gap-2">
+              <View className="rounded-xl bg-[#E9F6FF] p-2">
+                <MaterialIcons name="fact-check" size={16} color="#0878D1" />
+              </View>
+              <View>
+                <Text className="text-right text-[8px] font-medium text-[#7893A4]">
+                  الطلبات المكتملة
+                </Text>
+                <Text className="mt-0.5 text-right text-[19px] font-bold text-[#0878D1]">
+                  {captain.completedOrders}
+                </Text>
+              </View>
+            </View>
+            <View className="items-end justify-center border-r border-[#E6EFF4] pr-3">
+              <View className="flex-row-reverse items-center gap-1.5">
+                <View
+                  className={`h-2 w-2 rounded-full ${enabled ? "bg-[#22C55E]" : "bg-[#EF4444]"}`}
+                />
+                <Text
+                  className={`text-[11px] font-bold ${enabled ? "text-emerald-700" : "text-red-600"}`}
+                >
+                  {enabled ? "مفعل" : "معطل"}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {custodyCount ? (
+            <View className="mt-3 flex-row-reverse items-center gap-1.5 rounded-xl border border-[#F7DEB2] bg-[#FFF8EB] px-2.5 py-2">
+              <MaterialIcons name="inventory-2" size={14} color="#B87916" />
+              <Text className="flex-1 text-right text-[10px] font-bold text-[#A06411]">
+                {custodyCount === 1
+                  ? "أمانة مفتوحة واحدة"
+                  : `${custodyCount} أمانات مفتوحة`}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </Pressable>
@@ -445,68 +451,72 @@ export function AdminCaptainsScreen() {
         contentContainerClassName="gap-3 p-5 pb-8"
         ListHeaderComponent={
           <View className="gap-4">
-            <View className="rounded-3xl border border-[#D3E6F2] bg-white p-4">
+            <View className="overflow-hidden rounded-[28px] bg-[#063B78] px-4 pb-4 pt-5 shadow-sm">
+              <View className="absolute -left-16 top-8 h-24 w-[125%] rounded-full border border-[#16CEFF] opacity-30" />
+              <View className="absolute -right-20 top-1 h-20 w-[78%] rounded-full border border-[#16CEFF] opacity-20" />
               <View className="flex-row-reverse items-start justify-between">
                 <View className="flex-1 items-end">
-                  <Text className="text-lg font-bold text-[#073D70]">
-                    إدارة الكباتن
+                  <Text className="text-[21px] font-bold text-white">
+                    الكباتن
                   </Text>
-                  <Text className="mt-1 text-right text-xs leading-5 text-[#688499]">
-                    قائمة إدارية تُحدّث عند الدخول أو بالسحب فقط.
+                  <Text className="mt-1 text-right text-[10px] text-[#B9D7E9]">
+                    سجل إدارة فريق التوصيل
                   </Text>
                 </View>
-                <View className="rounded-2xl bg-[#E7F6FE] p-3">
-                  <MaterialIcons name="two-wheeler" size={22} color="#0878D1" />
+                <View className="rounded-2xl border border-[#4CCBFA] bg-[#0B5BA8] p-3">
+                  <MaterialIcons name="groups" size={22} color="#E1F8FF" />
                 </View>
               </View>
-              <View className="mt-4 flex-row-reverse gap-2">
-                <CaptainSummaryMetric
+              <View className="mt-5 flex-row-reverse divide-x divide-x-reverse divide-[#2E679E]">
+                <CaptainPulseMetric
                   icon="groups"
                   label="إجمالي الكباتن"
                   tone="blue"
                   value={data.isLoading ? "—" : snapshot.total}
                 />
-                <CaptainSummaryMetric
+                <CaptainPulseMetric
                   icon="verified"
-                  label="كباتن مفعلون"
+                  label="الكباتن المفعلون"
                   tone="green"
                   value={data.isLoading ? "—" : snapshot.active}
                 />
-                <CaptainSummaryMetric
+                <CaptainPulseMetric
                   icon="inventory-2"
                   label="أمانات مفتوحة"
                   tone="amber"
                   value={data.isLoading ? "—" : snapshot.openCustodies}
                 />
               </View>
-              <View className="mt-4 flex-row-reverse items-center rounded-xl border border-[#C9DDE9] bg-[#FBFDFF] px-3">
-                <MaterialIcons name="search" size={19} color="#75818E" />
+            </View>
+
+            <View className="rounded-[22px] border border-[#E1EDF4] bg-white p-2 shadow-sm">
+              <View className="flex-row-reverse items-center rounded-[15px] bg-[#F7FBFE] px-3">
+                <MaterialIcons name="search" size={20} color="#8DA5B5" />
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="ابحث باسم الكابتن"
-                  placeholderTextColor="#8A98A6"
-                  className="h-11 flex-1 text-right text-sm text-[#1C1B1B]"
+                  placeholder="ابحث عن كابتن..."
+                  placeholderTextColor="#9AACB8"
+                  className="h-12 flex-1 text-right text-sm text-[#173B59]"
                   textAlign="right"
                 />
               </View>
-            </View>
-
-            <View className="flex-row-reverse gap-2">
-              {filters.map((item) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => setFilter(item.id)}
-                  className={`flex-1 items-center rounded-xl border px-2 py-2.5 ${filter === item.id ? "border-[#0878D1] bg-[#0878D1]" : "border-[#D4E2EC] bg-white"}`}
-                >
-                  <Text
-                    numberOfLines={1}
-                    className={`text-[10px] font-bold ${filter === item.id ? "text-white" : "text-[#586F80]"}`}
+              <View className="mt-2 flex-row-reverse overflow-hidden rounded-[14px] border border-[#E0EBF1]">
+                {filters.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => setFilter(item.id)}
+                    className={`flex-1 items-center border-l border-[#E0EBF1] px-1 py-2.5 ${filter === item.id ? "border-l-[#0878D1] bg-[#0878D1]" : "bg-white"}`}
                   >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      numberOfLines={1}
+                      className={`text-[10px] font-bold ${filter === item.id ? "text-white" : "text-[#536F82]"}`}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
 
             <View className="flex-row-reverse items-center justify-between">
