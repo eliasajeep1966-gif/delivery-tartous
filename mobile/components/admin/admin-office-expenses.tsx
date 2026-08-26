@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -35,20 +35,6 @@ export function AdminOfficeExpenses() {
   const [notes, setNotes] = useState("");
   const periods = useNativeOfficeExpensePeriods(period);
   const expenses = useNativeOfficeExpenses();
-  const latest = periods.data?.[0];
-  const totals = useMemo(
-    () =>
-      (periods.data ?? []).reduce(
-        (sum, row) => ({
-          company: sum.company + Number(row.company_gross_total),
-          expenses: sum.expenses + Number(row.expense_total),
-          net: sum.net + Number(row.net_company_total),
-        }),
-        { company: 0, expenses: 0, net: 0 },
-      ),
-    [periods.data],
-  );
-
   const submit = async () => {
     const parsed = Number(amount.replace(",", "."));
     if (!title.trim()) return showToast({ message: "اكتب اسم المصروف أولاً.", tone: "error" });
@@ -96,20 +82,8 @@ export function AdminOfficeExpenses() {
           <View style={styles.heroIcon}><MaterialIcons name="receipt-long" size={24} color="#B54708" /></View>
           <View style={styles.heroText}>
             <Text style={styles.heroTitle}>مصاريف المكتب</Text>
-            <Text style={styles.muted}>سجّل المصاريف اليومية واعرف صافي حصة الشركة بعد الخصم.</Text>
+            <Text style={styles.muted}>سجّل مصاريف المكتب اليومية واعرض سجلها حسب الفترة.</Text>
           </View>
-        </View>
-
-        <View style={styles.netCard}>
-          <Text style={styles.kicker}>صافي حصة الشركة للفترة الأخيرة</Text>
-          <Text style={styles.netAmount}>{latest ? money(Number(latest.net_company_total)) : "—"}</Text>
-          <Text style={styles.netHint}>حصة الشركة ناقص مصاريف المكتب</Text>
-        </View>
-
-        <View style={styles.metrics}>
-          <Metric label="حصة الشركة" value={totals.company} color="#6D28D9" />
-          <Metric label="المصاريف" value={totals.expenses} color="#B54708" />
-          <Metric label="الصافي" value={totals.net} color="#047857" />
         </View>
 
         <View style={styles.sectionHeading}>
@@ -144,8 +118,8 @@ export function AdminOfficeExpenses() {
         </View>
         {periods.isPending ? <Message text="جارٍ تحميل ملخص المصاريف..." /> : periods.error ? <Message text="تعذر تحميل ملخص المصاريف." /> : (periods.data ?? []).map((row) => (
           <View key={row.period_start} style={styles.row}>
-            <View><Text style={styles.rowTitle}>{dateLabel(row.period_start)}{period !== "daily" ? ` — ${dateLabel(row.period_end)}` : ""}</Text><Text style={styles.muted}>حصة الشركة {money(Number(row.company_gross_total))}</Text></View>
-            <View style={styles.end}><Text style={styles.expense}>{money(Number(row.expense_total))}</Text><Text style={styles.muted}>مصروف</Text><Text style={styles.net}>{money(Number(row.net_company_total))}</Text><Text style={styles.muted}>الصافي</Text></View>
+            <View><Text style={styles.rowTitle}>{dateLabel(row.period_start)}{period !== "daily" ? ` — ${dateLabel(row.period_end)}` : ""}</Text><Text style={styles.muted}>إجمالي مصاريف الفترة</Text></View>
+            <View style={styles.end}><Text style={styles.expense}>{money(Number(row.expense_total))}</Text><Text style={styles.muted}>مصروف</Text></View>
           </View>
         ))}
 
@@ -162,9 +136,6 @@ export function AdminOfficeExpenses() {
   );
 }
 
-function Metric({ label, value, color }: { label: string; value: number; color: string }) {
-  return <View style={styles.metric}><Text style={[styles.metricValue, { color }]}>{money(value)}</Text><Text style={styles.muted}>{label}</Text></View>;
-}
 function Field({ label, value, onChangeText, placeholder, keyboardType = "default" }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; keyboardType?: "default" | "decimal-pad" }) {
   return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#98AAB8" keyboardType={keyboardType} style={styles.input} textAlign="right" /></View>;
 }

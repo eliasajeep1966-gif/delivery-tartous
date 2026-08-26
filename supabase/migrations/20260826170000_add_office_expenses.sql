@@ -35,7 +35,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if not public.has_permission('view_finances') then
+  if not private.has_permission('view_finances') then
     raise exception 'Current user is not allowed to manage office expenses' using errcode = '42501';
   end if;
   if p_title is null or char_length(btrim(p_title)) not between 1 and 160 then
@@ -72,7 +72,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if not public.has_permission('view_finances') then
+  if not private.has_permission('view_finances') then
     raise exception 'Current user is not allowed to view office expenses' using errcode = '42501';
   end if;
   if p_limit is null or p_limit < 1 or p_limit > 200 then
@@ -96,7 +96,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if not public.has_permission('view_finances') then
+  if not private.has_permission('view_finances') then
     raise exception 'Current user is not allowed to delete office expenses' using errcode = '42501';
   end if;
   delete from public.office_expenses where id = p_id;
@@ -121,7 +121,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if not public.has_permission('view_finances') then
+  if not private.has_permission('view_finances') then
     raise exception 'Current user is not allowed to view finances' using errcode = '42501';
   end if;
   if p_period is null or p_period not in ('daily', 'weekly', 'monthly') then
