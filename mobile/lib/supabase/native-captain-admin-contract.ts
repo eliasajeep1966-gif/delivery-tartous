@@ -107,7 +107,7 @@ export const nativeCaptainAdminContract = {
 
     return (profilesResult.data ?? [])
       .flatMap((row: Record<string, unknown>): NativeCaptain[] => {
-        if (typeof row.id !== "string") return [];
+        if (typeof row.id !== "string" || row.role !== "captain") return [];
         const name =
           typeof row.full_name === "string" && row.full_name.trim()
             ? row.full_name.trim()

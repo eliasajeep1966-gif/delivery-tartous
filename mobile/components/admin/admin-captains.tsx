@@ -10,8 +10,10 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  Text,
-  TextInput,
+  Text as NativeText,
+  TextInput as NativeTextInput,
+  type TextInputProps,
+  type TextProps,
   View,
 } from "react-native";
 
@@ -32,6 +34,33 @@ const filters = [
 type CaptainFilter = (typeof filters)[number]["id"];
 
 const captainPlaceholder = require("../../assets/images/captain-placeholder.png");
+
+type CairoTextProps = TextProps & { className?: string };
+type CairoTextInputProps = TextInputProps & { className?: string };
+
+function Text({ className, style, ...props }: CairoTextProps) {
+  const fontFamily = className?.includes("font-bold")
+    ? "Cairo_700Bold"
+    : className?.includes("font-medium")
+      ? "Cairo_600SemiBold"
+      : "Cairo_400Regular";
+  return (
+    <NativeText
+      {...props}
+      className={className}
+      style={[style, { fontFamily }]}
+    />
+  );
+}
+
+function TextInput({ style, ...props }: CairoTextInputProps) {
+  return (
+    <NativeTextInput
+      {...props}
+      style={[style, { fontFamily: "Cairo_400Regular" }]}
+    />
+  );
+}
 
 function openCustodyCount(captain: NativeCaptain) {
   return captain.custodyRecords.filter((record) => !record.returnedAt).length;
@@ -285,38 +314,63 @@ function CaptainDetails({
 
             {captain.custodyRecords.length ? (
               <View className="mt-3 gap-2">
-                {captain.custodyRecords.map((record) => (
-                  <View
-                    key={record.id}
-                    className="flex-row-reverse items-center rounded-2xl border border-[#E3EDF3] bg-[#FBFDFF] p-3"
-                  >
-                    <View className="ml-2 rounded-xl bg-[#FFF5DE] p-2">
-                      <MaterialIcons
-                        name="inventory-2"
-                        size={16}
-                        color="#B87916"
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-right text-[11px] font-bold text-[#173B59]">
-                        {record.itemName}
-                      </Text>
-                      <Text className="mt-0.5 text-right text-[9px] text-[#708B9C]">
-                        {record.returnedAt ? "تم تسجيل الإرجاع" : "عهدة مفتوحة"}
-                      </Text>
-                    </View>
-                    {!record.returnedAt ? (
-                      <Pressable
-                        onPress={() => onReturn(record.id)}
-                        className="rounded-xl bg-emerald-50 px-2.5 py-2"
+                {captain.custodyRecords.map((record) => {
+                  const isReturned = Boolean(record.returnedAt);
+                  return (
+                    <View
+                      key={record.id}
+                      className={`flex-row-reverse items-center rounded-2xl border p-3 ${isReturned ? "border-[#D7ECE4] bg-[#F7FCF9]" : "border-[#F4DCA8] bg-[#FFFCF5]"}`}
+                    >
+                      <View
+                        className={`ml-2 rounded-xl p-2 ${isReturned ? "bg-[#E1F6EA]" : "bg-[#FFF0CF]"}`}
                       >
-                        <Text className="text-[9px] font-bold text-emerald-700">
-                          إرجاع
+                        <MaterialIcons
+                          name={isReturned ? "task-alt" : "inventory-2"}
+                          size={17}
+                          color={isReturned ? "#08745A" : "#B87916"}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-right text-[11px] font-bold text-[#173B59]">
+                          {record.itemName}
                         </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ))}
+                        <Text
+                          className={`mt-0.5 text-right text-[9px] font-medium ${isReturned ? "text-emerald-700" : "text-[#9B6A19]"}`}
+                        >
+                          {isReturned
+                            ? "تم استلام الأمانة"
+                            : "لدى الكابتن — بانتظار الاستلام"}
+                        </Text>
+                      </View>
+                      {isReturned ? (
+                        <View className="rounded-xl bg-[#E1F6EA] px-2.5 py-2">
+                          <Text className="text-[9px] font-bold text-emerald-700">
+                            مستلمة
+                          </Text>
+                        </View>
+                      ) : (
+                        <Pressable
+                          onPress={() => onReturn(record.id)}
+                          className="flex-row-reverse items-center gap-1.5 rounded-xl border border-[#BFE8D2] bg-[#F2FFF8] px-2.5 py-2"
+                        >
+                          <MaterialIcons
+                            name="assignment-return"
+                            size={15}
+                            color="#08745A"
+                          />
+                          <View>
+                            <Text className="text-right text-[9px] font-bold text-emerald-700">
+                              تأكيد الاستلام
+                            </Text>
+                            <Text className="mt-0.5 text-right text-[7px] text-[#3C8C74]">
+                              تسجيل إرجاعها من الكابتن
+                            </Text>
+                          </View>
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             ) : (
               <View className="mt-3 items-center rounded-2xl border border-dashed border-[#C7DAE8] bg-[#FBFDFF] p-5">
