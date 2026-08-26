@@ -209,7 +209,13 @@ export function AdminOrders() {
         { p_order_id: selectedOrder.id, p_captain_id: selectedCaptainId },
       );
       if (error) throw new Error(error.message);
-      void notifyCaptainOfOrder(selectedOrder.id);
+      void notifyCaptainOfOrder(selectedOrder.id).catch((error) => {
+        showToast({
+          message: error instanceof Error ? error.message : "فشل إرسال إشعار الطلب.",
+          tone: "error",
+          durationMs: 5000,
+        });
+      });
       showToast({ message: `تم تعيين الكابتن للطلب #${selectedOrder.orderNumber}.` });
       setAssignmentOpen(false);
       setSelectedCaptainId(null);

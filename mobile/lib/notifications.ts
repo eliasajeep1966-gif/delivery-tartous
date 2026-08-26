@@ -109,17 +109,12 @@ export async function unregisterPushNotifications(
   }
 }
 
-export async function notifyCaptainOfOrder(
-  orderId: string,
-): Promise<void | null> {
-  try {
-    const { error } = await getNativeSupabaseClient().functions.invoke(
-      "send-order-push",
-      { body: { orderId } },
-    );
-    if (error) throw new Error(error.message);
-  } catch (error) {
-    console.warn("Push notification delivery is unavailable.", error);
-    return null;
-  }
+export async function notifyCaptainOfOrder(orderId: string): Promise<number> {
+  const { data, error } = await getNativeSupabaseClient().functions.invoke(
+    "send-order-push",
+    { body: { orderId } },
+  );
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(String(data.error));
+  return Number(data?.sent ?? 0);
 }

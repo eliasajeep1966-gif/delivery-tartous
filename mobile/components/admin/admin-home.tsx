@@ -318,7 +318,13 @@ export function AdminHome() {
           created.id,
           draft.captainId,
         );
-        void notifyCaptainOfOrder(assigned.id).catch(() => undefined);
+        void notifyCaptainOfOrder(assigned.id).catch((error) => {
+          showToast({
+            message: error instanceof Error ? error.message : "فشل إرسال إشعار الطلب.",
+            tone: "error",
+            durationMs: 5000,
+          });
+        });
         playSound("adminOrderSuccess");
         setCreateOpen(false);
         showToast({ message: `تم إنشاء وتعيين الطلب #${assigned.orderNumber}.` });
