@@ -7,6 +7,7 @@ import {
   Modal,
   Pressable,
   RefreshControl,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -27,16 +28,6 @@ const filters = [
 ] as const;
 
 type CaptainFilter = (typeof filters)[number]["id"];
-
-const statusLabels: Record<string, string> = {
-  pending: "قيد الانتظار",
-  assigned: "تم التعيين",
-  received: "تم الاستلام",
-  in_delivery: "قيد التوصيل",
-  completed: "مكتمل",
-  cancelled: "ملغى",
-  false_order: "طلب كاذب",
-};
 
 function openCustodyCount(captain: NativeCaptain) {
   return captain.custodyRecords.filter((record) => !record.returnedAt).length;
@@ -115,31 +106,24 @@ function CaptainCard({
             {captain.email ?? "لا يوجد بريد مسجل"}
           </Text>
 
-          <View className="mt-3 flex-row-reverse border-t border-[#E6EFF4] pt-3">
-            <View className="flex-1 flex-row-reverse items-center gap-2">
+          <View className="mt-3 flex-row-reverse items-center justify-between border-t border-[#E6EFF4] pt-3">
+            <View className="flex-row-reverse items-center gap-1.5">
               <View className="rounded-xl bg-[#E9F6FF] p-2">
-                <MaterialIcons name="fact-check" size={16} color="#0878D1" />
+                <MaterialIcons name="badge" size={16} color="#0878D1" />
               </View>
-              <View>
-                <Text className="text-right text-[8px] font-medium text-[#7893A4]">
-                  الطلبات المكتملة
-                </Text>
-                <Text className="mt-0.5 text-right text-[19px] font-bold text-[#0878D1]">
-                  {captain.completedOrders}
-                </Text>
-              </View>
+              <Text className="text-[10px] font-bold text-[#547489]">
+                ملف فريق التوصيل
+              </Text>
             </View>
-            <View className="items-end justify-center border-r border-[#E6EFF4] pr-3">
-              <View className="flex-row-reverse items-center gap-1.5">
-                <View
-                  className={`h-2 w-2 rounded-full ${enabled ? "bg-[#22C55E]" : "bg-[#EF4444]"}`}
-                />
-                <Text
-                  className={`text-[11px] font-bold ${enabled ? "text-emerald-700" : "text-red-600"}`}
-                >
-                  {enabled ? "مفعل" : "معطل"}
-                </Text>
-              </View>
+            <View className="flex-row-reverse items-center gap-1.5">
+              <View
+                className={`h-2 w-2 rounded-full ${enabled ? "bg-[#22C55E]" : "bg-[#EF4444]"}`}
+              />
+              <Text
+                className={`text-[11px] font-bold ${enabled ? "text-emerald-700" : "text-red-600"}`}
+              >
+                {enabled ? "مفعل" : "معطل"}
+              </Text>
             </View>
           </View>
 
@@ -178,169 +162,187 @@ function CaptainDetails({
 }) {
   const custodyCount = openCustodyCount(captain);
   return (
-    <View className="flex-1 justify-end bg-black/35">
-      <View className="max-h-[90%] rounded-t-[30px] bg-[#F4FAFE] px-5 pb-6 pt-4">
-        <View className="mb-4 flex-row-reverse items-center justify-between">
-          <Pressable
-            onPress={onClose}
-            className="h-9 w-9 items-center justify-center rounded-xl bg-white"
-          >
-            <MaterialIcons name="close" size={20} color="#496B81" />
-          </Pressable>
-          <Text className="text-base font-bold text-[#073D70]">
-            ملف الكابتن
-          </Text>
-          <View className="h-9 w-9" />
-        </View>
-        <FlatList
-          data={captain.orders}
-          keyExtractor={(item) => item.id}
+    <View className="flex-1 justify-end bg-black/45">
+      <View className="max-h-[91%] overflow-hidden rounded-t-[34px] bg-[#F4FAFE]">
+        <View className="h-1.5 w-12 self-center rounded-full bg-[#C9DCE7]" />
+        <ScrollView
+          contentContainerClassName="px-5 pb-7 pt-4"
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <View>
-              <View className="rounded-3xl border border-[#D7E8F2] bg-white p-4">
-                <View className="flex-row-reverse items-center gap-3">
-                  <View className="h-12 w-12 items-center justify-center rounded-2xl bg-[#E4F5FD]">
-                    <Text className="text-base font-bold text-[#0878D1]">
-                      {captain.initial}
-                    </Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-right text-lg font-bold text-[#073D70]">
-                      {captain.name}
-                    </Text>
-                    <Text className="mt-1 text-right text-[10px] text-[#7893A4]">
-                      {captain.email ?? "لا يوجد بريد مسجل"}
-                    </Text>
-                  </View>
-                </View>
-                <View className="mt-4 flex-row-reverse border-t border-[#E7F0F5] pt-3">
-                  <View className="flex-1 items-end">
-                    <Text className="text-[9px] text-[#7893A4]">
-                      إجمالي مكتمل
-                    </Text>
-                    <Text className="mt-1 text-sm font-bold text-[#164C70]">
-                      {captain.completedOrders} طلبات
-                    </Text>
-                  </View>
-                  <View className="flex-1 items-end">
-                    <Text className="text-[9px] text-[#7893A4]">
-                      أمانات مفتوحة
-                    </Text>
-                    <Text className="mt-1 text-sm font-bold text-amber-700">
-                      {custodyCount}
-                    </Text>
-                  </View>
-                  <View className="flex-1 items-end">
-                    <Text className="text-[9px] text-[#7893A4]">
-                      الحالة الإدارية
-                    </Text>
-                    <Text
-                      className={`mt-1 text-sm font-bold ${captain.isActive ? "text-emerald-700" : "text-slate-600"}`}
-                    >
-                      {captain.isActive ? "مفعل" : "معطل"}
-                    </Text>
-                  </View>
+        >
+          <View className="mb-4 flex-row-reverse items-center justify-between">
+            <Pressable
+              onPress={onClose}
+              className="h-10 w-10 items-center justify-center rounded-2xl border border-[#D7E8F2] bg-white"
+            >
+              <MaterialIcons name="close" size={21} color="#496B81" />
+            </Pressable>
+            <Text className="text-base font-bold text-[#073D70]">
+              ملف الكابتن
+            </Text>
+            <View className="h-10 w-10" />
+          </View>
+
+          <View className="overflow-hidden rounded-[28px] bg-[#063B78] p-4">
+            <View className="absolute -right-16 top-5 h-20 w-[110%] rounded-full border border-[#2CCFFB] opacity-30" />
+            <View className="flex-row-reverse items-center gap-3">
+              <View className="h-[76px] w-[66px] items-center justify-center rounded-bl-[25px] rounded-tr-[25px] border-2 border-[#62D9FF] bg-[#0A4F95]">
+                <MaterialIcons
+                  name="person-outline"
+                  size={29}
+                  color="#D9F5FF"
+                />
+                <Text className="mt-0.5 text-lg font-bold text-white">
+                  {captain.initial}
+                </Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-right text-[20px] font-bold text-white">
+                  {captain.name}
+                </Text>
+                <Text className="mt-1 text-right text-[10px] text-[#C4DDEB]">
+                  {captain.email ?? "لا يوجد بريد مسجل"}
+                </Text>
+                <View className="mt-3 self-end rounded-full bg-white/15 px-3 py-1">
+                  <Text className="text-[10px] font-bold text-[#D9F5FF]">
+                    ملف فريق التوصيل
+                  </Text>
                 </View>
               </View>
+            </View>
+          </View>
 
-              <Text className="mb-2 mt-5 text-right text-sm font-bold text-[#073D70]">
+          <View className="mt-4 flex-row-reverse overflow-hidden rounded-2xl border border-[#D8E8F1] bg-white">
+            <View className="flex-1 items-center border-l border-[#E8F0F5] px-3 py-3">
+              <MaterialIcons
+                name="admin-panel-settings"
+                size={17}
+                color="#0878D1"
+              />
+              <Text className="mt-1 text-center text-[9px] text-[#7893A4]">
+                حالة الحساب
+              </Text>
+              <Text
+                className={`mt-0.5 text-[11px] font-bold ${captain.isActive ? "text-emerald-700" : "text-red-600"}`}
+              >
+                {captain.isActive ? "مفعل" : "معطل"}
+              </Text>
+            </View>
+            <View className="flex-1 items-center px-3 py-3">
+              <MaterialIcons name="inventory-2" size={17} color="#B87916" />
+              <Text className="mt-1 text-center text-[9px] text-[#7893A4]">
+                أمانات مفتوحة
+              </Text>
+              <Text className="mt-0.5 text-[11px] font-bold text-amber-700">
+                {custodyCount}
+              </Text>
+            </View>
+          </View>
+
+          <View className="mt-5 flex-row-reverse items-center justify-between">
+            <View>
+              <Text className="text-right text-[15px] font-bold text-[#073D70]">
                 الأمانات
               </Text>
-              <View className="rounded-2xl border border-[#D7E8F2] bg-white p-3">
+              <Text className="mt-0.5 text-right text-[9px] text-[#7893A4]">
+                إدارة العهد المسجلة باسم الكابتن
+              </Text>
+            </View>
+            <View className="rounded-xl bg-[#FFF5DE] p-2">
+              <MaterialIcons name="inventory-2" size={17} color="#B87916" />
+            </View>
+          </View>
+
+          <View className="mt-3 rounded-2xl border border-[#D7E8F2] bg-white p-3">
+            <View className="flex-row-reverse items-center gap-2">
+              <View className="flex-1 rounded-xl border border-[#D4E2EC] bg-[#FBFDFF] px-3">
                 <TextInput
                   value={custodyName}
                   onChangeText={setCustodyName}
-                  placeholder="اسم الأمانة"
+                  placeholder="اسم الأمانة الجديدة"
                   placeholderTextColor="#8A98A6"
-                  className="rounded-xl border border-[#D4E2EC] p-3 text-right text-xs text-[#173B59]"
+                  className="h-11 text-right text-xs text-[#173B59]"
                   textAlign="right"
                 />
-                <Pressable
-                  onPress={onAssign}
-                  className="mt-2 items-center rounded-xl bg-[#FFF6DF] p-3"
-                >
-                  <Text className="text-xs font-bold text-amber-700">
-                    إضافة أمانة
-                  </Text>
-                </Pressable>
-                {captain.custodyRecords.length ? (
-                  captain.custodyRecords.map((record) => (
-                    <View
-                      key={record.id}
-                      className="mt-2 flex-row-reverse items-center rounded-xl bg-[#F6FAFD] p-3"
-                    >
-                      <View className="flex-1">
-                        <Text className="text-right text-xs font-bold text-[#173B59]">
-                          {record.itemName}
-                        </Text>
-                        <Text className="mt-0.5 text-right text-[10px] text-[#667E8E]">
-                          {record.returnedAt ? "تم الإرجاع" : "مع الكابتن"}
-                        </Text>
-                      </View>
-                      {!record.returnedAt ? (
-                        <Pressable
-                          onPress={() => onReturn(record.id)}
-                          className="rounded-lg bg-emerald-50 px-2.5 py-2"
-                        >
-                          <Text className="text-[10px] font-bold text-emerald-700">
-                            تسجيل الإرجاع
-                          </Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  ))
-                ) : (
-                  <Text className="pt-3 text-center text-[10px] text-[#7893A4]">
-                    لا توجد أمانات مسجلة لهذا الكابتن.
-                  </Text>
-                )}
               </View>
-
-              <Text className="mb-2 mt-5 text-right text-sm font-bold text-[#073D70]">
-                سجل الطلبات المرتبطة
-              </Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <View className="mb-2 rounded-2xl border border-[#DCEAF3] bg-white p-3">
-              <View className="flex-row-reverse items-center justify-between">
-                <Text className="text-sm font-bold text-[#173B59]">
-                  طلب #{item.orderNumber}
-                </Text>
-                <Text className="rounded-lg bg-[#EAF7FD] px-2 py-1 text-[10px] font-bold text-[#0878D1]">
-                  {statusLabels[item.status] ?? item.status}
-                </Text>
-              </View>
-              <Text className="mt-2 text-right text-[10px] leading-5 text-[#667E8E]">
-                {item.customerName} · {item.pickupAddress} ←{" "}
-                {item.deliveryAddress}
-              </Text>
-            </View>
-          )}
-          ListEmptyComponent={
-            <Text className="rounded-2xl border border-dashed border-[#C7DAE8] bg-white p-5 text-center text-xs text-[#75818E]">
-              لا توجد طلبات مرتبطة بهذا الكابتن.
-            </Text>
-          }
-          ListFooterComponent={
-            <View className="mb-2 mt-4 rounded-2xl border border-[#D7E8F2] bg-white p-3">
-              <Text className="text-right text-[11px] font-bold text-[#526F82]">
-                إجراءات الكابتن
-              </Text>
               <Pressable
-                onPress={onToggle}
-                className={`mt-3 items-center rounded-xl p-3 ${captain.isActive ? "bg-red-50" : "bg-emerald-50"}`}
+                onPress={onAssign}
+                className="h-11 items-center justify-center rounded-xl bg-[#0878D1] px-3"
               >
-                <Text
-                  className={`text-xs font-bold ${captain.isActive ? "text-red-700" : "text-emerald-700"}`}
-                >
-                  {captain.isActive ? "تعطيل الكابتن" : "تفعيل الكابتن"}
-                </Text>
+                <MaterialIcons name="add" size={20} color="#FFFFFF" />
               </Pressable>
             </View>
-          }
-        />
+
+            {captain.custodyRecords.length ? (
+              <View className="mt-3 gap-2">
+                {captain.custodyRecords.map((record) => (
+                  <View
+                    key={record.id}
+                    className="flex-row-reverse items-center rounded-2xl border border-[#E3EDF3] bg-[#FBFDFF] p-3"
+                  >
+                    <View className="ml-2 rounded-xl bg-[#FFF5DE] p-2">
+                      <MaterialIcons
+                        name="inventory-2"
+                        size={16}
+                        color="#B87916"
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-right text-[11px] font-bold text-[#173B59]">
+                        {record.itemName}
+                      </Text>
+                      <Text className="mt-0.5 text-right text-[9px] text-[#708B9C]">
+                        {record.returnedAt ? "تم تسجيل الإرجاع" : "عهدة مفتوحة"}
+                      </Text>
+                    </View>
+                    {!record.returnedAt ? (
+                      <Pressable
+                        onPress={() => onReturn(record.id)}
+                        className="rounded-xl bg-emerald-50 px-2.5 py-2"
+                      >
+                        <Text className="text-[9px] font-bold text-emerald-700">
+                          إرجاع
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View className="mt-3 items-center rounded-2xl border border-dashed border-[#C7DAE8] bg-[#FBFDFF] p-5">
+                <MaterialIcons name="inventory-2" size={23} color="#9AB3C2" />
+                <Text className="mt-2 text-center text-[10px] text-[#7893A4]">
+                  لا توجد أمانات مسجلة لهذا الكابتن.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View className="mt-5 rounded-2xl border border-[#D7E8F2] bg-white p-3">
+            <View className="flex-row-reverse items-center gap-2">
+              <View className="rounded-xl bg-[#EAF7FD] p-2">
+                <MaterialIcons name="settings" size={17} color="#0878D1" />
+              </View>
+              <View>
+                <Text className="text-right text-[12px] font-bold text-[#173B59]">
+                  إجراءات الكابتن
+                </Text>
+                <Text className="mt-0.5 text-right text-[9px] text-[#7893A4]">
+                  تغيير حالة الحساب فقط
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={onToggle}
+              className={`mt-3 items-center rounded-xl p-3 ${captain.isActive ? "bg-red-50" : "bg-emerald-50"}`}
+            >
+              <Text
+                className={`text-xs font-bold ${captain.isActive ? "text-red-700" : "text-emerald-700"}`}
+              >
+                {captain.isActive ? "تعطيل الكابتن" : "تفعيل الكابتن"}
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
       </View>
     </View>
   );
