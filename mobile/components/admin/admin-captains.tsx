@@ -79,66 +79,73 @@ function CaptainCard({
   return (
     <Pressable
       onPress={onPress}
-      className="overflow-hidden rounded-[22px] border border-[#D9EAF4] bg-white shadow-sm"
+      className="overflow-hidden rounded-[25px] border border-[#E1EEF5] bg-white shadow-sm"
     >
       <View className="flex-row-reverse items-stretch">
-        <View className="w-[27%] items-center justify-center border-l border-[#D8ECF6] bg-[#EAF8FE] py-3">
-          <View className="h-[68px] w-[58px] items-center justify-center rounded-bl-[24px] rounded-tr-[24px] border border-[#BEE5F5] bg-white">
+        <View className="w-[31%] items-center justify-center bg-[#063B78] py-4">
+          <View className="h-[96px] w-[78px] items-center justify-center rounded-bl-[31px] rounded-tr-[31px] border-2 border-[#62D9FF] bg-[#0A4F95] shadow-sm">
             <Image
               source={captainPlaceholder}
-              className="h-[42px] w-[46px]"
+              className="h-[54px] w-[58px]"
               resizeMode="contain"
             />
           </View>
-          <Text className="mt-1.5 text-center text-[8px] font-bold text-[#5B91A9]">
+          <Text className="mt-2 text-center text-[8px] font-bold text-[#A9E9FF]">
             ملف الكابتن
           </Text>
         </View>
 
-        <View className="flex-1 px-3 pb-2.5 pt-3">
+        <View className="flex-1 px-4 pb-3 pt-4">
           <View className="flex-row-reverse items-center">
             <View
               className={`ml-2 h-2.5 w-2.5 rounded-full ${isAvailable ? "bg-[#22C55E]" : "bg-[#94A3B8]"}`}
             />
-            <Text className="flex-1 text-right text-[16px] font-bold text-[#063B78]">
+            <Text className="flex-1 text-right text-[17px] font-bold text-[#063B78]">
               {captain.name}
             </Text>
-            <MaterialIcons name="chevron-left" size={19} color="#7D9AAE" />
+            <MaterialIcons name="chevron-left" size={20} color="#7D9AAE" />
           </View>
           <Text
             numberOfLines={1}
-            className="mt-0.5 text-right text-[9px] text-[#8097A7]"
+            className="mt-1 text-right text-[10px] text-[#8097A7]"
           >
             {captain.email ?? "لا يوجد بريد مسجل"}
           </Text>
 
-          <View className="mt-2.5 flex-row-reverse items-center justify-between border-t border-[#E6EFF4] pt-2.5">
+          <View className="mt-3 flex-row-reverse items-center justify-between border-t border-[#E6EFF4] pt-3">
             <View className="flex-row-reverse items-center gap-1.5">
-              <View
-                className={`h-2 w-2 rounded-full ${isAvailable ? "bg-[#22C55E]" : "bg-[#94A3B8]"}`}
-              />
-              <Text
-                className={`text-[10px] font-bold ${isAvailable ? "text-emerald-700" : "text-slate-500"}`}
-              >
-                {isAvailable ? "متاح" : "غير متاح"}
-              </Text>
+              <View className="rounded-xl bg-[#E9F6FF] p-2">
+                <MaterialIcons name="badge" size={16} color="#0878D1" />
+              </View>
+              <View>
+                <Text className="text-right text-[8px] font-medium text-[#7893A4]">
+                  التوفر
+                </Text>
+                <Text
+                  className={`mt-0.5 text-right text-[11px] font-bold ${isAvailable ? "text-emerald-700" : "text-slate-500"}`}
+                >
+                  {isAvailable ? "متاح" : "غير متاح"}
+                </Text>
+              </View>
             </View>
-            <View className="flex-row-reverse items-center gap-1.5">
-              <View
-                className={`h-2 w-2 rounded-full ${enabled ? "bg-[#0878D1]" : "bg-[#EF4444]"}`}
-              />
-              <Text
-                className={`text-[10px] font-bold ${enabled ? "text-[#0878D1]" : "text-red-600"}`}
-              >
-                {enabled ? "مفعل" : "معطل"}
-              </Text>
+            <View className="items-end justify-center border-r border-[#E6EFF4] pr-3">
+              <View className="flex-row-reverse items-center gap-1.5">
+                <View
+                  className={`h-2 w-2 rounded-full ${enabled ? "bg-[#0878D1]" : "bg-[#EF4444]"}`}
+                />
+                <Text
+                  className={`text-[11px] font-bold ${enabled ? "text-[#0878D1]" : "text-red-600"}`}
+                >
+                  {enabled ? "مفعل" : "معطل"}
+                </Text>
+              </View>
             </View>
           </View>
 
           {custodyCount ? (
-            <View className="mt-2 flex-row-reverse items-center gap-1.5 rounded-lg border border-[#F7DEB2] bg-[#FFF8EB] px-2 py-1.5">
-              <MaterialIcons name="inventory-2" size={13} color="#B87916" />
-              <Text className="flex-1 text-right text-[9px] font-bold text-[#A06411]">
+            <View className="mt-3 flex-row-reverse items-center gap-1.5 rounded-xl border border-[#F7DEB2] bg-[#FFF8EB] px-2.5 py-2">
+              <MaterialIcons name="inventory-2" size={14} color="#B87916" />
+              <Text className="flex-1 text-right text-[10px] font-bold text-[#A06411]">
                 {custodyCount === 1
                   ? "أمانة مفتوحة واحدة"
                   : `${custodyCount} أمانات مفتوحة`}
