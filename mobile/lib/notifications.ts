@@ -47,7 +47,7 @@ export async function registerCaptainPushNotifications(
 
   try {
     if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("orders-v2", {
+      await Notifications.setNotificationChannelAsync("orders-v3", {
         name: "Orders",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
