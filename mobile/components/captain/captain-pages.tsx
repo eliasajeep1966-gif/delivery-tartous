@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   Linking,
   RefreshControl,
@@ -21,7 +22,9 @@ import {
   type CaptainWageRow,
 } from "@/lib/supabase/native-captain-contract";
 
-const BLUE = "#0060B8";
+const DEEP_BLUE = "#063B78";
+const BLUE = "#0878D1";
+const NEON = "#16CEFF";
 const money = (value: number) =>
   `${new Intl.NumberFormat("en-US").format(value)} ل.س`;
 const date = (value: string | null) =>
@@ -61,8 +64,12 @@ export function CaptainOrders() {
       {data.error ? (
         <Message text={data.error} />
       ) : (
-        data.orders.map((order) => (
-          <View key={order.id} style={styles.card}>
+        data.orders.map((order, index) => (
+          <Animated.View
+            entering={FadeInDown.delay(70 + index * 30).duration(190)}
+            key={order.id}
+            style={styles.card}
+          >
             <View style={styles.between}>
               <View>
                 <Text style={styles.muted}>الطلب #{order.order_number}</Text>
@@ -84,7 +91,7 @@ export function CaptainOrders() {
             <Text style={styles.line}>المصدر: {order.pickup_address}</Text>
             <Text style={styles.line}>الوجهة: {order.delivery_address}</Text>
             <Text style={styles.muted}>{date(order.updated_at)}</Text>
-          </View>
+          </Animated.View>
         ))
       )}
     </Page>
@@ -175,8 +182,12 @@ export function CaptainWages() {
             <Metric label="المسدّد" value={money(totals.paid)} />
             <Metric label="المتبقي" value={money(totals.unpaid)} />
           </View>
-          {visible.map((row) => (
-            <View key={row.financial_ledger_id} style={styles.card}>
+          {visible.map((row, index) => (
+            <Animated.View
+              entering={FadeInDown.delay(70 + index * 30).duration(190)}
+              key={row.financial_ledger_id}
+              style={styles.card}
+            >
               <View style={styles.between}>
                 <View>
                   <Text style={styles.muted}>الطلب #{row.order_number}</Text>
@@ -197,7 +208,7 @@ export function CaptainWages() {
                   ? "تم تسليم الأجر"
                   : `متبقي ${money(row.unpaid_amount)}`}
               </Text>
-            </View>
+            </Animated.View>
           ))}
         </>
       )}
@@ -236,8 +247,12 @@ export function CaptainCustodyPage() {
       {error ? (
         <Message text={error} />
       ) : rows.length ? (
-        rows.map((row) => (
-          <View key={row.id} style={styles.card}>
+        rows.map((row, index) => (
+          <Animated.View
+            entering={FadeInDown.delay(70 + index * 30).duration(190)}
+            key={row.id}
+            style={styles.card}
+          >
             <View style={styles.between}>
               <View>
                 <Text style={styles.muted}>أمانة #{row.id.slice(0, 8)}</Text>
@@ -253,7 +268,7 @@ export function CaptainCustodyPage() {
             <Text style={styles.muted}>
               استلمت بتاريخ: {date(row.assigned_at)}
             </Text>
-          </View>
+          </Animated.View>
         ))
       ) : (
         <Message text="لا توجد أمانات مسجلة." />
@@ -414,7 +429,10 @@ function Page({
   onRefresh?: () => void;
 }) {
   return (
-    <ScreenContainer className="bg-[#EDF8FD]" containerClassName="bg-[#EDF8FD]">
+    <ScreenContainer
+      className="bg-transparent"
+      containerClassName="bg-transparent"
+    >
       <ScrollView
         refreshControl={
           onRefresh ? (
@@ -431,10 +449,15 @@ function Page({
           <MaterialIcons name="local-shipping" size={22} color={BLUE} />
           <View>
             <Text style={styles.pageTitle}>{title}</Text>
-            <Text style={styles.muted}>{subtitle}</Text>
+            <Text style={styles.pageSubtitle}>{subtitle}</Text>
           </View>
         </View>
-        {children}
+        <Animated.View
+          entering={FadeInDown.delay(45).duration(200)}
+          style={styles.pageBody}
+        >
+          {children}
+        </Animated.View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -483,31 +506,50 @@ function Button({
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 10, padding: 12, paddingBottom: 34 },
+  content: { gap: 12, padding: 12, paddingBottom: 34 },
+  pageBody: { gap: 12 },
   pageHead: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#DCECF4",
-    borderRadius: 16,
+    backgroundColor: DEEP_BLUE,
+    borderColor: NEON,
+    borderRadius: 19,
     borderWidth: 1,
     flexDirection: "row-reverse",
     gap: 10,
-    padding: 13,
+    minHeight: 76,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: DEEP_BLUE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.13,
+    shadowRadius: 12,
   },
   pageTitle: {
-    color: "#155B8D",
+    color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
-    fontSize: 15,
+    fontSize: 16,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  pageSubtitle: {
+    color: "#CDEFFF",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 10,
+    marginTop: 2,
     textAlign: "right",
     writingDirection: "rtl",
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#FFFFFF",
-    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderColor: "#D1ECF6",
+    borderRadius: 17,
     borderWidth: 1,
-    gap: 7,
-    padding: 13,
+    gap: 8,
+    padding: 14,
+    shadowColor: "#0A668A",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.045,
+    shadowRadius: 8,
   },
   between: { flexDirection: "row-reverse", justifyContent: "space-between" },
   left: { alignItems: "flex-end" },
@@ -532,13 +574,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   badge: {
-    backgroundColor: "#E8F6FF",
-    borderRadius: 5,
+    backgroundColor: "#EAF9FF",
+    borderColor: "#BCEBFA",
+    borderRadius: 9,
+    borderWidth: 1,
     color: BLUE,
     fontFamily: "Cairo_700Bold",
     fontSize: 9,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    writingDirection: "rtl",
   },
   amount: {
     color: "#075D9F",
@@ -562,26 +608,42 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   periods: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderColor: "#CFEAF5",
+    borderRadius: 16,
+    borderWidth: 1,
     flexDirection: "row-reverse",
     gap: 5,
     padding: 5,
   },
   period: {
     alignItems: "center",
-    borderRadius: 11,
+    borderRadius: 12,
     flex: 1,
     justifyContent: "center",
-    minHeight: 40,
+    minHeight: 48,
   },
-  periodActive: { backgroundColor: BLUE },
-  periodText: { color: "#5C7C90", fontFamily: "Cairo_700Bold", fontSize: 11 },
+  periodActive: {
+    backgroundColor: BLUE,
+    shadowColor: BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
+  },
+  periodText: {
+    color: "#5C7C90",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    writingDirection: "rtl",
+  },
   periodTextActive: { color: "#FFFFFF" },
   metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 },
   metric: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderColor: "#D1ECF6",
+    borderRadius: 15,
+    borderWidth: 1,
+    minHeight: 84,
     padding: 12,
     width: "48.5%",
   },
@@ -616,13 +678,14 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: "#F8FCFE",
-    borderColor: "#DCECF4",
-    borderRadius: 12,
+    borderColor: "#CFEAF5",
+    borderRadius: 13,
     borderWidth: 1,
     color: "#194B6E",
     fontFamily: "Cairo_400Regular",
-    minHeight: 45,
+    minHeight: 50,
     paddingHorizontal: 12,
+    writingDirection: "rtl",
   },
   accountHeading: {
     alignItems: "center",
@@ -671,9 +734,11 @@ const styles = StyleSheet.create({
   button: {
     alignItems: "center",
     backgroundColor: BLUE,
-    borderRadius: 12,
+    borderColor: NEON,
+    borderRadius: 14,
+    borderWidth: 1,
     justifyContent: "center",
-    minHeight: 43,
+    minHeight: 50,
   },
   buttonText: { color: "#FFFFFF", fontFamily: "Cairo_700Bold", fontSize: 11 },
   buttonDanger: { backgroundColor: "#FEE2E2" },

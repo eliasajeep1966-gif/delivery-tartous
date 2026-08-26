@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
+import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 import {
   Alert,
   Linking,
@@ -23,7 +24,9 @@ import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useNativeCaptainDashboard } from "@/features/captain/use-native-captain-dashboard";
 import type { CaptainOrderStatus } from "@/lib/supabase/native-captain-contract";
 
-const BLUE = "#0060B8";
+const DEEP_BLUE = "#063B78";
+const BLUE = "#0878D1";
+const NEON = "#16CEFF";
 const statusLabels: Record<CaptainOrderStatus, string> = {
   pending: "قيد الانتظار",
   assigned: "تم إسناد الطلب",
@@ -103,7 +106,10 @@ export function CaptainHome() {
   };
 
   return (
-    <ScreenContainer className="bg-[#edf8fd]" containerClassName="bg-[#edf8fd]">
+    <ScreenContainer
+      className="bg-transparent"
+      containerClassName="bg-transparent"
+    >
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -155,7 +161,10 @@ export function CaptainHome() {
           />
         ) : (
           <>
-            <View style={styles.availabilityCard}>
+            <Animated.View
+              entering={FadeInDown.delay(30).duration(190)}
+              style={styles.availabilityCard}
+            >
               <View>
                 <View style={styles.row}>
                   <View
@@ -184,8 +193,11 @@ export function CaptainHome() {
                 trackColor={{ false: "#D8E7EE", true: BLUE }}
                 thumbColor="#FFFFFF"
               />
-            </View>
-            <View style={styles.currentCard}>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInDown.delay(70).duration(210)}
+              style={styles.currentCard}
+            >
               <View style={styles.currentHeader}>
                 <MaterialIcons name="two-wheeler" size={22} color="#FFFFFF" />
                 <View>
@@ -248,8 +260,8 @@ export function CaptainHome() {
                   ستظهر تفاصيل الطلب هنا عند إسناده إليك.
                 </Text>
               )}
-            </View>
-            <View>
+            </Animated.View>
+            <Animated.View entering={FadeInDown.delay(110).duration(210)}>
               <Text style={styles.sectionTitle}>ملخص اليوم</Text>
               <View style={styles.metrics}>
                 <Metric
@@ -263,14 +275,18 @@ export function CaptainHome() {
                   label="قيمة مكتملة"
                 />
               </View>
-            </View>
-            <View>
+            </Animated.View>
+            <Animated.View entering={FadeInDown.delay(150).duration(210)}>
               <View style={styles.sectionHeading}>
                 <Text style={styles.sectionTitle}>آخر الطلبات</Text>
                 <Text style={styles.link}>{dashboard.orders.length} طلبات</Text>
               </View>
-              {dashboard.recentOrders.slice(0, 4).map((order) => (
-                <View key={order.id} style={styles.orderRow}>
+              {dashboard.recentOrders.slice(0, 4).map((order, index) => (
+                <Animated.View
+                  entering={FadeInDown.delay(180 + index * 35).duration(190)}
+                  key={order.id}
+                  style={styles.orderRow}
+                >
                   <View>
                     <Text style={styles.orderNumber}>
                       #{order.order_number}
@@ -286,20 +302,24 @@ export function CaptainHome() {
                     </Text>
                     <Text style={styles.fee}>{money(order.fee)}</Text>
                   </View>
-                </View>
+                </Animated.View>
               ))}
-            </View>
+            </Animated.View>
           </>
         )}
       </ScrollView>
       <Modal
         transparent
         visible={falseOrderOpen}
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setFalseOrderOpen(false)}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
+          <Animated.View
+            entering={FadeInDown.duration(210)}
+            exiting={FadeOut.duration(120)}
+            style={styles.modal}
+          >
             <MaterialIcons name="warning" size={32} color="#C62828" />
             <Text style={styles.modalTitle}>تسجيل الطلب كطلب كاذب</Text>
             {dashboard.actionError ? (
@@ -328,7 +348,7 @@ export function CaptainHome() {
                 </Text>
               </MotionPressable>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </ScreenContainer>
@@ -448,14 +468,14 @@ function StateCard({ text, retry }: { text: string; retry?: () => void }) {
 const styles = StyleSheet.create({
   topBar: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderBottomColor: "#D8EDF7",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderBottomColor: "rgba(22,206,255,0.58)",
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     marginHorizontal: -12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   brand: { alignItems: "center", flex: 1, gap: 1 },
   brandTitle: {
@@ -472,11 +492,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
-  content: { padding: 12, paddingBottom: 32, gap: 14 },
+  content: { gap: 14, padding: 12, paddingBottom: 34 },
   header: {
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
+    paddingTop: 2,
   },
   greeting: {
     color: "#155B8D",
@@ -495,21 +516,27 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     alignItems: "center",
-    backgroundColor: "#E8F6FF",
-    borderRadius: 12,
-    height: 38,
+    backgroundColor: "rgba(255,255,255,0.86)",
+    borderColor: "#BCEBFA",
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 48,
     justifyContent: "center",
-    width: 38,
+    width: 48,
   },
   availabilityCard: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#DCECF4",
-    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderColor: "#BCEBFA",
+    borderRadius: 18,
     borderWidth: 1,
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    padding: 13,
+    padding: 14,
+    shadowColor: "#0A668A",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
   },
   availabilityText: {
     color: "#6D8799",
@@ -529,18 +556,26 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   currentCard: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#B9DDF1",
-    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.97)",
+    borderColor: "#B3E8FA",
+    borderRadius: 20,
     borderWidth: 1,
     overflow: "hidden",
+    shadowColor: "#0A668A",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
   },
   currentHeader: {
     alignItems: "center",
-    backgroundColor: BLUE,
+    backgroundColor: DEEP_BLUE,
+    borderBottomColor: NEON,
+    borderBottomWidth: 2,
     flexDirection: "row-reverse",
     gap: 9,
-    padding: 13,
+    minHeight: 68,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   currentTitle: {
     color: "#FFFFFF",
@@ -556,7 +591,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  cardBody: { gap: 9, padding: 12 },
+  cardBody: { gap: 10, padding: 13 },
   timeline: {
     backgroundColor: "#F8FCFE",
     borderColor: "#DCECF4",
@@ -656,9 +691,15 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: "center",
     backgroundColor: BLUE,
-    borderRadius: 12,
-    minHeight: 44,
+    borderColor: NEON,
+    borderRadius: 14,
+    borderWidth: 1,
     justifyContent: "center",
+    minHeight: 50,
+    shadowColor: BLUE,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.16,
+    shadowRadius: 7,
   },
   primaryText: {
     color: "#FFFFFF",
@@ -707,9 +748,12 @@ const styles = StyleSheet.create({
   },
   metrics: { flexDirection: "row-reverse", gap: 10, marginTop: 8 },
   metric: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderColor: "#D5EDF6",
+    borderRadius: 16,
+    borderWidth: 1,
     flex: 1,
+    minHeight: 104,
     padding: 13,
   },
   metricValue: {
@@ -741,12 +785,15 @@ const styles = StyleSheet.create({
   },
   orderRow: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderColor: "#D5EDF6",
+    borderRadius: 15,
+    borderWidth: 1,
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    marginTop: 7,
-    padding: 11,
+    marginTop: 8,
+    minHeight: 76,
+    padding: 12,
   },
   orderNumber: {
     color: "#154F79",
@@ -811,7 +858,9 @@ const styles = StyleSheet.create({
   },
   modal: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderColor: "#BCEBFA",
+    borderRadius: 20,
+    borderWidth: 1,
     gap: 12,
     padding: 18,
     width: "100%",
