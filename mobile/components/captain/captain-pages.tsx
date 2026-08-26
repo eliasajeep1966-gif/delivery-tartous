@@ -438,12 +438,32 @@ export function CaptainWages() {
                 >
                   <View style={styles.between}>
                     <View>
-                      <Text style={styles.muted}>الطلب #{row.order_number}</Text>
-                      <Text style={styles.line}>{date(row.completed_at)}</Text>
+                      <Text style={styles.wageOrderNumber}>الطلب #{row.order_number}</Text>
+                      <Text style={styles.wageRowDate}>{date(row.completed_at)}</Text>
                     </View>
                     <View style={styles.left}>
                       <Text style={styles.wageRowAmount}>{money(row.captain_amount)}</Text>
                       <Text style={styles.wageRowHint}>أجرك من هذا الطلب</Text>
+                    </View>
+                  </View>
+                  <View style={styles.wageRouteGrid}>
+                    <View style={styles.wageRouteCard}>
+                      <View style={styles.wageRouteHead}>
+                        <MaterialIcons name="inventory-2" size={15} color="#0878D1" />
+                        <Text style={styles.wageRouteLabel}>المصدر</Text>
+                      </View>
+                      <Text numberOfLines={3} style={styles.wageRouteAddress}>
+                        {row.pickup_address}
+                      </Text>
+                    </View>
+                    <View style={styles.wageRouteCard}>
+                      <View style={styles.wageRouteHead}>
+                        <MaterialIcons name="location-on" size={15} color="#D35B38" />
+                        <Text style={styles.wageRouteLabel}>الوجهة</Text>
+                      </View>
+                      <Text numberOfLines={3} style={styles.wageRouteAddress}>
+                        {row.delivery_address}
+                      </Text>
                     </View>
                   </View>
                 </Animated.View>
@@ -1287,10 +1307,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 48,
   },
+  wageOrderNumber: {
+    color: "#174F74",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageRowDate: {
+    color: "#63869A",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 11,
+    marginTop: 2,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   wageRowAmount: {
     color: "#075D9F",
     fontFamily: "Cairo_700Bold",
-    fontSize: 14,
+    fontSize: 16,
     textAlign: "left",
     writingDirection: "rtl",
   },
@@ -1300,6 +1335,32 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 2,
     textAlign: "left",
+    writingDirection: "rtl",
+  },
+  wageRouteGrid: { flexDirection: "row-reverse", gap: 8 },
+  wageRouteCard: {
+    backgroundColor: "#F6FBFE",
+    borderColor: "#D7EAF3",
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 88,
+    padding: 9,
+  },
+  wageRouteHead: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
+  wageRouteLabel: {
+    color: "#4C738B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    writingDirection: "rtl",
+  },
+  wageRouteAddress: {
+    color: "#294F66",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 11,
+    lineHeight: 19,
+    marginTop: 6,
+    textAlign: "right",
     writingDirection: "rtl",
   },
   custodyReturned: {

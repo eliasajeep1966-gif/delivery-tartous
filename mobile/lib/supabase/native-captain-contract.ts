@@ -79,6 +79,8 @@ export type CaptainWageRow = {
   captain_amount: number;
   company_amount: number;
   completed_at: string;
+  delivery_address: string;
+  pickup_address: string;
   financial_ledger_id: string;
   gross_fee: number;
   is_fully_paid: boolean;
