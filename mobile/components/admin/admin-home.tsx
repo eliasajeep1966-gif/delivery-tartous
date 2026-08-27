@@ -3,7 +3,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { type Href, useRouter } from "expo-router";
 import { type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   AppState,
   FlatList,
   type LayoutChangeEvent,
@@ -308,8 +307,7 @@ export function AdminHome() {
     );
   }
 
-  const announce = (title: string, message: string) =>
-    Alert.alert(title, message);
+  const announce = (message: string) => showToast({ message });
   const openOrders = () => router.push("/(tabs)/orders" as Href);
   const submitOrder = async (draft: NativeNewOrderDraft): Promise<boolean> => {
     setIsCreating(true);
@@ -399,7 +397,7 @@ export function AdminHome() {
           accessibilityLabel: "الإشعارات",
           badge: true,
           icon: "notifications-none",
-          onPress: () => announce("الإشعارات", "لا توجد إشعارات جديدة."),
+          onPress: () => announce("لا توجد إشعارات جديدة."),
         }}
       />
 

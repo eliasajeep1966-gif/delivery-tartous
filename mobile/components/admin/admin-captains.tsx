@@ -3,7 +3,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
-  Alert,
   FlatList,
   Image,
   Modal,
@@ -17,6 +16,7 @@ import {
   View,
 } from "react-native";
 
+import { ActionConfirmationDialog } from "@/components/ui/action-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
@@ -422,6 +422,8 @@ export function AdminCaptainsScreen() {
   const [filter, setFilter] = useState<CaptainFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [custodyName, setCustodyName] = useState("");
+  const [pendingToggle, setPendingToggle] = useState<NativeCaptain | null>(null);
+  const [isTogglingCaptain, setIsTogglingCaptain] = useState(false);
   const selected =
     data.captains.find((captain) => captain.id === selectedId) ?? null;
   const snapshot = useMemo(
@@ -457,32 +459,27 @@ export function AdminCaptainsScreen() {
       await operation();
       showToast({ message: success });
     } catch (cause) {
-      Alert.alert(
-        "تعذر تنفيذ العملية",
-        cause instanceof Error ? cause.message : "حاول مرة أخرى.",
-      );
+      showToast({
+        message: cause instanceof Error ? cause.message : "تعذر تنفيذ العملية. أعد المحاولة.",
+        tone: "error",
+        durationMs: 5000,
+      });
     }
   };
-  const confirmToggle = (captain: NativeCaptain) => {
-    const nextActive = !captain.isActive;
-    Alert.alert(
-      nextActive ? "تفعيل الكابتن" : "تعطيل الكابتن",
-      nextActive
-        ? `هل تريد تفعيل ${captain.name}؟`
-        : `هل تريد تعطيل ${captain.name}؟`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: nextActive ? "تفعيل" : "تعطيل",
-          style: nextActive ? "default" : "destructive",
-          onPress: () =>
-            void perform(
-              () => data.setActive(captain.id, nextActive),
-              nextActive ? "تم تفعيل الكابتن." : "تم تعطيل الكابتن.",
-            ),
-        },
-      ],
-    );
+  const confirmToggle = (captain: NativeCaptain) => setPendingToggle(captain);
+  const applyCaptainToggle = async () => {
+    if (!pendingToggle || isTogglingCaptain) return;
+    const nextActive = !pendingToggle.isActive;
+    setIsTogglingCaptain(true);
+    try {
+      await perform(
+        () => data.setActive(pendingToggle.id, nextActive),
+        nextActive ? "تم تفعيل الكابتن." : "تم تعطيل الكابتن.",
+      );
+      setPendingToggle(null);
+    } finally {
+      setIsTogglingCaptain(false);
+    }
   };
 
   if (profile?.role !== "admin" && profile?.role !== "supervisor") {
@@ -684,6 +681,21 @@ export function AdminCaptainsScreen() {
           />
         ) : null}
       </Modal>
+      <ActionConfirmationDialog
+        visible={pendingToggle !== null}
+        isConfirming={isTogglingCaptain}
+        title={pendingToggle?.isActive ? "تأكيد تعطيل الكابتن" : "تأكيد تفعيل الكابتن"}
+        description={pendingToggle
+          ? pendingToggle.isActive
+            ? `سيتم إيقاف ${pendingToggle.name} عن استقبال الطلبات حتى تعيد تفعيله.`
+            : `سيتم تفعيل ${pendingToggle.name} ليصبح متاحاً ضمن فريق التوصيل.`
+          : ""}
+        confirmLabel={pendingToggle?.isActive ? "تعطيل الكابتن" : "تفعيل الكابتن"}
+        icon={pendingToggle?.isActive ? "person-off" : "verified"}
+        tone={pendingToggle?.isActive ? "danger" : "primary"}
+        onClose={() => setPendingToggle(null)}
+        onConfirm={() => void applyCaptainToggle()}
+      />
     </ScreenContainer>
   );
 }

@@ -2,7 +2,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
 import { LogoutConfirmationDialog } from "@/components/auth/logout-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 
@@ -61,6 +61,7 @@ const items = [
 export function AdminMore() {
   const router = useRouter();
   const { profile, signOut, operation } = useDeliveryAuth();
+  const { showToast } = useAppToast();
   const [isOwner, setIsOwner] = useState(false);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
@@ -88,10 +89,9 @@ export function AdminMore() {
       router.push(path as Href);
       return;
     }
-    Alert.alert(
-      label ?? "هذه الوحدة",
-      "سيتم نقل هذه الشاشة إلى Native في مرحلة لاحقة.",
-    );
+    showToast({
+      message: `${label ?? "هذه الوحدة"} ليست متاحة في التطبيق حالياً.`,
+    });
   };
   return (
     <ScreenContainer

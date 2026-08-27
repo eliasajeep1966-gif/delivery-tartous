@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -11,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { KeyRound, ShieldAlert, Trash2, UserRound } from "lucide-react-native";
 
+import { ActionConfirmationDialog } from "@/components/ui/action-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
@@ -57,6 +57,7 @@ export default function OwnerDataResetScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetConfirmationOpen, setResetConfirmationOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -110,12 +111,18 @@ export default function OwnerDataResetScreen() {
   );
   const selectedUser = manageableUsers.find((user) => user.id === selectedUserId) ?? null;
 
-  const resetApplication = async () => {
+  const requestApplicationReset = () => {
     if (!password) {
-      Alert.alert("كلمة المرور مطلوبة", "أدخل كلمة مرور حساب المالك للمتابعة.");
+      showToast({
+        message: "أدخل كلمة مرور حساب المالك للمتابعة.",
+        tone: "error",
+      });
       return;
     }
+    setResetConfirmationOpen(true);
+  };
 
+  const resetApplication = async () => {
     setSubmitting(true);
     try {
       const { error } = await withTimeout(
@@ -134,7 +141,7 @@ export default function OwnerDataResetScreen() {
         error instanceof Error && error.message
           ? error.message
           : "تعذر مسح بيانات التطبيق.";
-      Alert.alert("تعذر مسح البيانات", message);
+      showToast({ message, tone: "error", durationMs: 5000 });
     } finally {
       setSubmitting(false);
     }
@@ -142,15 +149,21 @@ export default function OwnerDataResetScreen() {
 
   const resetSelectedUserPassword = async () => {
     if (!selectedUser) {
-      Alert.alert("اختر مستخدماً", "اختر الحساب الذي تريد تعيين كلمة مرور جديدة له.");
+      showToast({
+        message: "اختر الحساب الذي تريد تعيين كلمة مرور جديدة له.",
+        tone: "error",
+      });
       return;
     }
     if (newPassword.length < 12) {
-      Alert.alert("كلمة المرور قصيرة", "يجب أن تكون كلمة المرور الجديدة 12 حرفاً على الأقل.");
+      showToast({
+        message: "يجب أن تكون كلمة المرور الجديدة 12 حرفاً على الأقل.",
+        tone: "error",
+      });
       return;
     }
     if (newPassword !== passwordConfirmation) {
-      Alert.alert("عدم تطابق", "تأكيد كلمة المرور غير مطابق.");
+      showToast({ message: "تأكيد كلمة المرور غير مطابق.", tone: "error" });
       return;
     }
 
@@ -182,7 +195,7 @@ export default function OwnerDataResetScreen() {
         error instanceof Error && error.message
           ? error.message
           : "تعذر تعيين كلمة المرور للمستخدم.";
-      Alert.alert("تعذر تعيين كلمة المرور", message);
+      showToast({ message, tone: "error", durationMs: 5000 });
     } finally {
       setResettingPassword(false);
     }
@@ -348,7 +361,7 @@ export default function OwnerDataResetScreen() {
               autoCorrect={false}
               editable={!submitting}
               returnKeyType="done"
-              onSubmitEditing={() => void resetApplication()}
+              onSubmitEditing={requestApplicationReset}
               className="mt-2 h-12 rounded-2xl border border-[#E7AAAA] bg-white px-3 text-left text-base text-[#1C1B1B]"
             />
           </View>
@@ -356,7 +369,7 @@ export default function OwnerDataResetScreen() {
           <Pressable
             accessibilityLabel="مسح بيانات التطبيق"
             disabled={submitting}
-            onPress={() => void resetApplication()}
+            onPress={requestApplicationReset}
             className={`mt-4 h-12 flex-row items-center justify-center gap-2 rounded-2xl ${submitting ? "bg-[#D9A6A2]" : "bg-[#BA1A1A] active:scale-95"}`}
           >
             {submitting ? (
@@ -370,6 +383,17 @@ export default function OwnerDataResetScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <ActionConfirmationDialog
+        visible={resetConfirmationOpen}
+        isConfirming={submitting}
+        title="تأكيد مسح بيانات التطبيق"
+        description="سيتم حذف الطلبات والسجلات المالية والمصروفات وبيانات التشغيل نهائياً. لا يمكن التراجع عن هذه العملية."
+        confirmLabel="مسح البيانات نهائياً"
+        icon="delete-forever"
+        tone="danger"
+        onClose={() => setResetConfirmationOpen(false)}
+        onConfirm={() => void resetApplication()}
+      />
     </ScreenContainer>
   );
 }

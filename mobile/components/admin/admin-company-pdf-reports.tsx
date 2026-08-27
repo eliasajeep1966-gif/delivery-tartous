@@ -2,7 +2,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
   View,
 } from "react-native";
 
+import { useAppToast } from "@/contexts/app-toast-context";
 import { useAdminCaptains } from "@/features/admin/use-admin-captains";
 import { nativeCompanyPdfReportContract } from "@/features/admin/use-admin-finance";
 import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
@@ -58,6 +58,7 @@ export function AdminCompanyPdfReports({
   const [endDate, setEndDate] = useState(today);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const { showToast } = useAppToast();
 
   const selectedCaptain = useMemo(
     () => captains.find((captain) => captain.id === captainId) ?? null,
@@ -74,7 +75,10 @@ export function AdminCompanyPdfReports({
   const createReport = async () => {
     if (isGenerating) return;
     if (mode === "captain" && !selectedCaptain) {
-      Alert.alert("اختر الكابتن", "اختر كابتناً أولاً قبل طباعة التقرير.");
+      showToast({
+        message: "اختر كابتناً أولاً قبل إنشاء التقرير.",
+        tone: "error",
+      });
       return;
     }
 
@@ -137,7 +141,7 @@ export function AdminCompanyPdfReports({
         error instanceof Error && error.message
           ? error.message
           : "تعذر إعداد ملف التقرير. حاول مرة أخرى.";
-      Alert.alert("تعذر إنشاء التقرير", message);
+      showToast({ message, tone: "error", durationMs: 5000 });
     } finally {
       setIsGenerating(false);
     }

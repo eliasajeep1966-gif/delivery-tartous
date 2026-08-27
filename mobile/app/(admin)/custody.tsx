@@ -5,7 +5,6 @@ import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useMemo, useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -103,10 +102,11 @@ export default function AdminCustodyScreen() {
       await data.returnCustody(record.id);
       showToast({ message: `تم تسجيل استلام الأمانة من ${record.captainName}.` });
     } catch (cause) {
-      Alert.alert(
-        "تعذر تسجيل الاستلام",
-        cause instanceof Error ? cause.message : "حاول مرة أخرى.",
-      );
+      showToast({
+        message: cause instanceof Error ? cause.message : "تعذر تسجيل الاستلام. أعد المحاولة.",
+        tone: "error",
+        durationMs: 5000,
+      });
     } finally {
       setReturningId(null);
     }

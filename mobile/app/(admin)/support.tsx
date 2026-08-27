@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -81,25 +80,34 @@ export default function AdminSupportScreen() {
     profile?.role === "admin" ||
     profile?.role === "supervisor" ||
     profile?.role === "captain";
-  const openUrl = async (url: string) => {
+  const openUrl = async (url: string): Promise<boolean> => {
     try {
       await Linking.openURL(url);
+      return true;
     } catch {
-      Alert.alert("تعذر فتح القناة", "تحقق من توفر التطبيق أو حاول مرة أخرى.");
+      showToast({
+        message: "تعذر فتح قناة الدعم. تحقق من توفر التطبيق ثم أعد المحاولة.",
+        tone: "error",
+        durationMs: 5000,
+      });
+      return false;
     }
   };
   const submit = () => {
     const clean = description.trim();
-    if (clean.length < 10)
-      return Alert.alert(
-        "تفاصيل البلاغ",
-        "اكتب تفاصيل البلاغ بعشرة أحرف على الأقل.",
-      );
+    if (clean.length < 10) {
+      showToast({
+        message: "اكتب تفاصيل البلاغ بعشرة أحرف على الأقل.",
+        tone: "error",
+      });
+      return;
+    }
     const message = `مرحباً، أريد الإبلاغ عن مشكلة في تطبيق Delivery Tartous.\n\nالاسم: ${name.trim() || "غير مذكور"}\nنوع البلاغ: ${category}\nرقم الطلب: ${orderNumber.trim() || "غير مرتبط بطلب"}\n\nتفاصيل البلاغ:\n${clean}`;
     void openUrl(
       `mailto:eliasajeep1966@gmail.com?subject=${encodeURIComponent(`بلاغ دعم — ${category}`)}&body=${encodeURIComponent(message)}`,
-    );
-    showToast({ message: "تم فتح البريد لمراجعة البلاغ وإرساله." });
+    ).then((opened) => {
+      if (opened) showToast({ message: "تم فتح البريد لمراجعة البلاغ وإرساله." });
+    });
   };
   if (!canUseSupport)
     return (
