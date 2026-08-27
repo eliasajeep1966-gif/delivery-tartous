@@ -197,9 +197,12 @@ export const nativeAdminFinanceContract = {
   },
 } as const;
 
-export function useNativeAdminWagePeriods(enabled = true) {
+export function useNativeAdminWagePeriods(
+  enabled = true,
+  initialPeriod: NativeFinancePeriod = "daily",
+) {
   const queryClient = useQueryClient();
-  const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
+  const [period, setPeriod] = useState<NativeFinancePeriod>(initialPeriod);
   const query = useInfiniteQuery({
     queryKey: ["admin-wage-periods", period],
     initialPageParam: undefined as

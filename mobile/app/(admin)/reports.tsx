@@ -9,9 +9,9 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle } from "react-native-svg";
 import {
   Building2,
-  ClipboardList,
   FileText,
   RefreshCw,
   TrendingUp,
@@ -28,12 +28,21 @@ import { AdminCompanyPdfReports } from "@/components/admin/admin-company-pdf-rep
 import {
   useNativeAdminWagePeriods,
   useNativeCompanyProfitHistory,
+  useNativeOfficeExpensePeriods,
   type NativeFinancePeriod,
 } from "@/features/admin/use-admin-finance";
 
 const BLUE = "#0878D1";
+const CHART_CENTER = 72;
+const CHART_RADIUS = 56;
+const CHART_CIRCUMFERENCE = 2 * Math.PI * CHART_RADIUS;
 
 type Icon = React.ReactNode;
+type FinanceBreakdownSlice = {
+  label: string;
+  value: number;
+  color: string;
+};
 
 function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
   const flattened = StyleSheet.flatten(style);
@@ -50,7 +59,7 @@ function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
 }
 
 const money = (value: number) =>
-  `${new Intl.NumberFormat("en-US").format(value)} ل.س`;
+  `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)} ل.س`;
 const date = (value: string) =>
   new Intl.DateTimeFormat("ar-SY", {
     timeZone: "Asia/Damascus",
@@ -69,29 +78,71 @@ export default function AdminReportsScreen() {
   const [period, setPeriod] = useState<NativeFinancePeriod>("monthly");
   const [showPdfReports, setShowPdfReports] = useState(false);
   const history = useNativeCompanyProfitHistory(period);
-  const wages = useNativeAdminWagePeriods();
+  const wages = useNativeAdminWagePeriods(true, "monthly");
+  const expenses = useNativeOfficeExpensePeriods(period);
   const isBackOffice = profile?.role === "admin" || profile?.role === "supervisor";
   const rows = useMemo(() => history.data ?? [], [history.data]);
-  const wageRows = useMemo(
-    () => wages.data.filter((row) => row.period_start === rows[0]?.period_start),
-    [rows, wages.data],
+  const expenseByPeriod = useMemo(
+    () => new Map((expenses.data ?? []).map((row) => [row.period_start, row.expense_total])),
+    [expenses.data],
   );
-  const totals = useMemo(
+  const latestRow = rows[0] ?? null;
+  const summary = useMemo(() => {
+    if (!latestRow) return null;
+    const captainCompensation = Math.max(0, latestRow.settlement_total);
+    const captainWages = Math.max(0, latestRow.captain_net_total - captainCompensation);
+    const expenseTotal = expenseByPeriod.get(latestRow.period_start) ?? 0;
+    return {
+      captainCompensation,
+      captainTotal: latestRow.captain_net_total,
+      captainWages,
+      companyTotal: latestRow.company_total,
+      expenseTotal,
+      grossTotal: latestRow.gross_total,
+      netCompanyTotal: latestRow.company_total - expenseTotal,
+      orderCount: latestRow.order_count,
+      periodEnd: latestRow.period_end,
+      periodStart: latestRow.period_start,
+    };
+  }, [expenseByPeriod, latestRow]);
+  const chartSlices = useMemo<FinanceBreakdownSlice[]>(
     () =>
-      rows.reduce(
-        (sum, row) => ({
-          gross: sum.gross + row.gross_total,
-          company: sum.company + row.company_total,
-          captain: sum.captain + row.captain_net_total,
-          orders: sum.orders + row.order_count,
-        }),
-        { gross: 0, company: 0, captain: 0, orders: 0 },
-      ),
-    [rows],
+      summary
+        ? [
+            {
+              label: "أجور الكباتن العادية",
+              value: summary.captainWages,
+              color: "#1677C8",
+            },
+            {
+              label: "تعويضات الكباتن",
+              value: summary.captainCompensation,
+              color: "#8B5CF6",
+            },
+            {
+              label: "مصاريف المكتب",
+              value: summary.expenseTotal,
+              color: "#F59E0B",
+            },
+            {
+              label: "نتيجة الشركة قبل المصاريف",
+              value: summary.companyTotal,
+              color: summary.companyTotal >= 0 ? "#059669" : "#E05252",
+            },
+          ]
+        : [],
+    [summary],
   );
+  const wageRows = useMemo(
+    () => wages.data.filter((row) => row.period_start === latestRow?.period_start),
+    [latestRow?.period_start, wages.data],
+  );
+
+
   const retry = () => {
     void history.refetch();
     void wages.refetch();
+    void expenses.refetch();
   };
 
   if (!isBackOffice) {
@@ -117,7 +168,7 @@ export default function AdminReportsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={history.isRefetching || wages.isRefetching}
+            refreshing={history.isRefetching || wages.isRefetching || expenses.isRefetching}
             onRefresh={retry}
             tintColor={BLUE}
           />
@@ -139,14 +190,19 @@ export default function AdminReportsScreen() {
             </Text>
           </View>
           <Text style={styles.heroTitle}>تقرير المكتب</Text>
-          <Text style={styles.heroSubtitle}>تابع أجور الطلبات، حصة الكباتن، وصافي المكتب.</Text>
+          <Text style={styles.heroSubtitle}>
+            تابع نتيجة الشركة، أجور وتعويضات الكباتن، ومصاريف المكتب.
+          </Text>
           <View style={styles.periodPicker}>
             {periods.map((item) => {
               const selected = period === item.id;
               return (
                 <Pressable
                   key={item.id}
-                  onPress={() => setPeriod(item.id)}
+                  onPress={() => {
+                    setPeriod(item.id);
+                    wages.changePeriod(item.id);
+                  }}
                   style={({ pressed }) => [
                     styles.periodChoice,
                     selected && styles.periodChoiceSelected,
@@ -173,66 +229,81 @@ export default function AdminReportsScreen() {
           <View style={styles.pdfReportText}>
             <Text style={styles.pdfReportTitle}>طباعة تقارير PDF</Text>
             <Text style={styles.pdfReportSubtitle}>
-              كشف كابتن محدد أو ملخص الشركة
+              كشف كابتن محدد أو تقرير مالي للشركة
             </Text>
           </View>
           <Text style={styles.pdfReportAction}>فتح</Text>
         </Pressable>
 
-        {history.isPending || wages.isPending ? (
+        {history.isPending || wages.isPending || expenses.isPending ? (
           <LoadingState label="جارٍ تحميل التقارير..." />
-        ) : history.error || wages.error ? (
+        ) : history.error || wages.error || expenses.error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>
               {history.error instanceof Error
                 ? history.error.message
                 : wages.error instanceof Error
                   ? wages.error.message
-                  : "تعذر تحميل التقارير."}
+                  : expenses.error instanceof Error
+                    ? expenses.error.message
+                    : "تعذر تحميل التقارير."}
             </Text>
             <Pressable onPress={retry} style={({ pressed }) => [styles.retryButton, pressed && styles.smallPressed]}>
               <RefreshCw size={15} color={BLUE} />
               <Text style={styles.retryText}>إعادة المحاولة</Text>
             </Pressable>
           </View>
-        ) : rows.length === 0 ? (
+        ) : !summary ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>لا توجد بيانات مالية لهذه الفترة.</Text>
           </View>
         ) : (
           <>
-            <SectionHeading overline="لقطة مالية" title="حركة الفترة" />
+            <SectionHeading overline="لقطة مالية" title="آخر فترة مسجلة" />
+            <View style={styles.periodSummaryCard}>
+              <Text style={styles.periodSummaryTitle}>
+                {period === "daily"
+                  ? date(summary.periodStart)
+                  : `من ${date(summary.periodStart)} إلى ${date(summary.periodEnd)}`}
+              </Text>
+              <Text style={styles.periodSummarySubtitle}>
+                {summary.orderCount} طلبات نهائية · القيمة المرجعية {money(summary.grossTotal)}
+              </Text>
+            </View>
             <View style={styles.metricGrid}>
               <MetricCard
                 icon={<Building2 size={19} color="#FFFFFF" />}
-                label="صافي المكتب"
-                value={money(totals.company)}
+                label="صافي الشركة"
+                value={money(summary.netCompanyTotal)}
                 highlighted
               />
               <MetricCard
-                icon={<WalletCards size={19} color="#126FA7" />}
-                label="إجمالي الأجور"
-                value={money(totals.gross)}
+                icon={<TrendingUp size={19} color={summary.companyTotal >= 0 ? "#08755C" : "#B94040"} />}
+                label="نتيجة الشركة قبل المصاريف"
+                value={money(summary.companyTotal)}
+                tone={summary.companyTotal >= 0 ? "green" : "red"}
               />
               <MetricCard
-                icon={<Truck size={19} color="#0A8A67" />}
-                label="حصة الكباتن"
-                value={money(totals.captain)}
-                tone="green"
+                icon={<Truck size={19} color="#126FA7" />}
+                label="إجمالي أجر الكباتن"
+                value={money(summary.captainTotal)}
               />
               <MetricCard
-                icon={<ClipboardList size={19} color="#126FA7" />}
-                label="طلبات الفترة"
-                value={`${totals.orders} طلب`}
+                icon={<WalletCards size={19} color="#7045C8" />}
+                label="تعويضات الكباتن"
+                value={money(summary.captainCompensation)}
+                tone="purple"
               />
             </View>
+
+            <FinancialBreakdownChart slices={chartSlices} />
 
             <SectionHeading overline="النتائج المسجلة" title="الحصيلة حسب التاريخ" />
             {rows.map((row) => (
               <View key={`${row.period_start}-${row.period_end}`} style={styles.activityCard}>
-                <View style={styles.activityAccent} />
-                <View style={styles.activityIcon}>
-                  <TrendingUp size={18} color="#287AAC" />
+                <View style={[styles.activityAccent, row.company_total < 0 && styles.activityAccentLoss]} />
+                <View style={[styles.activityIcon, row.company_total < 0 && styles.activityIconLoss]}>
+                  <TrendingUp size={18} color={row.company_total < 0 ? "#C84A4A" : "#287AAC"} />
                 </View>
                 <View style={styles.activityContent}>
                   <View style={styles.activityTop}>
@@ -245,8 +316,10 @@ export default function AdminReportsScreen() {
                       <Text style={styles.ordersBadgeText}>{row.order_count} طلبات</Text>
                     </View>
                   </View>
-                  <Text style={styles.activitySubtitle}>إجمالي الأجور {money(row.gross_total)}</Text>
-                  <Text style={styles.activityProfit}>صافي المكتب {money(row.company_total)}</Text>
+                  <Text style={styles.activitySubtitle}>القيمة المرجعية {money(row.gross_total)}</Text>
+                  <Text style={[styles.activityProfit, row.company_total < 0 && styles.activityLoss]}>
+                    نتيجة الشركة قبل المصاريف {money(row.company_total)}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -265,7 +338,9 @@ export default function AdminReportsScreen() {
                         <Text style={styles.activityTitle}>{row.captain_name}</Text>
                         <Text style={styles.captainAmount}>{money(row.captain_net_total)}</Text>
                       </View>
-                      <Text style={styles.activitySubtitle}>{row.order_count} طلبات مكتملة ضمن الفترة</Text>
+                      <Text style={styles.activitySubtitle}>
+                        {row.order_count} طلبات نهائية · تعويضات {money(row.settlement_total)}
+                      </Text>
                     </View>
                   </View>
                 ))}
@@ -280,6 +355,95 @@ export default function AdminReportsScreen() {
         visible={showPdfReports}
       />
     </ScreenContainer>
+  );
+}
+
+function FinancialBreakdownChart({ slices }: { slices: FinanceBreakdownSlice[] }) {
+  const visibleSlices = slices
+    .filter((slice) => Number.isFinite(slice.value) && Math.abs(slice.value) > 0.005)
+    .map((slice) => ({ ...slice, magnitude: Math.abs(slice.value) }));
+  const total = visibleSlices.reduce((sum, slice) => sum + slice.magnitude, 0);
+  const chartSegments = visibleSlices.reduce<
+    { slice: (typeof visibleSlices)[number]; length: number; offset: number }[]
+  >((segments, slice) => {
+    const length = (slice.magnitude / total) * CHART_CIRCUMFERENCE;
+    const previous = segments.at(-1);
+    return [
+      ...segments,
+      {
+        slice,
+        length,
+        offset: previous ? previous.offset + previous.length : 0,
+      },
+    ];
+  }, []);
+
+  return (
+    <View style={styles.breakdownCard}>
+      <View style={styles.breakdownHeader}>
+        <View>
+          <Text style={styles.breakdownTitle}>دائرة توزيع البنود</Text>
+          <Text style={styles.breakdownSubtitle}>حجم كل بند ضمن آخر فترة مسجلة</Text>
+        </View>
+        <View style={styles.breakdownBadge}>
+          <Text style={styles.breakdownBadgeText}>مالي</Text>
+        </View>
+      </View>
+      {!visibleSlices.length || total <= 0 ? (
+        <Text style={styles.breakdownEmpty}>لا توجد مبالغ مالية قابلة للعرض ضمن هذه الفترة.</Text>
+      ) : (
+        <>
+          <View style={styles.chartAndLegend}>
+            <View style={styles.donutWrap}>
+              <Svg height={144} viewBox="0 0 144 144" width={144}>
+                <Circle
+                  cx={CHART_CENTER}
+                  cy={CHART_CENTER}
+                  fill="none"
+                  r={CHART_RADIUS}
+                  stroke="#E8F0F5"
+                  strokeWidth={18}
+                />
+                {chartSegments.map(({ slice, length, offset }) => (
+                  <Circle
+                    key={slice.label}
+                    cx={CHART_CENTER}
+                    cy={CHART_CENTER}
+                    fill="none"
+                    r={CHART_RADIUS}
+                    rotation={-90}
+                    origin={`${CHART_CENTER}, ${CHART_CENTER}`}
+                    stroke={slice.color}
+                    strokeDasharray={`${length} ${CHART_CIRCUMFERENCE}`}
+                    strokeDashoffset={-offset}
+                    strokeLinecap="butt"
+                    strokeWidth={18}
+                  />
+                ))}
+              </Svg>
+              <View pointerEvents="none" style={styles.donutCenter}>
+                <Text style={styles.donutCenterTitle}>توزيع</Text>
+                <Text style={styles.donutCenterSubtitle}>الفترة</Text>
+              </View>
+            </View>
+            <View style={styles.legend}>
+              {visibleSlices.map((slice) => (
+                <View key={slice.label} style={styles.legendRow}>
+                  <View style={[styles.legendDot, { backgroundColor: slice.color }]} />
+                  <View style={styles.legendText}>
+                    <Text numberOfLines={1} style={styles.legendLabel}>{slice.label}</Text>
+                    <Text style={styles.legendValue}>{money(slice.value)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+          <Text style={styles.breakdownNote}>
+            الدائرة للمقارنة البصرية بين البنود؛ صافي الشركة هو نتيجة الشركة بعد حسم مصاريف المكتب.
+          </Text>
+        </>
+      )}
+    </View>
   );
 }
 
@@ -305,9 +469,17 @@ function MetricCard({
   label: string;
   value: string;
   highlighted?: boolean;
-  tone?: "blue" | "green";
+  tone?: "blue" | "green" | "purple" | "red";
 }) {
-  const iconBackground = highlighted ? "rgba(255,255,255,0.17)" : tone === "green" ? "#E8F8F2" : "#EAF5FC";
+  const iconBackground = highlighted
+    ? "rgba(255,255,255,0.17)"
+    : tone === "green"
+      ? "#E8F8F2"
+      : tone === "purple"
+        ? "#F3EEFF"
+        : tone === "red"
+          ? "#FFF0F0"
+          : "#EAF5FC";
   return (
     <View style={[styles.metricCard, highlighted && styles.metricCardHighlight]}>
       <View style={styles.metricTop}>
@@ -355,25 +527,50 @@ const styles = StyleSheet.create({
   sectionHeading: { alignItems: "flex-end", flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 11, marginTop: 6 },
   overline: { color: "#7B9AAC", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   sectionTitle: { color: "#163E5C", fontSize: 17, fontWeight: "800", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  metricGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, justifyContent: "space-between", marginBottom: 17 },
+  periodSummaryCard: { backgroundColor: "#FFFFFF", borderColor: "#E2EDF5", borderRadius: 15, borderWidth: 1, marginBottom: 9, paddingHorizontal: 12, paddingVertical: 10 },
+  periodSummaryTitle: { color: "#214B67", fontSize: 11, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  periodSummarySubtitle: { color: "#6F8EA3", fontSize: 9, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
+  metricGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, justifyContent: "space-between", marginBottom: 14 },
   metricCard: { backgroundColor: "#FFFFFF", borderColor: "#E6EEF4", borderRadius: 16, borderWidth: 1, minHeight: 90, overflow: "hidden", padding: 11, shadowColor: "#113D5B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.055, shadowRadius: 9, width: "48.5%" },
   metricCardHighlight: { backgroundColor: "#0878D1", borderColor: "#0878D1", shadowColor: "#0878D1", shadowOpacity: 0.2, shadowRadius: 13 },
   metricTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
   metricIcon: { alignItems: "center", borderRadius: 10, height: 29, justifyContent: "center", width: 29 },
-  metricValue: { color: "#164C70", fontSize: 16, fontWeight: "800", marginTop: 8, textAlign: "right", writingDirection: "rtl" },
+  metricValue: { color: "#164C70", fontSize: 15, fontWeight: "800", marginTop: 8, textAlign: "right", writingDirection: "rtl" },
   metricValueHighlight: { color: "#FFFFFF" },
-  metricLabel: { color: "#6A879A", fontSize: 10, fontWeight: "700", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  metricLabel: { color: "#6A879A", fontSize: 9, lineHeight: 15, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   metricLabelHighlight: { color: "rgba(255,255,255,0.82)" },
+  breakdownCard: { backgroundColor: "#FFFFFF", borderColor: "#DCEAF3", borderRadius: 20, borderWidth: 1, marginBottom: 18, padding: 14, shadowColor: "#113D5B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.055, shadowRadius: 9 },
+  breakdownHeader: { alignItems: "flex-start", flexDirection: "row-reverse", justifyContent: "space-between" },
+  breakdownTitle: { color: "#173F5C", fontSize: 14, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
+  breakdownSubtitle: { color: "#7592A5", fontSize: 9, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  breakdownBadge: { backgroundColor: "#EAF5FC", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
+  breakdownBadgeText: { color: "#1677C8", fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
+  chartAndLegend: { alignItems: "center", flexDirection: "row-reverse", gap: 12, marginTop: 12 },
+  donutWrap: { alignItems: "center", height: 144, justifyContent: "center", width: 144 },
+  donutCenter: { alignItems: "center", justifyContent: "center", position: "absolute" },
+  donutCenterTitle: { color: "#214B67", fontSize: 12, fontWeight: "800", writingDirection: "rtl" },
+  donutCenterSubtitle: { color: "#7390A3", fontSize: 9, marginTop: -2, writingDirection: "rtl" },
+  legend: { flex: 1, gap: 1 },
+  legendRow: { alignItems: "center", borderBottomColor: "#ECF2F6", borderBottomWidth: 1, flexDirection: "row-reverse", gap: 7, minHeight: 34 },
+  legendDot: { borderRadius: 5, height: 10, width: 10 },
+  legendText: { flex: 1 },
+  legendLabel: { color: "#48687E", fontSize: 9, fontWeight: "700", textAlign: "right", writingDirection: "rtl" },
+  legendValue: { color: "#183F5A", fontSize: 10, fontWeight: "800", marginTop: -1, textAlign: "right", writingDirection: "rtl" },
+  breakdownNote: { color: "#708EA2", fontSize: 9, lineHeight: 15, marginTop: 10, textAlign: "right", writingDirection: "rtl" },
+  breakdownEmpty: { color: "#75818E", fontSize: 11, paddingVertical: 18, textAlign: "center", writingDirection: "rtl" },
   activityCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E4EDF3", borderRadius: 18, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 9, minHeight: 86, overflow: "hidden", paddingHorizontal: 12, paddingVertical: 11, shadowColor: "#113D5B", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.045, shadowRadius: 8 },
   activityAccent: { backgroundColor: "#4F90BB", bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
+  activityAccentLoss: { backgroundColor: "#D65A5A" },
   captainAccent: { backgroundColor: "#16B384" },
   activityIcon: { alignItems: "center", backgroundColor: "#EAF5FC", borderRadius: 11, height: 35, justifyContent: "center", width: 35 },
+  activityIconLoss: { backgroundColor: "#FFF0F0" },
   captainIcon: { backgroundColor: "#E8F8F2" },
   activityContent: { flex: 1 },
   activityTop: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between" },
   activityTitle: { color: "#193F5B", flex: 1, fontSize: 12, fontWeight: "800", marginLeft: 8, textAlign: "right", writingDirection: "rtl" },
   activitySubtitle: { color: "#7894A7", fontSize: 10, marginTop: 4, textAlign: "right", writingDirection: "rtl" },
   activityProfit: { color: "#08755C", fontSize: 10, fontWeight: "800", marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  activityLoss: { color: "#B94040" },
   ordersBadge: { backgroundColor: "#EAF4FF", borderRadius: 9, paddingHorizontal: 7, paddingVertical: 3 },
   ordersBadgeText: { color: "#287AAC", fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
   captainAmount: { color: "#08755C", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
