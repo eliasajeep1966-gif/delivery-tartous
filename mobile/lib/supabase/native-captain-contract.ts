@@ -166,7 +166,7 @@ export const nativeCaptainContract = {
       };
     },
     async orders(captainId: string): Promise<CaptainOrder[]> {
-      const result = await client().from("orders").select("*").eq("assigned_captain_id", captainId).order("created_at", { ascending: false }).order("id", { ascending: false });
+      const result = await client().from("orders").select("*").eq("assigned_captain_id", captainId).order("updated_at", { ascending: false }).order("id", { ascending: false });
       return unwrap(result as Result<CaptainOrder[]>, "تعذر تحميل سجل طلباتك.");
     },
     async ordersPage(
@@ -179,7 +179,7 @@ export const nativeCaptainContract = {
         .from("orders")
         .select("*", { count: "exact" })
         .eq("assigned_captain_id", captainId)
-        .order("created_at", { ascending: false })
+        .order("updated_at", { ascending: false })
         .order("id", { ascending: false })
         .range(safeOffset, safeOffset + safeLimit - 1);
 

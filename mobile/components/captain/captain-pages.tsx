@@ -85,7 +85,7 @@ const orderStatusTone: Record<CaptainOrderStatus, { background: string; border: 
   received: { background: "#E0F2FE", border: "#7DD3FC", color: "#0369A1" },
   in_delivery: { background: "#EDE9FE", border: "#C4B5FD", color: "#6D28D9" },
   completed: { background: "#DCFCE7", border: "#86EFAC", color: "#15803D" },
-  cancelled: { background: "#F3F4F6", border: "#D1D5DB", color: "#4B5563" },
+  cancelled: { background: "#FEE2E2", border: "#FCA5A5", color: "#B91C1C" },
   false_order: { background: "#FEE2E2", border: "#FCA5A5", color: "#B91C1C" },
   reversed: { background: "#FCE7F3", border: "#F9A8D4", color: "#BE185D" },
 };
