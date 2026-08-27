@@ -1,6 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Tabs } from "expo-router";
+import { useEffect } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -22,12 +23,31 @@ function DeliveryTabBackdrop() {
 export default function TabLayout() {
   const colors = useColors();
   const { profile } = useDeliveryAuth();
+  const role = profile?.role;
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (!role) return;
+
+    const prewarmTimer = setTimeout(() => {
+      if (role === "captain") {
+        require("@/components/captain/captain-pages");
+        return;
+      }
+
+      require("@/components/admin/admin-orders");
+      require("@/components/admin/admin-wages");
+      require("@/components/admin/admin-captains");
+      require("@/components/admin/admin-more");
+    }, 600);
+
+    return () => clearTimeout(prewarmTimer);
+  }, [role]);
 
   // Never render the admin tab layout as a fallback while the session profile is still loading.
   if (!profile) return null;
 
-  const isCaptain = profile.role === "captain";
+  const isCaptain = role === "captain";
   const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
   const tabBarHeight = 64 + bottomPadding;
 
@@ -48,6 +68,8 @@ export default function TabLayout() {
             paddingBottom: bottomPadding,
           },
         ],
+        animation: "fade",
+        transitionSpec: { animation: "timing", config: { duration: 160 } },
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
       }}
