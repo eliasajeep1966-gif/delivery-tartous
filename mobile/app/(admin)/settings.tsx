@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
@@ -44,6 +44,8 @@ export default function OfficeSettingsScreen() {
     phone: "0933000000",
     address: "طرطوس — مركز المدينة",
   });
+  const [editingField, setEditingField] = useState<OfficeFieldKey | null>(null);
+  const [editingValue, setEditingValue] = useState("");
   const [captainShare, setCaptainShare] = useState("70");
   const [officeShare, setOfficeShare] = useState("30");
   const [exceptions, setExceptions] = useState<Exception[]>([
@@ -64,6 +66,17 @@ export default function OfficeSettingsScreen() {
     setExceptions((items) =>
       items.map((item) => (item.id === id ? { ...item, [key]: value } : item)),
     );
+
+  const saveEditedField = () => {
+    if (!editingField) return;
+    if (!editingValue.trim()) {
+      showToast({ message: "لا يمكن ترك هذا الحقل فارغاً.", tone: "error" });
+      return;
+    }
+    updateOffice(editingField, editingValue.trim());
+    setEditingField(null);
+    setEditingValue("");
+  };
 
   const save = () => {
     if (!splitIsValid) {
@@ -163,14 +176,16 @@ export default function OfficeSettingsScreen() {
         />
         <View style={styles.card}>
           {officeFields.map((field, index) => (
-            <SettingsInput
+            <OfficeInfoRow
               key={field.key}
               icon={field.icon}
               label={field.label}
               value={field.value}
-              onChangeText={(value) => updateOffice(field.key, value)}
-              keyboardType={field.keyboardType}
               divider={index < officeFields.length - 1}
+              onEdit={() => {
+                setEditingField(field.key);
+                setEditingValue(field.value);
+              }}
             />
           ))}
         </View>
@@ -296,12 +311,22 @@ export default function OfficeSettingsScreen() {
 
         <MotionPressable onPress={save} style={styles.saveButton}>
           <MaterialIcons name="save" size={20} color="#FFFFFF" />
-          <Text style={styles.saveButtonText}>حفظ الإعدادات</Text>
+          <Text style={styles.saveButtonText}>حفظ ضمن الجلسة</Text>
         </MotionPressable>
         <Text style={styles.saveHint}>
-          ستطبق التغييرات الجديدة على الطلبات التالية بعد الحفظ.
+          الحفظ الحالي مؤقت داخل هذه الجلسة فقط، حتى نربطه بالحفظ الدائم.
         </Text>
       </ScrollView>
+      <OfficeFieldEditModal
+        field={officeFields.find((field) => field.key === editingField) ?? null}
+        value={editingValue}
+        onChangeText={setEditingValue}
+        onClose={() => {
+          setEditingField(null);
+          setEditingValue("");
+        }}
+        onSave={saveEditedField}
+      />
     </ScreenContainer>
   );
 }
@@ -333,19 +358,17 @@ function SectionHeader({
   );
 }
 
-function SettingsInput({
+function OfficeInfoRow({
   icon,
   label,
   value,
-  onChangeText,
-  keyboardType = "default",
+  onEdit,
   divider,
 }: {
   icon: IconName;
   label: string;
   value: string;
-  onChangeText: (value: string) => void;
-  keyboardType?: "default" | "phone-pad";
+  onEdit: () => void;
   divider: boolean;
 }) {
   return (
@@ -355,16 +378,73 @@ function SettingsInput({
       </View>
       <View style={styles.settingsFieldCopy}>
         <Text style={styles.inputLabel}>{label}</Text>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={keyboardType}
-          placeholderTextColor="#91A4B3"
-          style={styles.cleanInput}
-          textAlign="right"
-        />
+        <Text numberOfLines={1} style={styles.fieldValue}>{value || "—"}</Text>
       </View>
+      <MotionPressable onPress={onEdit} style={styles.editFieldButton}>
+        <MaterialIcons name="edit" size={15} color={BLUE} />
+        <Text style={styles.editFieldButtonText}>تعديل</Text>
+      </MotionPressable>
     </View>
+  );
+}
+
+function OfficeFieldEditModal({
+  field,
+  value,
+  onChangeText,
+  onClose,
+  onSave,
+}: {
+  field: {
+    key: OfficeFieldKey;
+    label: string;
+    value: string;
+    icon: IconName;
+    keyboardType?: "default" | "phone-pad";
+  } | null;
+  value: string;
+  onChangeText: (value: string) => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal
+      visible={Boolean(field)}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.editModalOverlay}>
+        <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View style={styles.editModalCard}>
+          <View style={styles.editModalIcon}>
+            <MaterialIcons name={field?.icon ?? "edit"} size={23} color={BLUE} />
+          </View>
+          <Text style={styles.editModalTitle}>تعديل {field?.label}</Text>
+          <Text style={styles.editModalDescription}>
+            عدّل القيمة ثم اضغط حفظ التعديل.
+          </Text>
+          <TextInput
+            autoFocus
+            value={value}
+            onChangeText={onChangeText}
+            keyboardType={field?.keyboardType ?? "default"}
+            placeholderTextColor="#91A4B3"
+            style={styles.editModalInput}
+            textAlign="right"
+          />
+          <View style={styles.editModalActions}>
+            <MotionPressable onPress={onClose} style={styles.editModalCancel}>
+              <Text style={styles.editModalCancelText}>تراجع</Text>
+            </MotionPressable>
+            <MotionPressable onPress={onSave} style={styles.editModalSave}>
+              <MaterialIcons name="check" size={18} color="#FFFFFF" />
+              <Text style={styles.editModalSaveText}>حفظ التعديل</Text>
+            </MotionPressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -460,7 +540,20 @@ const styles = StyleSheet.create({
   fieldIcon: { alignItems: "center", backgroundColor: "#F2F8FC", borderRadius: 11, height: 38, justifyContent: "center", width: 38 },
   settingsFieldCopy: { flex: 1 },
   inputLabel: { color: "#547086", fontFamily: "Cairo_700Bold", fontSize: 10, textAlign: "right", writingDirection: "rtl" },
-  cleanInput: { color: DEEP_BLUE, fontFamily: "Cairo_400Regular", fontSize: 12, height: 29, marginTop: 1, padding: 0 },
+  fieldValue: { color: DEEP_BLUE, fontFamily: "Cairo_400Regular", fontSize: 12, marginTop: 1, textAlign: "right", writingDirection: "rtl" },
+  editFieldButton: { alignItems: "center", backgroundColor: "#EAF4FF", borderRadius: 9, flexDirection: "row-reverse", gap: 3, justifyContent: "center", minHeight: 32, paddingHorizontal: 8 },
+  editFieldButtonText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
+  editModalOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", backgroundColor: "rgba(20, 30, 38, 0.42)", justifyContent: "center", padding: 24 },
+  editModalCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#CDE1F0", borderRadius: 20, borderWidth: 1, maxWidth: 400, padding: 22, width: "100%" },
+  editModalIcon: { alignItems: "center", backgroundColor: "#EAF4FF", borderRadius: 24, height: 48, justifyContent: "center", width: 48 },
+  editModalTitle: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 16, marginTop: 10, textAlign: "center", writingDirection: "rtl" },
+  editModalDescription: { color: "#647782", fontFamily: "Cairo_400Regular", fontSize: 11, marginTop: 4, textAlign: "center", writingDirection: "rtl" },
+  editModalInput: { alignSelf: "stretch", backgroundColor: "#F8FBFD", borderColor: "#C8DCEB", borderRadius: 11, borderWidth: 1, color: DEEP_BLUE, fontFamily: "Cairo_400Regular", fontSize: 13, height: 46, marginTop: 16, paddingHorizontal: 11 },
+  editModalActions: { flexDirection: "row-reverse", gap: 9, marginTop: 17, width: "100%" },
+  editModalCancel: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#C9D9E7", borderRadius: 11, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 43 },
+  editModalCancelText: { color: "#536B7B", fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
+  editModalSave: { alignItems: "center", backgroundColor: BLUE, borderRadius: 11, flex: 1, flexDirection: "row-reverse", gap: 4, justifyContent: "center", minHeight: 43 },
+  editModalSaveText: { color: "#FFFFFF", fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
   shareRow: { flexDirection: "row-reverse", gap: 10, padding: 12 },
   shareInput: { borderRadius: 14, flex: 1, padding: 12 },
   captainShare: { backgroundColor: "#ECFDF5", borderColor: "#B7E7D6", borderWidth: 1 },
