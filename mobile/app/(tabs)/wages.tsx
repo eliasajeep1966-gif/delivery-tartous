@@ -1,9 +1,15 @@
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
+import {
+  TabContentSkeleton,
+  useDeferredTabContent,
+} from "@/hooks/use-deferred-tab-content";
 
 export default function WagesScreen() {
   const { profile } = useDeliveryAuth();
+  const isReady = useDeferredTabContent(Boolean(profile));
 
   if (!profile) return null;
+  if (!isReady) return <TabContentSkeleton />;
 
   if (profile.role === "captain") {
     const { CaptainWages } =
