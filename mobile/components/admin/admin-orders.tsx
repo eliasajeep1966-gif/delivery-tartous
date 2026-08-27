@@ -2,7 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
-import { type ComponentProps, useEffect, useMemo, useState } from "react";
+import { type ComponentProps, useMemo, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -19,6 +19,10 @@ import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
+import {
+  useRefreshOnScreenResume,
+  useScreenLiveUpdates,
+} from "@/hooks/use-screen-live-updates";
 import {
   useAdminOrderDetails,
   useAvailableCaptains,
@@ -38,8 +42,6 @@ import {
   notifyCaptainOfOrder,
   notifyCaptainOfOrderCancellation,
 } from "@/lib/notifications";
-
-import { nativeAdminContract } from "@/lib/supabase/native-admin-contract";
 
 function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
   const flattened = StyleSheet.flatten(style);
@@ -149,6 +151,8 @@ export function AdminOrders() {
   const { showToast } = useAppToast();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
+  const isTabFocused = useScreenLiveUpdates();
+  const isLiveUpdatesActive = isBackOffice && isTabFocused;
   const [filter, setFilter] = useState<AdminOrdersFilter>("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<AdminOrderListItem | null>(
@@ -161,31 +165,27 @@ export function AdminOrders() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
-  const orders = useAdminOrders(filter, isBackOffice);
+  const handleLiveOrderChange = () => {
+    void queryClient.invalidateQueries({ queryKey: ["admin-home"] });
+    if (selectedOrder) {
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-order-details", selectedOrder.id],
+      });
+    }
+  };
+  const orders = useAdminOrders(
+    filter,
+    isLiveUpdatesActive,
+    handleLiveOrderChange,
+  );
   const details = useAdminOrderDetails(selectedOrder?.id ?? null);
   const captains = useAvailableCaptains(
-    Boolean(selectedOrder && assignmentOpen),
+    Boolean(selectedOrder && assignmentOpen) && isLiveUpdatesActive,
   );
-
-  useEffect(() => {
-    if (!isBackOffice) return;
-    const unsubscribe = nativeAdminContract.realtime.subscribeOrders(() => {
-      void queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      void queryClient.invalidateQueries({ queryKey: ["admin-home"] });
-      if (selectedOrder)
-        void queryClient.invalidateQueries({
-          queryKey: ["admin-order-details", selectedOrder.id],
-        });
-    });
-    const polling = setInterval(
-      () => void queryClient.invalidateQueries({ queryKey: ["admin-orders"] }),
-      15_000,
-    );
-    return () => {
-      clearInterval(polling);
-      unsubscribe();
-    };
-  }, [isBackOffice, queryClient, selectedOrder]);
+  useRefreshOnScreenResume(isLiveUpdatesActive, () => {
+    void orders.refetch();
+    handleLiveOrderChange();
+  });
 
   const visibleOrders = useMemo(() => {
     const needle = search.trim().toLowerCase();

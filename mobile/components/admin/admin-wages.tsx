@@ -32,6 +32,10 @@ import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
+  useRefreshOnScreenResume,
+  useScreenLiveUpdates,
+} from "@/hooks/use-screen-live-updates";
+import {
   nativeAdminFinanceContract,
   type NativeCaptainWagePeriodRow,
   type NativeFinancePeriod,
@@ -197,7 +201,9 @@ export function AdminWages() {
   const router = useRouter();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
-  const wagePeriods = useNativeAdminWagePeriods();
+  const isTabFocused = useScreenLiveUpdates();
+  const isLiveUpdatesActive = isBackOffice && isTabFocused;
+  const wagePeriods = useNativeAdminWagePeriods(isLiveUpdatesActive);
   const [dashboardFilter, setDashboardFilter] =
     useState<WageDashboardFilter>("daily");
   const [selectedPeriodStart, setSelectedPeriodStart] = useState("");
@@ -206,18 +212,30 @@ export function AdminWages() {
   const [selectedCaptainId, setSelectedCaptainId] = useState<string | null>(
     null,
   );
-  const details = useNativeCaptainWageDetails(selectedCaptainId);
+  const details = useNativeCaptainWageDetails(
+    selectedCaptainId,
+    isLiveUpdatesActive,
+  );
   const expensePeriod: NativeFinancePeriod =
     dashboardFilter === "custom" ? "daily" : dashboardFilter;
-  const officeExpenses = useNativeOfficeExpensePeriods(expensePeriod);
-  const companyProfitHistory = useNativeCompanyProfitHistory(expensePeriod);
-  const dailyProductivityHistory = useNativeCompanyProfitHistory("daily");
+  const officeExpenses = useNativeOfficeExpensePeriods(
+    expensePeriod,
+    isLiveUpdatesActive,
+  );
+  const companyProfitHistory = useNativeCompanyProfitHistory(
+    expensePeriod,
+    isLiveUpdatesActive,
+  );
+  const dailyProductivityHistory = useNativeCompanyProfitHistory(
+    "daily",
+    isLiveUpdatesActive,
+  );
   const dataOpacity = useSharedValue(1);
   const profitScale = useSharedValue(1.1);
   const profitTranslateY = useSharedValue(-14);
   const customDateKey = damascusDateKey(customDate);
   const customDateRows = useQuery({
-    enabled: dashboardFilter === "custom",
+    enabled: isLiveUpdatesActive && dashboardFilter === "custom",
     queryKey: ["admin-wage-periods", "custom-date", customDateKey],
     queryFn: async () => {
       const rows =
@@ -232,6 +250,24 @@ export function AdminWages() {
     retry: 1,
     staleTime: 20_000,
   });
+  const refreshOnResume = useCallback(() => {
+    void wagePeriods.refetch();
+    if (selectedCaptainId) void details.refetch();
+    void officeExpenses.refetch();
+    void companyProfitHistory.refetch();
+    void dailyProductivityHistory.refetch();
+    if (dashboardFilter === "custom") void customDateRows.refetch();
+  }, [
+    companyProfitHistory.refetch,
+    customDateRows.refetch,
+    dailyProductivityHistory.refetch,
+    dashboardFilter,
+    details.refetch,
+    officeExpenses.refetch,
+    selectedCaptainId,
+    wagePeriods.refetch,
+  ]);
+  useRefreshOnScreenResume(isLiveUpdatesActive, refreshOnResume);
 
   const periodRows = useMemo(() => wagePeriods.data ?? [], [wagePeriods.data]);
   const activeRows = useMemo(

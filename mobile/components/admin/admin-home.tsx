@@ -34,6 +34,10 @@ import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
+  useRefreshOnScreenResume,
+  useScreenLiveUpdates,
+} from "@/hooks/use-screen-live-updates";
+import {
   type AdminHomeActivityWithTiming,
   type AdminHomeMetric,
   type AdminOrderStatus,
@@ -123,7 +127,9 @@ export function AdminHome() {
   const { playSound } = useAppSound();
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
-  const home = useAdminHome(isBackOffice);
+  const isTabFocused = useScreenLiveUpdates();
+  const isLiveUpdatesActive = isBackOffice && isTabFocused;
+  const home = useAdminHome(isLiveUpdatesActive);
   const { data: snapshot, refetch } = home;
   const [createOpen, setCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -142,15 +148,17 @@ export function AdminHome() {
   }, [refetch]);
 
   useRealtimeOrders({
-    enabled: isBackOffice,
+    enabled: isLiveUpdatesActive,
     onOrder: scheduleRealtimeRefresh,
     onCaptain: scheduleRealtimeRefresh,
     onProfile: scheduleRealtimeRefresh,
     onActivity: scheduleRealtimeRefresh,
   });
 
+  useRefreshOnScreenResume(isLiveUpdatesActive, scheduleRealtimeRefresh);
+
   useEffect(() => {
-    if (!isBackOffice) return;
+    if (!isLiveUpdatesActive) return;
     const fallbackTimer = setInterval(() => {
       if (AppState.currentState === "active") void refetch();
     }, 60_000);
@@ -165,7 +173,7 @@ export function AdminHome() {
         realtimeRefreshTimer.current = null;
       }
     };
-  }, [isBackOffice, refetch, scheduleRealtimeRefresh]);
+  }, [isLiveUpdatesActive, refetch, scheduleRealtimeRefresh]);
 
   const createLedProgress = useSharedValue(0);
   const createLedWidth = useSharedValue(0);

@@ -74,7 +74,7 @@ async function enrichCaptainOrdersWithDeliveryTiming(
   });
 }
 
-export function useNativeCaptainDashboard() {
+export function useNativeCaptainDashboard(enabled = true) {
   const { profile, session } = useDeliveryAuth();
   const captainId = session?.user.id ?? profile?.id ?? null;
   const [metrics, setMetrics] = useState<CaptainHomeMetrics | null>(null);
@@ -91,6 +91,7 @@ export function useNativeCaptainDashboard() {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [orderSaving, setOrderSaving] = useState(false);
   const mounted = useRef(true);
+  const hasLoaded = useRef(false);
   const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -166,8 +167,20 @@ export function useNativeCaptainDashboard() {
 
   useEffect(() => {
     mounted.current = true;
+    if (!enabled) {
+      return () => {
+        mounted.current = false;
+        reloadVersion.current += 1;
+        if (realtimeReloadTimer.current !== null) {
+          clearTimeout(realtimeReloadTimer.current);
+          realtimeReloadTimer.current = null;
+        }
+      };
+    }
     const initialLoadTimer = setTimeout(() => {
-      void reload();
+      const silent = hasLoaded.current;
+      hasLoaded.current = true;
+      void reload(silent);
     }, 0);
     if (!captainId) {
       return () => {
@@ -188,6 +201,7 @@ export function useNativeCaptainDashboard() {
 
     return () => {
       mounted.current = false;
+      reloadVersion.current += 1;
       clearTimeout(initialLoadTimer);
       clearInterval(refreshTimer);
       appStateSubscription.remove();
@@ -196,10 +210,9 @@ export function useNativeCaptainDashboard() {
         realtimeReloadTimer.current = null;
       }
     };
-  }, [captainId, reload]);
-
+  }, [captainId, enabled, reload]);
   useRealtimeOrders({
-    enabled: Boolean(captainId),
+    enabled: Boolean(captainId) && enabled,
     captainId,
     onOrder: scheduleRealtimeReload,
     onCaptain: (payload) => {
@@ -340,7 +353,7 @@ export function useNativeCaptainDashboard() {
 
 export const CAPTAIN_ORDERS_PAGE_SIZE = 10;
 
-export function useNativeCaptainOrders() {
+export function useNativeCaptainOrders(enabled = true) {
   const { profile, session } = useDeliveryAuth();
   const captainId = session?.user.id ?? profile?.id ?? null;
   const [page, setPage] = useState(0);
@@ -350,6 +363,7 @@ export function useNativeCaptainOrders() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const hasLoaded = useRef(false);
   const reloadVersion = useRef(0);
   const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -428,8 +442,20 @@ export function useNativeCaptainOrders() {
 
   useEffect(() => {
     mounted.current = true;
+    if (!enabled) {
+      return () => {
+        mounted.current = false;
+        reloadVersion.current += 1;
+        if (realtimeReloadTimer.current !== null) {
+          clearTimeout(realtimeReloadTimer.current);
+          realtimeReloadTimer.current = null;
+        }
+      };
+    }
     const initialLoadTimer = setTimeout(() => {
-      void reload();
+      const silent = hasLoaded.current;
+      hasLoaded.current = true;
+      void reload(silent);
     }, 0);
     return () => {
       mounted.current = false;
@@ -440,10 +466,9 @@ export function useNativeCaptainOrders() {
         realtimeReloadTimer.current = null;
       }
     };
-  }, [reload]);
-
+  }, [enabled, reload]);
   useRealtimeOrders({
-    enabled: Boolean(captainId),
+    enabled: Boolean(captainId) && enabled,
     captainId,
     onOrder: scheduleRealtimeReload,
   });

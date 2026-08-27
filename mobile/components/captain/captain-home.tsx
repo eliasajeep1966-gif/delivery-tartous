@@ -23,6 +23,7 @@ import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppSound } from "@/contexts/app-sound-context";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
+import { useScreenLiveUpdates } from "@/hooks/use-screen-live-updates";
 import {
   type CaptainOrderWithTiming,
   useNativeCaptainDashboard,
@@ -105,7 +106,8 @@ export function CaptainHome() {
   const { profile, signOut, operation } = useDeliveryAuth();
   const { showToast } = useAppToast();
   const { playSound } = useAppSound();
-  const dashboard = useNativeCaptainDashboard();
+  const isLiveUpdatesActive = useScreenLiveUpdates();
+  const dashboard = useNativeCaptainDashboard(isLiveUpdatesActive);
   const [falseOrderOpen, setFalseOrderOpen] = useState(false);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";

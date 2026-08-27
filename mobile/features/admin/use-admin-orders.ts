@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { type AdminOrderStatus } from "@/lib/admin/admin-home-mappers";
 import {
@@ -160,15 +160,27 @@ async function loadOrdersPage(filter: AdminOrdersFilter, cursor: Cursor | null):
   };
 }
 
-export function useAdminOrders(filter: AdminOrdersFilter, enabled = true) {
+export function useAdminOrders(
+  filter: AdminOrdersFilter,
+  enabled = true,
+  onOrderChange?: () => void,
+) {
   const queryClient = useQueryClient();
+  const orderChangeCallback = useRef(onOrderChange);
+
+  useEffect(() => {
+    orderChangeCallback.current = onOrderChange;
+  }, [onOrderChange]);
   const [cursorHistory, setCursorHistory] = useState<(Cursor | null)[]>([null]);
   const [pageIndex, setPageIndex] = useState(0);
   const currentCursor = cursorHistory[pageIndex] ?? null;
 
   useRealtimeOrders({
     enabled,
-    onOrder: () => void queryClient.invalidateQueries({ queryKey: ["admin-orders"] }),
+    onOrder: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      orderChangeCallback.current?.();
+    },
   });
 
   useEffect(() => {
@@ -181,6 +193,8 @@ export function useAdminOrders(filter: AdminOrdersFilter, enabled = true) {
     queryFn: () => loadOrdersPage(filter, currentCursor),
     enabled,
     staleTime: 20_000,
+    refetchInterval: enabled ? 15_000 : false,
+    refetchIntervalInBackground: false,
     retry: 1,
   });
 

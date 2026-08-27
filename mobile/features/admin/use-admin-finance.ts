@@ -197,7 +197,7 @@ export const nativeAdminFinanceContract = {
   },
 } as const;
 
-export function useNativeAdminWagePeriods() {
+export function useNativeAdminWagePeriods(enabled = true) {
   const queryClient = useQueryClient();
   const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
   const query = useInfiniteQuery({
@@ -218,7 +218,10 @@ export function useNativeAdminWagePeriods() {
         ? { periodStart: last.period_start, captainId: last.captain_id }
         : undefined;
     },
+    enabled,
     staleTime: 20_000,
+    refetchInterval: enabled ? 15_000 : false,
+    refetchIntervalInBackground: false,
     retry: 1,
   });
 
@@ -231,19 +234,13 @@ export function useNativeAdminWagePeriods() {
     }
   }, [query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
   useEffect(() => {
+    if (!enabled) return;
     const unsubscribe = nativeAdminContract.realtime.subscribe(() => {
       void queryClient.invalidateQueries({ queryKey: ["admin-wage-periods"] });
       void queryClient.invalidateQueries({ queryKey: ["admin-wage-details"] });
     });
-    const polling = setInterval(() => {
-      void queryClient.invalidateQueries({ queryKey: ["admin-wage-periods"] });
-      void queryClient.invalidateQueries({ queryKey: ["admin-wage-details"] });
-    }, 15_000);
-    return () => {
-      clearInterval(polling);
-      unsubscribe();
-    };
-  }, [queryClient]);
+    return unsubscribe;
+  }, [enabled, queryClient]);
   return {
     ...query,
     data: query.data?.pages.flat() ?? [],
@@ -254,11 +251,15 @@ export function useNativeAdminWagePeriods() {
   };
 }
 
-export function useNativeCompanyProfitHistory(period: NativeFinancePeriod) {
+export function useNativeCompanyProfitHistory(
+  period: NativeFinancePeriod,
+  enabled = true,
+) {
   return useQuery({
     queryKey: ["admin-company-profit-history", period],
     queryFn: () =>
       nativeAdminFinanceContract.reads.companyProfitPeriodHistory({ period }),
+    enabled,
     staleTime: 20_000,
     retry: 1,
   });
@@ -324,12 +325,15 @@ function nextDateKey(value: string) {
     .slice(0, 10);
 }
 
-export function useNativeCaptainWageDetails(captainId: string | null) {
+export function useNativeCaptainWageDetails(
+  captainId: string | null,
+  enabled = true,
+) {
   return useQuery({
     queryKey: ["admin-wage-details", captainId],
     queryFn: () =>
       nativeAdminFinanceContract.reads.captainWageDetails(captainId ?? ""),
-    enabled: Boolean(captainId),
+    enabled: Boolean(captainId) && enabled,
     staleTime: 20_000,
     retry: 1,
   });
@@ -358,7 +362,10 @@ function damascusDateKey(value: Date) {
   return `${pick("year")}-${pick("month")}-${pick("day")}`;
 }
 
-export function useNativeAdminCaptainWageDetailPage(captainId: string | null) {
+export function useNativeAdminCaptainWageDetailPage(
+  captainId: string | null,
+  enabled = true,
+) {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<CaptainWageDetailFilter>("daily");
   const [customDate, setCustomDate] = useState(() => damascusDateKey(new Date()));
@@ -380,19 +387,20 @@ export function useNativeAdminCaptainWageDetailPage(captainId: string | null) {
         offset: page * CAPTAIN_WAGE_DETAIL_PAGE_SIZE,
         period,
       }),
-    enabled: Boolean(captainId),
+    enabled: Boolean(captainId) && enabled,
     staleTime: 20_000,
     retry: 1,
   });
 
   useEffect(() => {
+    if (!enabled) return;
     const unsubscribe = nativeAdminContract.realtime.subscribe(() => {
       void queryClient.invalidateQueries({
         queryKey: ["admin-captain-wage-detail-page", captainId],
       });
     });
     return unsubscribe;
-  }, [captainId, queryClient]);
+  }, [captainId, enabled, queryClient]);
 
   const data = query.data;
   const total = data?.total ?? 0;
@@ -664,21 +672,26 @@ export const nativeCompanyPdfReportContract = {
   },
 } as const;
 
-export function useNativeOfficeExpensePeriods(period: NativeFinancePeriod){
+export function useNativeOfficeExpensePeriods(
+  period: NativeFinancePeriod,
+  enabled = true,
+) {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["admin-office-expense-periods", period],
     queryFn: () => nativeOfficeExpensesContract.reads.periods(period),
+    enabled,
     staleTime: 20_000,
     retry: 1,
   });
   useEffect(() => {
+    if (!enabled) return;
     const unsubscribe = nativeAdminContract.realtime.subscribe(() => {
       void queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
       void queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
     });
     return unsubscribe;
-  }, [queryClient]);
+  }, [enabled, queryClient]);
   return query;
 }
 

@@ -17,6 +17,7 @@ import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
+import { useScreenLiveUpdates } from "@/hooks/use-screen-live-updates";
 import {
   CAPTAIN_ORDERS_PAGE_SIZE,
   useNativeCaptainOrders,
@@ -140,7 +141,8 @@ function wagePeriodRange(periodStart: string, periodEnd: string) {
 }
 
 export function CaptainOrders() {
-  const data = useNativeCaptainOrders();
+  const isLiveUpdatesActive = useScreenLiveUpdates();
+  const data = useNativeCaptainOrders(isLiveUpdatesActive);
   const firstOrderNumber = data.total
     ? data.page * CAPTAIN_ORDERS_PAGE_SIZE + 1
     : 0;
