@@ -467,6 +467,22 @@ function OrderRow({
         <View style={styles.orderTop}>
           <View style={styles.orderIdentity}>
             <Text style={styles.orderNumber}>طلب #{item.orderNumber}</Text>
+            <View style={styles.orderHeaderCaptain}>
+              <MaterialIcons
+                name="two-wheeler"
+                size={15}
+                color={item.assignedCaptainName ? "#0878D1" : "#7E95A5"}
+              />
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.orderHeaderCaptainText,
+                  !item.assignedCaptainName && styles.orderHeaderCaptainTextMuted,
+                ]}
+              >
+                {item.assignedCaptainName ?? "بانتظار تعيين كابتن"}
+              </Text>
+            </View>
             <Text style={styles.orderDate}>{formatCompactDate(item.createdAt)}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.background }]}>
@@ -486,12 +502,6 @@ function OrderRow({
           <MaterialIcons name="arrow-back" size={12} color="#91A8B8" />
           <MaterialIcons name="location-on" size={13} color="#16A879" />
           <Text numberOfLines={1} style={styles.routeText}>{item.deliveryAddress}</Text>
-        </View>
-        <View style={styles.captainRow}>
-          <MaterialIcons name="two-wheeler" size={14} color={item.assignedCaptainName ? "#0878D1" : "#7E95A5"} />
-          <Text numberOfLines={1} style={[styles.captainText, !item.assignedCaptainName && styles.captainTextMuted]}>
-            {item.assignedCaptainName ?? "بانتظار تعيين كابتن"}
-          </Text>
         </View>
         <OrderDeliveryJourney timing={item.deliveryTiming} />
       </View>
@@ -1116,8 +1126,11 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     justifyContent: "space-between",
   },
-  orderIdentity: { alignItems: "center", flexDirection: "row-reverse", gap: 7 },
-  orderNumber: { color: "#163E5C", fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
+  orderIdentity: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 7, marginLeft: 8 },
+  orderNumber: { color: "#163E5C", flexShrink: 0, fontSize: 14, fontWeight: "800", writingDirection: "rtl" },
+  orderHeaderCaptain: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 4, minWidth: 0 },
+  orderHeaderCaptainText: { color: "#0878D1", flexShrink: 1, fontSize: 13, fontWeight: "800", writingDirection: "rtl" },
+  orderHeaderCaptainTextMuted: { color: "#8096A6" },
   statusBadge: { borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 },
   statusText: { fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
   orderCustomerRow: {
@@ -1136,9 +1149,6 @@ const styles = StyleSheet.create({
   },
   routeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 3, marginTop: 5 },
   routeText: { color: "#5A7487", flex: 1, fontSize: 10, fontWeight: "700", textAlign: "right", writingDirection: "rtl" },
-  captainRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 5 },
-  captainText: { color: "#0878D1", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
-  captainTextMuted: { color: "#8096A6" },
   orderJourney: {
     backgroundColor: "#F4FBF8",
     borderColor: "#D8EEE5",
