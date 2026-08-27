@@ -9,6 +9,7 @@ import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useOfficeSettings } from "@/features/admin/use-office-settings";
+import { presentOfficeSettingsError } from "@/lib/admin/office-settings-errors";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 
 const BLUE = "#0060B8";
@@ -128,7 +129,7 @@ export default function OfficeSettingsScreen() {
       showToast({ message: "تم حفظ إعدادات المكتب بشكل دائم." });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "تعذر حفظ إعدادات المكتب.",
+        message: presentOfficeSettingsError(error, "save"),
         tone: "error",
         durationMs: 5000,
       });
@@ -172,9 +173,7 @@ export default function OfficeSettingsScreen() {
           <MaterialIcons name="sync-problem" size={24} color={DANGER} />
           <Text style={styles.loadErrorTitle}>تعذر تحميل إعدادات المكتب</Text>
           <Text style={styles.loadErrorText}>
-            {officeSettings.error instanceof Error
-              ? officeSettings.error.message
-              : "تحقق من الاتصال ثم أعد المحاولة."}
+            {presentOfficeSettingsError(officeSettings.error, "load")}
           </Text>
           <MotionPressable onPress={() => void officeSettings.refetch()} style={styles.retryLoadButton}>
             <MaterialIcons name="refresh" size={17} color="#FFFFFF" />
