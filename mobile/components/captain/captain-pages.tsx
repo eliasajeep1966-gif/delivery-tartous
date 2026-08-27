@@ -483,16 +483,6 @@ export function CaptainWages() {
                       <Text numberOfLines={1} style={styles.wageRouteContactName}>
                         {row.pickup_contact_name}
                       </Text>
-                      <MotionPressable
-                        accessibilityLabel={`الاتصال بمصدر الطلب ${row.pickup_contact_name}`}
-                        onPress={() => void Linking.openURL(`tel:${row.pickup_contact_phone}`)}
-                        style={styles.wageRoutePhoneButton}
-                      >
-                        <MaterialIcons name="phone-in-talk" size={15} color="#0878D1" />
-                        <Text style={styles.wageRouteCallText}>اتصال</Text>
-                        <MaterialIcons name="call-made" size={14} color="#0878D1" />
-                        <Text style={styles.wageRoutePhone}>{row.pickup_contact_phone}</Text>
-                      </MotionPressable>
                       <Text numberOfLines={1} style={styles.wageRouteAddress}>
                         {row.pickup_address}
                       </Text>
@@ -505,16 +495,6 @@ export function CaptainWages() {
                       <Text numberOfLines={1} style={styles.wageRouteContactName}>
                         {row.delivery_contact_name}
                       </Text>
-                      <MotionPressable
-                        accessibilityLabel={`الاتصال بوجهة الطلب ${row.delivery_contact_name}`}
-                        onPress={() => void Linking.openURL(`tel:${row.delivery_contact_phone}`)}
-                        style={styles.wageRoutePhoneButton}
-                      >
-                        <MaterialIcons name="phone-in-talk" size={15} color="#0878D1" />
-                        <Text style={styles.wageRouteCallText}>اتصال</Text>
-                        <MaterialIcons name="call-made" size={14} color="#0878D1" />
-                        <Text style={styles.wageRoutePhone}>{row.delivery_contact_phone}</Text>
-                      </MotionPressable>
                       <Text numberOfLines={1} style={styles.wageRouteAddress}>
                         {row.delivery_address}
                       </Text>
