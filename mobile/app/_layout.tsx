@@ -141,15 +141,8 @@ function AuthAwareNavigator() {
         <Stack.Screen name="owner-password-reset" />
       </Stack>
 
-      {status === "initializing" ? (
-        <View style={styles.overlay}>
-          <AuthStateScreen
-            title="جارٍ استعادة الجلسة"
-            message="نتحقق من جلسة الدخول وصلاحيات الحساب بأمان."
-            loading
-          />
-        </View>
-      ) : null}
+      {/* Keep the native splash short and let the login scene render immediately.
+          Auth routing still waits for initialization before redirecting a saved session. */}
 
       {isRecoverableState ? (
         <View style={styles.overlay}>
