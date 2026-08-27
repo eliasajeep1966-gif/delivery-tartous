@@ -290,8 +290,7 @@ export function CaptainHome() {
                         </Text>
                       </MotionPressable>
                     ) : null}
-                    {current.status === "received" ||
-                    current.status === "in_delivery" ? (
+                    {current.status === "in_delivery" ? (
                       <MotionPressable
                         disabled={dashboard.orderSaving}
                         pressedScale={0.97}
