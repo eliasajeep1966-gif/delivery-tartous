@@ -94,7 +94,7 @@ export function AdminCompanyPdfReports({
             endDate: range.endDate,
           });
         await createAndShareSimplePdfReport({
-          title: "كشف مالي للكابتن",
+          title: `تقرير الكابتن — ${summary.captain_name}`,
           subject: summary.captain_name,
           startDate: summary.period_start,
           endDate: summary.period_end,
