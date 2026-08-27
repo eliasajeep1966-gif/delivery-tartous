@@ -139,12 +139,12 @@ export default function AdminSupportScreen() {
             <Contact
               icon={<Smartphone size={15} color="#0060B8" />}
               label="اتصال"
-              onPress={() => void openUrl("tel:099658677")}
+              onPress={() => void openUrl("tel:+963996598677")}
             />
             <Contact
               icon={<MessageCircle size={15} color="#0060B8" />}
               label="واتساب"
-              onPress={() => void openUrl("https://wa.me/96399658677")}
+              onPress={() => void openUrl("https://wa.me/963996598677")}
             />
             <Contact
               icon={<Send size={15} color="#0060B8" />}
