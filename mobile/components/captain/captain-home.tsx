@@ -172,6 +172,9 @@ export function CaptainHome() {
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
   const current = dashboard.currentOrder;
   const showCurrentOrderLed = Boolean(current);
+  const currentCardColors = current
+    ? (["#063B78", "#0872CC", "#0CBDF2"] as const)
+    : (["#07539B", "#0878D1", "#16CEFF"] as const);
   const action = current ? nextAction(current.status) : null;
 
   const handleCurrentCardLayout = (event: LayoutChangeEvent) => {
@@ -351,9 +354,18 @@ export function CaptainHome() {
                 thumbColor="#FFFFFF"
               />
             </Animated.View>
-            <Animated.View entering={FadeInDown.delay(70).duration(210)}>
+            <Animated.View
+              entering={FadeInDown.delay(70).duration(210)}
+              style={styles.currentCardShell}
+            >
+              {!current ? (
+                <View
+                  pointerEvents="none"
+                  style={styles.emptyCurrentOuterGlow}
+                />
+              ) : null}
               <LinearGradient
-                colors={["#063B78", "#0872CC", "#0CBDF2"]}
+                colors={currentCardColors}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 0, y: 1 }}
                 onLayout={handleCurrentCardLayout}
@@ -460,13 +472,13 @@ export function CaptainHome() {
                         style={styles.falseOrderButton}
                       >
                         <View style={styles.falseOrderIcon}>
-                          <MaterialIcons name="warning-amber" size={19} color="#FFFFFF" />
+                          <MaterialIcons name="warning-amber" size={22} color="#FFFFFF" />
                         </View>
                         <View style={styles.falseOrderCopy}>
                           <Text style={styles.falseOrderTitle}>تسجيل طلب كاذب</Text>
                           <Text style={styles.falseOrderHint}>أوقف الطلب عند تعذّر تسليمه</Text>
                         </View>
-                        <MaterialIcons name="chevron-left" size={23} color="#FEE2E2" />
+                        <MaterialIcons name="chevron-left" size={26} color="#FEE2E2" />
                       </MotionPressable>
                     ) : null}
                   </Animated.View>
@@ -876,6 +888,8 @@ const styles = StyleSheet.create({
   },
   currentCard: {
     borderColor: "rgba(84,222,255,0.62)",
+    elevation: 8,
+    zIndex: 1,
     borderRadius: 20,
     borderWidth: 1,
     overflow: "hidden",
@@ -883,6 +897,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 7 },
     shadowOpacity: 0.28,
     shadowRadius: 16,
+  },
+  currentCardShell: { position: "relative" },
+  emptyCurrentOuterGlow: {
+    backgroundColor: "rgba(22,206,255,0.24)",
+    borderRadius: 25,
+    bottom: 4,
+    left: 7,
+    position: "absolute",
+    right: 7,
+    shadowColor: "#16CEFF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.72,
+    shadowRadius: 20,
+    top: 9,
   },
   emptyCurrentBacklight: {
     bottom: 0,
@@ -1078,11 +1106,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#BE2433",
     borderColor: "rgba(255,220,224,0.82)",
-    borderRadius: 14,
+    borderRadius: 17,
     borderWidth: 1,
     flexDirection: "row-reverse",
-    minHeight: 58,
-    paddingHorizontal: 12,
+    minHeight: 72,
+    paddingHorizontal: 16,
     shadowColor: "#690A15",
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.26,
@@ -1092,24 +1120,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.18)",
     borderColor: "rgba(255,255,255,0.28)",
-    borderRadius: 13,
+    borderRadius: 15,
     borderWidth: 1,
-    height: 30,
+    height: 40,
     justifyContent: "center",
-    width: 30,
+    width: 40,
   },
-  falseOrderCopy: { flex: 1, marginHorizontal: 9 },
+  falseOrderCopy: { flex: 1, marginHorizontal: 12 },
   falseOrderTitle: {
     color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
-    fontSize: 13,
+    fontSize: 16,
     textAlign: "right",
     writingDirection: "rtl",
   },
   falseOrderHint: {
     color: "rgba(255,238,240,0.88)",
     fontFamily: "Cairo_400Regular",
-    fontSize: 9,
+    fontSize: 11,
     marginTop: 1,
     textAlign: "right",
     writingDirection: "rtl",
@@ -1199,9 +1227,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusBadgeProminent: {
+    alignSelf: "flex-start",
     borderRadius: 12,
+    flexShrink: 0,
     minHeight: 34,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
   },
   statusBadgeText: {
@@ -1209,7 +1239,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     writingDirection: "rtl",
   },
-  statusBadgeTextProminent: { fontSize: 12 },
+  statusBadgeTextProminent: { fontSize: 12, lineHeight: 18 },
   orderRow: {
     alignItems: "flex-start",
     backgroundColor: "rgba(255,255,255,0.94)",
@@ -1223,7 +1253,7 @@ const styles = StyleSheet.create({
     minHeight: 116,
     padding: 12,
   },
-  orderCopy: { flex: 1, gap: 4 },
+  orderCopy: { flex: 1, gap: 4, minWidth: 0 },
   orderTitleRow: {
     alignItems: "center",
     flexDirection: "row-reverse",
