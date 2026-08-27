@@ -70,7 +70,7 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#00000000",
+      backgroundColor: "#FFFFFF",
       foregroundImage: appIcon,
     },
     predictiveBackGestureEnabled: false,
