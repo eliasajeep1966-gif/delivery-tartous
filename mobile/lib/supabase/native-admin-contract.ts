@@ -85,9 +85,14 @@ export const nativeAdminContract = {
     async assignOrderCaptain(
       orderId: string,
       captainId: string,
+      options?: { recordActivity?: boolean },
     ): Promise<NativeCreatedOrder> {
+      const rpcName =
+        options?.recordActivity === false
+          ? "assign_order_captain_without_activity"
+          : "assign_order_captain";
       const result = await withTimeout(
-        getNativeSupabaseClient().rpc("assign_order_captain", {
+        getNativeSupabaseClient().rpc(rpcName, {
           p_order_id: orderId,
           p_captain_id: captainId,
         }),

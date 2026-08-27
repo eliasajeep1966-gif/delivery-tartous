@@ -318,6 +318,7 @@ export function AdminHome() {
         const assigned = await nativeAdminContract.actions.assignOrderCaptain(
           created.id,
           draft.captainId,
+          { recordActivity: false },
         );
         void notifyCaptainOfOrder(assigned.id).catch((error) => {
           showToast({
