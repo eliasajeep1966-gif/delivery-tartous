@@ -362,13 +362,13 @@ export function CaptainHome() {
                 {!current ? (
                   <LinearGradient
                     colors={[
-                      "rgba(197,249,255,0.34)",
-                      "rgba(78,222,255,0.12)",
-                      "rgba(3,96,174,0)",
+                      "rgba(221,253,255,0.58)",
+                      "rgba(105,235,255,0.32)",
+                      "rgba(9,127,205,0.08)",
                     ]}
-                    end={{ x: 0.12, y: 1 }}
+                    end={{ x: 0.08, y: 1 }}
                     pointerEvents="none"
-                    start={{ x: 0.92, y: 0 }}
+                    start={{ x: 0.96, y: 0 }}
                     style={styles.emptyCurrentBacklight}
                   />
                 ) : null}
@@ -652,15 +652,23 @@ function StopCard({
         <MaterialIcons name={icon} size={16} color={BLUE} />
         <Text style={styles.stopTitle}>{title}</Text>
       </View>
-      <Text style={styles.detail}>
-        الاسم: {stop?.contact_name || "غير متاح"}
+      <Text style={styles.stopContactName}>
+        {stop?.contact_name || "غير متاح"}
       </Text>
       {stop?.contact_phone ? (
-        <MotionPressable onPress={() => onCall(stop.contact_phone)}>
-          <Text style={styles.phone}>{stop.contact_phone}</Text>
+        <MotionPressable
+          accessibilityLabel={`الاتصال بـ ${stop.contact_name || title}`}
+          haptic="light"
+          onPress={() => onCall(stop.contact_phone)}
+          style={styles.stopCallButton}
+        >
+          <MaterialIcons name="phone-in-talk" size={15} color="#0878D1" />
+          <Text style={styles.stopCallText}>اتصال</Text>
+          <MaterialIcons name="call-made" size={14} color="#0878D1" />
+          <Text style={styles.stopPhone}>{stop.contact_phone}</Text>
         </MotionPressable>
       ) : null}
-      <Text style={styles.detail}>العنوان: {stop?.address || fallback}</Text>
+      <Text style={styles.stopAddress}>العنوان: {stop?.address || fallback}</Text>
       {stop?.note ? <Text style={styles.note}>{stop.note}</Text> : null}
     </View>
   );
@@ -870,6 +878,7 @@ const styles = StyleSheet.create({
   emptyCurrentBacklight: {
     bottom: 0,
     left: 0,
+    opacity: 0.96,
     position: "absolute",
     right: 0,
     top: 0,
@@ -915,7 +924,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   cardBody: { gap: 14, padding: 14 },
-  stopsGrid: { flexDirection: "row-reverse", gap: 8 },
+  stopsGrid: { alignItems: "stretch", flexDirection: "row-reverse", gap: 8 },
   timeline: { gap: 7 },
   currentTimelineTitle: {
     color: "#FFFFFF",
@@ -971,29 +980,60 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     flex: 1,
-    minHeight: 145,
-    padding: 10,
+    minWidth: 0,
+    padding: 11,
   },
   stopTitle: {
     color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
-    fontSize: 11,
+    fontSize: 12,
     writingDirection: "rtl",
   },
-  detail: {
-    color: "rgba(245,253,255,0.88)",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 10,
-    marginTop: 4,
+  stopContactName: {
+    color: "#FFFFFF",
+    flexShrink: 1,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 6,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  phone: {
-    color: "#FFFFFF",
+  stopCallButton: {
+    alignItems: "center",
+    alignSelf: "flex-end",
+    backgroundColor: "rgba(231,250,255,0.96)",
+    borderColor: "rgba(157,239,255,0.92)",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 3,
+    marginTop: 7,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  stopCallText: {
+    color: "#0878D1",
     fontFamily: "Cairo_700Bold",
     fontSize: 10,
-    marginTop: 4,
-    textAlign: "left",
+    writingDirection: "rtl",
+  },
+  stopPhone: {
+    color: "#075D9F",
+    flexShrink: 1,
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    writingDirection: "ltr",
+  },
+  stopAddress: {
+    color: "rgba(245,253,255,0.92)",
+    flexShrink: 1,
+    fontFamily: "Cairo_400Regular",
+    fontSize: 12,
+    lineHeight: 19,
+    marginTop: 7,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   note: {
     backgroundColor: "rgba(255,255,255,0.14)",
