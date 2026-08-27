@@ -70,4 +70,35 @@ describe("createAndShareSimplePdfReport", () => {
       expect.anything(),
     );
   });
+
+  it("includes a financial breakdown chart with the supplied labels and amounts", async () => {
+    mocks.printToFileAsync.mockResolvedValue({
+      base64: "PDF-BASE64",
+      uri: "file:///cache/Print/temporary.pdf",
+    });
+    mocks.getInfoAsync.mockResolvedValue({ exists: true, size: 32 });
+    mocks.isAvailableAsync.mockResolvedValue(true);
+
+    await createAndShareSimplePdfReport({
+      title: "تقرير مالي للمكتب",
+      startDate: "2026-08-22",
+      endDate: "2026-08-28",
+      metrics: [{ label: "صافي الشركة", value: "3,000 ل.س", highlighted: true }],
+      breakdown: [
+        { label: "أجور الكباتن", value: 7_000, color: "#1677C8" },
+        { label: "تعويض الكباتن", value: 7_000, color: "#8B5CF6" },
+        { label: "مصاريف المكتب", value: 1_234.5, color: "#F59E0B" },
+        { label: "نتيجة الشركة", value: -4_000, color: "#E05252" },
+      ],
+      generatedBy: "مدير",
+    });
+
+    const html = mocks.printToFileAsync.mock.calls[0]?.[0]?.html as string;
+    expect(html).toContain("توزيع البنود المالية");
+    expect(html).toContain("أجور الكباتن");
+    expect(html).toContain("تعويض الكباتن");
+    expect(html).toContain("مصاريف المكتب");
+    expect(html).toContain("نتيجة الشركة");
+    expect(html).toContain("stroke-dasharray");
+  });
 });

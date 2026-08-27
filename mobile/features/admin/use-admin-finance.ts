@@ -523,6 +523,8 @@ export type NativeCompanyReportRangeSummary = {
   gross_total: number;
   company_total: number;
   captain_net_total: number;
+  captain_wage_total: number;
+  captain_compensation_total: number;
   expense_total: number;
   net_company_total: number;
 };
@@ -536,6 +538,9 @@ export type NativeCaptainPdfReportSummary = {
   gross_total: number;
   captain_total: number;
   company_total: number;
+  captain_wage_total: number;
+  captain_compensation_total: number;
+  company_result_total: number;
 };
 
 function finiteNumber(value: unknown): number {
@@ -659,6 +664,8 @@ export const nativeCompanyPdfReportContract = {
         gross_total: finiteNumber(row.gross_total),
         company_total: finiteNumber(row.company_total),
         captain_net_total: finiteNumber(row.captain_net_total),
+        captain_wage_total: finiteNumber(row.captain_wage_total),
+        captain_compensation_total: finiteNumber(row.captain_compensation_total),
         expense_total: finiteNumber(row.expense_total),
         net_company_total: finiteNumber(row.net_company_total),
       };
@@ -689,6 +696,9 @@ export const nativeCompanyPdfReportContract = {
         gross_total: finiteNumber(row.gross_total),
         captain_total: finiteNumber(row.captain_total),
         company_total: finiteNumber(row.company_total),
+        captain_wage_total: finiteNumber(row.captain_wage_total),
+        captain_compensation_total: finiteNumber(row.captain_compensation_total),
+        company_result_total: finiteNumber(row.company_result_total),
       };
     },
   },
