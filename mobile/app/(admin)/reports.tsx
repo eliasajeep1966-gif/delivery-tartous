@@ -1,6 +1,8 @@
-import { useMemo, useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -125,9 +127,9 @@ export default function AdminReportsScreen() {
               color: "#F59E0B",
             },
             {
-              label: "نتيجة الشركة قبل المصاريف",
-              value: summary.companyTotal,
-              color: summary.companyTotal >= 0 ? "#059669" : "#E05252",
+              label: "صافي الشركة",
+              value: summary.netCompanyTotal,
+              color: summary.netCompanyTotal >= 0 ? "#059669" : "#E05252",
             },
           ]
         : [],
@@ -278,10 +280,10 @@ export default function AdminReportsScreen() {
                 highlighted
               />
               <MetricCard
-                icon={<TrendingUp size={19} color={summary.companyTotal >= 0 ? "#08755C" : "#B94040"} />}
-                label="نتيجة الشركة قبل المصاريف"
-                value={money(summary.companyTotal)}
-                tone={summary.companyTotal >= 0 ? "green" : "red"}
+                icon={<WalletCards size={19} color="#A46500" />}
+                label="مصاريف المكتب"
+                value={money(summary.expenseTotal)}
+                tone="orange"
               />
               <MetricCard
                 icon={<Truck size={19} color="#126FA7" />}
@@ -296,7 +298,10 @@ export default function AdminReportsScreen() {
               />
             </View>
 
-            <FinancialBreakdownChart slices={chartSlices} />
+            <FinancialBreakdownChart
+              animationKey={`${period}:${summary.periodStart}:${summary.periodEnd}`}
+              slices={chartSlices}
+            />
 
             <SectionHeading overline="النتائج المسجلة" title="الحصيلة حسب التاريخ" />
             {rows.map((row) => (
@@ -317,8 +322,14 @@ export default function AdminReportsScreen() {
                     </View>
                   </View>
                   <Text style={styles.activitySubtitle}>القيمة المرجعية {money(row.gross_total)}</Text>
-                  <Text style={[styles.activityProfit, row.company_total < 0 && styles.activityLoss]}>
-                    نتيجة الشركة قبل المصاريف {money(row.company_total)}
+                  <Text
+                    style={[
+                      styles.activityProfit,
+                      row.company_total - (expenseByPeriod.get(row.period_start) ?? 0) < 0 &&
+                        styles.activityLoss,
+                    ]}
+                  >
+                    صافي الشركة {money(row.company_total - (expenseByPeriod.get(row.period_start) ?? 0))}
                   </Text>
                 </View>
               </View>
@@ -358,7 +369,31 @@ export default function AdminReportsScreen() {
   );
 }
 
-function FinancialBreakdownChart({ slices }: { slices: FinanceBreakdownSlice[] }) {
+function FinancialBreakdownChart({
+  animationKey,
+  slices,
+}: {
+  animationKey: string;
+  slices: FinanceBreakdownSlice[];
+}) {
+  const [rotation] = useState(() => new Animated.Value(0));
+  const spin = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["-180deg", "180deg"],
+  });
+
+  useEffect(() => {
+    rotation.setValue(0);
+    const animation = Animated.timing(rotation, {
+      duration: 850,
+      easing: Easing.out(Easing.cubic),
+      toValue: 1,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [animationKey, rotation]);
+
   const visibleSlices = slices
     .filter((slice) => Number.isFinite(slice.value) && Math.abs(slice.value) > 0.005)
     .map((slice) => ({ ...slice, magnitude: Math.abs(slice.value) }));
@@ -381,13 +416,7 @@ function FinancialBreakdownChart({ slices }: { slices: FinanceBreakdownSlice[] }
   return (
     <View style={styles.breakdownCard}>
       <View style={styles.breakdownHeader}>
-        <View>
-          <Text style={styles.breakdownTitle}>دائرة توزيع البنود</Text>
-          <Text style={styles.breakdownSubtitle}>حجم كل بند ضمن آخر فترة مسجلة</Text>
-        </View>
-        <View style={styles.breakdownBadge}>
-          <Text style={styles.breakdownBadgeText}>مالي</Text>
-        </View>
+        <Text style={styles.breakdownTitle}>التوزيع المالي</Text>
       </View>
       {!visibleSlices.length || total <= 0 ? (
         <Text style={styles.breakdownEmpty}>لا توجد مبالغ مالية قابلة للعرض ضمن هذه الفترة.</Text>
@@ -395,7 +424,8 @@ function FinancialBreakdownChart({ slices }: { slices: FinanceBreakdownSlice[] }
         <>
           <View style={styles.chartAndLegend}>
             <View style={styles.donutWrap}>
-              <Svg height={144} viewBox="0 0 144 144" width={144}>
+              <Animated.View style={[styles.donutAnimation, { transform: [{ rotate: spin }] }]}>
+                <Svg height={144} viewBox="0 0 144 144" width={144}>
                 <Circle
                   cx={CHART_CENTER}
                   cy={CHART_CENTER}
@@ -420,14 +450,15 @@ function FinancialBreakdownChart({ slices }: { slices: FinanceBreakdownSlice[] }
                     strokeWidth={18}
                   />
                 ))}
-              </Svg>
+                </Svg>
+              </Animated.View>
               <View pointerEvents="none" style={styles.donutCenter}>
                 <Text style={styles.donutCenterTitle}>توزيع</Text>
                 <Text style={styles.donutCenterSubtitle}>الفترة</Text>
               </View>
             </View>
             <View style={styles.legend}>
-              {visibleSlices.map((slice) => (
+              {slices.map((slice) => (
                 <View key={slice.label} style={styles.legendRow}>
                   <View style={[styles.legendDot, { backgroundColor: slice.color }]} />
                   <View style={styles.legendText}>
@@ -438,9 +469,6 @@ function FinancialBreakdownChart({ slices }: { slices: FinanceBreakdownSlice[] }
               ))}
             </View>
           </View>
-          <Text style={styles.breakdownNote}>
-            الدائرة للمقارنة البصرية بين البنود؛ صافي الشركة هو نتيجة الشركة بعد حسم مصاريف المكتب.
-          </Text>
         </>
       )}
     </View>
@@ -469,7 +497,7 @@ function MetricCard({
   label: string;
   value: string;
   highlighted?: boolean;
-  tone?: "blue" | "green" | "purple" | "red";
+  tone?: "blue" | "green" | "purple" | "orange" | "red";
 }) {
   const iconBackground = highlighted
     ? "rgba(255,255,255,0.17)"
@@ -477,7 +505,9 @@ function MetricCard({
       ? "#E8F8F2"
       : tone === "purple"
         ? "#F3EEFF"
-        : tone === "red"
+        : tone === "orange"
+          ? "#FFF4DE"
+          : tone === "red"
           ? "#FFF0F0"
           : "#EAF5FC";
   return (
@@ -540,13 +570,11 @@ const styles = StyleSheet.create({
   metricLabel: { color: "#6A879A", fontSize: 9, lineHeight: 15, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   metricLabelHighlight: { color: "rgba(255,255,255,0.82)" },
   breakdownCard: { backgroundColor: "#FFFFFF", borderColor: "#DCEAF3", borderRadius: 20, borderWidth: 1, marginBottom: 18, padding: 14, shadowColor: "#113D5B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.055, shadowRadius: 9 },
-  breakdownHeader: { alignItems: "flex-start", flexDirection: "row-reverse", justifyContent: "space-between" },
+  breakdownHeader: { alignItems: "flex-end", flexDirection: "row-reverse" },
   breakdownTitle: { color: "#173F5C", fontSize: 14, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  breakdownSubtitle: { color: "#7592A5", fontSize: 9, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  breakdownBadge: { backgroundColor: "#EAF5FC", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
-  breakdownBadgeText: { color: "#1677C8", fontSize: 9, fontWeight: "800", writingDirection: "rtl" },
-  chartAndLegend: { alignItems: "center", flexDirection: "row-reverse", gap: 12, marginTop: 12 },
+  chartAndLegend: { alignItems: "center", flexDirection: "row-reverse", gap: 12, marginTop: 10 },
   donutWrap: { alignItems: "center", height: 144, justifyContent: "center", width: 144 },
+  donutAnimation: { height: 144, width: 144 },
   donutCenter: { alignItems: "center", justifyContent: "center", position: "absolute" },
   donutCenterTitle: { color: "#214B67", fontSize: 12, fontWeight: "800", writingDirection: "rtl" },
   donutCenterSubtitle: { color: "#7390A3", fontSize: 9, marginTop: -2, writingDirection: "rtl" },
@@ -556,7 +584,6 @@ const styles = StyleSheet.create({
   legendText: { flex: 1 },
   legendLabel: { color: "#48687E", fontSize: 9, fontWeight: "700", textAlign: "right", writingDirection: "rtl" },
   legendValue: { color: "#183F5A", fontSize: 10, fontWeight: "800", marginTop: -1, textAlign: "right", writingDirection: "rtl" },
-  breakdownNote: { color: "#708EA2", fontSize: 9, lineHeight: 15, marginTop: 10, textAlign: "right", writingDirection: "rtl" },
   breakdownEmpty: { color: "#75818E", fontSize: 11, paddingVertical: 18, textAlign: "center", writingDirection: "rtl" },
   activityCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E4EDF3", borderRadius: 18, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 9, minHeight: 86, overflow: "hidden", paddingHorizontal: 12, paddingVertical: 11, shadowColor: "#113D5B", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.045, shadowRadius: 8 },
   activityAccent: { backgroundColor: "#4F90BB", bottom: 0, position: "absolute", right: 0, top: 0, width: 4 },
