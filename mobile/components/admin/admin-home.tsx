@@ -66,6 +66,8 @@ function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
   );
 }
 
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
 const statusStyle: Record<
   AdminOrderStatus,
   { label: string; color: string; background: string; strip: string }
@@ -184,10 +186,11 @@ export function AdminHome() {
 
   const getLedPoint = (distance: number, width: number, height: number) => {
     "worklet";
-    const inset = 2;
+    // The path sits on the centre of the 1 px card border, including its 20 px corners.
+    const inset = 1;
     const innerWidth = Math.max(width - inset * 2, 1);
     const innerHeight = Math.max(height - inset * 2, 1);
-    const radius = Math.min(18, innerWidth / 2, innerHeight / 2);
+    const radius = Math.min(19, innerWidth / 2, innerHeight / 2);
     const horizontal = Math.max(innerWidth - radius * 2, 0);
     const vertical = Math.max(innerHeight - radius * 2, 0);
     const corner = (Math.PI * radius) / 2;
@@ -262,8 +265,8 @@ export function AdminHome() {
     );
     return {
       opacity: 1,
-      left: point.x - 5,
-      top: point.y - 5,
+      left: point.x - 4,
+      top: point.y - 4,
     };
   });
 
@@ -273,7 +276,7 @@ export function AdminHome() {
     const currentDistance = createLedProgress.value * start.perimeter;
     const point = getLedPoint(currentDistance, createLedWidth.value, createLedHeight.value);
     const previous = getLedPoint(
-      (currentDistance - 34 + start.perimeter) % start.perimeter,
+      (currentDistance - 26 + start.perimeter) % start.perimeter,
       createLedWidth.value,
       createLedHeight.value,
     );
@@ -283,11 +286,25 @@ export function AdminHome() {
     const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
 
     return {
-      opacity: 0.9,
+      opacity: 0.96,
       left: (point.x + previous.x) / 2 - length / 2,
-      top: (point.y + previous.y) / 2 - 1,
+      top: (point.y + previous.y) / 2 - 1.5,
       width: length,
       transform: [{ rotate: `${angle}deg` }],
+    };
+  });
+
+  const createLedGlowStyle = useAnimatedStyle(() => {
+    if (!createLedWidth.value || !createLedHeight.value) return { opacity: 0 };
+    const point = getLedPoint(
+      createLedProgress.value * getLedPoint(0, createLedWidth.value, createLedHeight.value).perimeter,
+      createLedWidth.value,
+      createLedHeight.value,
+    );
+    return {
+      opacity: 0.72,
+      left: point.x - 10,
+      top: point.y - 10,
     };
   });
 
@@ -511,9 +528,16 @@ export function AdminHome() {
                   end={{ x: 0, y: 1 }}
                   style={styles.createGradient}
                 >
+                  <AnimatedLinearGradient
+                    colors={["rgba(126,238,255,0)", "rgba(188,250,255,0.96)"]}
+                    end={{ x: 1, y: 0.5 }}
+                    pointerEvents="none"
+                    start={{ x: 0, y: 0.5 }}
+                    style={[styles.createLedTail, createLedTailStyle]}
+                  />
                   <Animated.View
                     pointerEvents="none"
-                    style={[styles.createLedTail, createLedTailStyle]}
+                    style={[styles.createLedGlow, createLedGlowStyle]}
                   />
                   <Animated.View
                     pointerEvents="none"
@@ -1104,8 +1128,9 @@ const styles = StyleSheet.create({
   skeletonLabel: { backgroundColor: "#F0F5F8", borderRadius: 4, height: 8, marginLeft: "auto", marginTop: 6, width: "65%" },
   createCard: { borderColor: "rgba(84,222,255,0.62)", borderRadius: 20, borderWidth: 1, marginTop: 18, overflow: "hidden", shadowColor: "#16CEFF", shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.28, shadowRadius: 16 },
   createGradient: { alignItems: "center", flexDirection: "row-reverse", gap: 13, minHeight: 118, overflow: "hidden", paddingHorizontal: 16, paddingVertical: 15, position: "relative" },
-  createLedTail: { backgroundColor: "rgba(167,246,255,0.42)", borderRadius: 3, height: 2, position: "absolute" },
-  createLedDot: { backgroundColor: "#E8FCFF", borderColor: "#7BEAFF", borderRadius: 6, borderWidth: 1, height: 10, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 8, width: 10 },
+  createLedTail: { borderRadius: 3, height: 3, position: "absolute" },
+  createLedGlow: { backgroundColor: "rgba(70,224,255,0.45)", borderRadius: 10, height: 20, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 10, width: 20 },
+  createLedDot: { backgroundColor: "#F2FEFF", borderColor: "#8AF1FF", borderRadius: 4, borderWidth: 1, height: 8, position: "absolute", shadowColor: "#E7FDFF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 7, width: 8 },
   createIconWrap: { alignItems: "center", backgroundColor: "#F5FDFF", borderColor: "rgba(137,240,255,0.8)", borderRadius: 17, borderWidth: 1, height: 48, justifyContent: "center", shadowColor: "#043D63", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 5, width: 48 },
   createCopy: { flex: 1 },
   createKicker: { color: "rgba(231,248,255,0.72)", fontSize: 10, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
