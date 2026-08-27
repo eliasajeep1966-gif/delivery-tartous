@@ -240,27 +240,50 @@ function CaptainOrderCard({
 }) {
   return (
     <Animated.View
-      entering={FadeInDown.delay(70 + index * 24).duration(190)}
-      style={styles.card}
+      entering={FadeInDown.delay(55 + index * 20).duration(170)}
+      style={[styles.card, styles.orderCard]}
     >
-      <View style={styles.between}>
-        <View style={styles.orderPrimaryCopy}>
-          <Text style={styles.muted}>الطلب #{order.order_number}</Text>
-          <Text numberOfLines={1} style={styles.title}>{order.customer_name}</Text>
-          <MotionPressable onPress={() => void Linking.openURL(`tel:${order.customer_phone}`)}>
-            <Text style={styles.phone}>{order.customer_phone}</Text>
-          </MotionPressable>
+      <View style={styles.orderCardTop}>
+        <View style={styles.orderIdentity}>
+          <Text style={styles.orderNumber}>الطلب #{order.order_number}</Text>
+          <Text numberOfLines={1} style={styles.orderCustomer}>{order.customer_name}</Text>
         </View>
-        <View style={styles.left}>
-          <CaptainOrderStatusBadge status={order.status} />
-          <Text style={styles.amount}>{money(order.fee)}</Text>
+        <CaptainOrderStatusBadge status={order.status} />
+      </View>
+
+      <View style={styles.orderRoute}>
+        <View style={styles.orderRouteStop}>
+          <View style={[styles.orderRouteIcon, styles.orderRouteIconPickup]}>
+            <MaterialIcons name="inventory-2" size={14} color="#0878D1" />
+          </View>
+          <Text numberOfLines={1} style={styles.orderRouteText}>{order.pickup_address}</Text>
+        </View>
+        <View style={styles.orderRouteConnector} />
+        <View style={styles.orderRouteStop}>
+          <View style={[styles.orderRouteIcon, styles.orderRouteIconDelivery]}>
+            <MaterialIcons name="location-on" size={15} color="#C65031" />
+          </View>
+          <Text numberOfLines={1} style={styles.orderRouteText}>{order.delivery_address}</Text>
         </View>
       </View>
-      <View style={styles.divider} />
-      <Text style={styles.line}>المصدر: {order.pickup_address}</Text>
-      <Text style={styles.line}>الوجهة: {order.delivery_address}</Text>
-      <OrderDeliveryTiming status={order.status} timing={order.deliveryTiming} />
-      <Text style={styles.muted}>{date(order.completed_at ?? order.updated_at)}</Text>
+
+      <View style={styles.orderCardFooter}>
+        <View style={styles.orderFooterMeta}>
+          <MaterialIcons name="event" size={14} color="#6E8A9B" />
+          <Text style={styles.orderDate}>{date(order.completed_at ?? order.updated_at)}</Text>
+        </View>
+        <OrderDeliveryTiming status={order.status} timing={order.deliveryTiming} />
+        <View style={styles.orderFooterRight}>
+          <Text style={styles.orderFee}>{money(order.fee)}</Text>
+          <MotionPressable
+            accessibilityLabel={`الاتصال بـ ${order.customer_name}`}
+            onPress={() => void Linking.openURL(`tel:${order.customer_phone}`)}
+            style={styles.orderCallButton}
+          >
+            <MaterialIcons name="phone" size={15} color="#0878D1" />
+          </MotionPressable>
+        </View>
+      </View>
     </Animated.View>
   );
 }
@@ -286,45 +309,21 @@ function OrderDeliveryTiming({
   const presentation = timing ? presentDeliveryTiming(timing) : null;
   if (!presentation) return null;
 
-  if (presentation.mode !== "completed") {
-    const text = presentation.mode === "received"
-      ? `تم الاستلام ${presentation.receivedTime}`
-      : `تم الاستلام ${presentation.receivedTime} · قيد التوصيل ${presentation.inDeliveryTime} · ${presentation.label}`;
-    return (
-      <View style={styles.deliveryProgressLine}>
-        <MaterialIcons
-          name={presentation.mode === "received" ? "inventory-2" : "two-wheeler"}
-          size={13}
-          color={BLUE}
-        />
-        <Text style={styles.deliveryProgressText}>{text}</Text>
-      </View>
-    );
-  }
+  const text = presentation.mode === "completed"
+    ? presentation.label
+    : presentation.mode === "received"
+      ? `استلام ${presentation.receivedTime}`
+      : `قيد التوصيل · ${presentation.label}`;
+  const icon = presentation.mode === "completed"
+    ? "timer"
+    : presentation.mode === "received"
+      ? "inventory-2"
+      : "two-wheeler";
 
   return (
-    <View style={styles.deliveryJourney}>
-      <View style={styles.deliveryJourneyTop}>
-        <Text style={styles.deliveryJourneyLabel}>زمن التوصيل</Text>
-        <View style={styles.deliveryDurationBadge}>
-          <MaterialIcons name="timer" size={12} color="#08755C" />
-          <Text style={styles.deliveryDurationText}>{presentation.label}</Text>
-        </View>
-      </View>
-      <View style={styles.deliveryJourneyTrack}>
-        <View style={styles.deliveryJourneyMoment}>
-          <Text style={styles.deliveryJourneyMomentLabel}>استلام</Text>
-          <Text style={styles.deliveryJourneyMomentTime}>{presentation.receivedTime}</Text>
-        </View>
-        <View style={styles.deliveryJourneyConnector}>
-          <View style={styles.deliveryJourneyLine} />
-          <MaterialIcons name="arrow-back" size={13} color="#41A78C" />
-        </View>
-        <View style={styles.deliveryJourneyMoment}>
-          <Text style={styles.deliveryJourneyMomentLabel}>توصيل</Text>
-          <Text style={styles.deliveryJourneyMomentTime}>{presentation.completedTime}</Text>
-        </View>
-      </View>
+    <View style={styles.orderTimingPill}>
+      <MaterialIcons name={icon} size={13} color="#0878D1" />
+      <Text style={styles.orderTimingText}>{text}</Text>
     </View>
   );
 }
@@ -1077,18 +1076,120 @@ const styles = StyleSheet.create({
   between: { flexDirection: "row-reverse", justifyContent: "space-between" },
   orderPrimaryCopy: { flex: 1, paddingLeft: 8 },
   left: { alignItems: "flex-end" },
-  orderStatusBadge: {
+  orderCard: {
+    backgroundColor: "#FFFFFF",
+    gap: 12,
+    padding: 13,
+    shadowOpacity: 0.025,
+  },
+  orderCardTop: {
+    alignItems: "flex-start",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+  },
+  orderIdentity: { flex: 1, paddingLeft: 10 },
+  orderNumber: {
+    color: "#356277",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  orderCustomer: {
+    color: "#143F57",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  orderRoute: {
     alignItems: "center",
+    backgroundColor: "#F7FBFD",
+    borderColor: "#E2EFF4",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 6,
+    minHeight: 48,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+  },
+  orderRouteStop: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 5 },
+  orderRouteIcon: {
+    alignItems: "center",
+    borderRadius: 9,
+    height: 25,
+    justifyContent: "center",
+    width: 25,
+  },
+  orderRouteIconPickup: { backgroundColor: "#E3F4FF" },
+  orderRouteIconDelivery: { backgroundColor: "#FFF0EA" },
+  orderRouteText: {
+    color: "#355E73",
+    flex: 1,
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 10,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  orderRouteConnector: { backgroundColor: "#A9D8EB", height: 1, width: 14 },
+  orderCardFooter: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+  },
+  orderFooterMeta: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
+  orderDate: {
+    color: "#6E8A9B",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
+  orderFooterRight: { alignItems: "center", flexDirection: "row-reverse", gap: 7 },
+  orderFee: {
+    color: "#075D9F",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
+  orderCallButton: {
+    alignItems: "center",
+    backgroundColor: "#E8F8FF",
+    borderColor: "#C6EAF7",
     borderRadius: 11,
     borderWidth: 1,
+    height: 31,
     justifyContent: "center",
-    minHeight: 32,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    width: 31,
+  },
+  orderTimingPill: {
+    alignItems: "center",
+    backgroundColor: "#F1F9FD",
+    borderRadius: 8,
+    flexDirection: "row-reverse",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  orderTimingText: {
+    color: "#08719A",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 8,
+    writingDirection: "rtl",
+  },
+  orderStatusBadge: {
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 29,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   orderStatusBadgeText: {
     fontFamily: "Cairo_700Bold",
-    fontSize: 11,
+    fontSize: 10,
     writingDirection: "rtl",
   },
   title: {
