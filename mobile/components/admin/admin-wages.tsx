@@ -179,6 +179,19 @@ function formatPercentChange(value: number): string {
   }).format(Math.abs(value))}%`;
 }
 
+function compactChartPoints(
+  points: readonly ProductivityPoint[],
+  maximum = 7,
+): ProductivityPoint[] {
+  if (points.length <= maximum) return [...points];
+  return Array.from({ length: maximum }, (_, index) => {
+    const sourceIndex = Math.round(
+      (index / (maximum - 1)) * (points.length - 1),
+    );
+    return points[sourceIndex]!;
+  });
+}
+
 export function AdminWages() {
   const { profile } = useDeliveryAuth();
   const router = useRouter();
@@ -198,6 +211,7 @@ export function AdminWages() {
     dashboardFilter === "custom" ? "daily" : dashboardFilter;
   const officeExpenses = useNativeOfficeExpensePeriods(expensePeriod);
   const companyProfitHistory = useNativeCompanyProfitHistory(expensePeriod);
+  const dailyProductivityHistory = useNativeCompanyProfitHistory("daily");
   const dataOpacity = useSharedValue(1);
   const profitScale = useSharedValue(1.1);
   const profitTranslateY = useSharedValue(-14);
@@ -267,41 +281,56 @@ export function AdminWages() {
         (dashboardFilter === "custom" ? customDateKey : selectedKey),
     )?.expense_total ?? 0;
   const netCompanyTotal = totals.company - Number(selectedExpenseTotal);
-  const productivitySnapshot = useMemo(() => {
+  const chartPeriodStart = selectedRows[0]?.period_start ?? selectedKey;
+  const chartPeriodEnd = selectedRows[0]?.period_end ?? selectedKey;
+  const productivitySnapshot = (() => {
     const expensesByPeriod = new Map(
       (officeExpenses.data ?? []).map((row) => [
         row.period_start,
         Number(row.expense_total),
       ]),
     );
-    const timeline = (companyProfitHistory.data ?? [])
+    const profitTimeline = (companyProfitHistory.data ?? [])
       .map((row) => ({
         net: Number(row.company_total) - (expensesByPeriod.get(row.period_start) ?? 0),
         periodStart: row.period_start,
-        productivity: Math.max(0, Number(row.order_count)),
       }))
-      .filter((row) => row.periodStart && Number.isFinite(row.productivity))
+      .filter((row) => row.periodStart && Number.isFinite(row.net))
       .sort((left, right) => left.periodStart.localeCompare(right.periodStart));
-    const selectedIndex = timeline.findIndex(
+    const selectedIndex = profitTimeline.findIndex(
       (row) => row.periodStart === selectedKey,
     );
-    const currentIndex = selectedIndex >= 0 ? selectedIndex : timeline.length - 1;
-    const current = currentIndex >= 0 ? timeline[currentIndex] : null;
-    const previous = currentIndex > 0 ? timeline[currentIndex - 1] : null;
+    const currentIndex =
+      selectedIndex >= 0 ? selectedIndex : profitTimeline.length - 1;
+    const current = currentIndex >= 0 ? profitTimeline[currentIndex] : null;
+    const previous = currentIndex > 0 ? profitTimeline[currentIndex - 1] : null;
     const comparison =
       current && previous && previous.net !== 0
         ? ((current.net - previous.net) / Math.abs(previous.net)) * 100
         : null;
-    return {
-      comparison,
-      points: timeline
-        .slice(Math.max(0, currentIndex - 4), currentIndex + 1)
-        .map((row) => ({
-          periodStart: row.periodStart,
-          value: row.productivity,
-        })),
-    };
-  }, [companyProfitHistory.data, officeExpenses.data, selectedKey]);
+
+    const dailyTimeline = (dailyProductivityHistory.data ?? [])
+      .map((row) => ({
+        periodStart: row.period_start,
+        value: Math.max(0, Number(row.order_count)),
+      }))
+      .filter((row) => row.periodStart && Number.isFinite(row.value))
+      .sort((left, right) => left.periodStart.localeCompare(right.periodStart));
+    const pointsInRange = dailyTimeline.filter(
+      (row) =>
+        row.periodStart >= chartPeriodStart && row.periodStart <= chartPeriodEnd,
+    );
+    const points =
+      dashboardFilter === "daily" || dashboardFilter === "custom"
+        ? dailyTimeline
+            .filter(
+              (row) => !chartPeriodEnd || row.periodStart <= chartPeriodEnd,
+            )
+            .slice(-5)
+        : pointsInRange;
+
+    return { comparison, points: compactChartPoints(points) };
+  })();
   const isPeriodPending =
     (dashboardFilter === "custom"
       ? customDateRows.isPending
@@ -454,6 +483,7 @@ export function AdminWages() {
             onRefresh={() => {
               void officeExpenses.refetch();
               void companyProfitHistory.refetch();
+              void dailyProductivityHistory.refetch();
               if (dashboardFilter === "custom") {
                 void customDateRows.refetch();
               } else {
