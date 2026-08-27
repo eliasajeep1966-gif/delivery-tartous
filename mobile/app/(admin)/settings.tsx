@@ -8,6 +8,7 @@ import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
+import { useOfficeSettings } from "@/features/admin/use-office-settings";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 
 const BLUE = "#0060B8";
@@ -30,6 +31,16 @@ type Exception = {
   office: string;
 };
 
+const defaultOffice: OfficeProfile = {
+  name: "دليفري طرطوس",
+  phone: "0933000000",
+  address: "طرطوس — مركز المدينة",
+};
+
+const defaultExceptions: Exception[] = [
+  { id: "default", keyword: "طلب سريع", captain: "75", office: "25" },
+];
+
 const validSplit = (captain: string, office: string) =>
   Number(captain) + Number(office) === 100 &&
   Number(captain) >= 0 &&
@@ -39,31 +50,38 @@ export default function OfficeSettingsScreen() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
   const { showToast } = useAppToast();
-  const [office, setOffice] = useState<OfficeProfile>({
-    name: "دليفري طرطوس",
-    phone: "0933000000",
-    address: "طرطوس — مركز المدينة",
-  });
+  const [officeDraft, setOfficeDraft] = useState<OfficeProfile | null>(null);
   const [editingField, setEditingField] = useState<OfficeFieldKey | null>(null);
   const [editingValue, setEditingValue] = useState("");
-  const [captainShare, setCaptainShare] = useState("70");
-  const [officeShare, setOfficeShare] = useState("30");
-  const [exceptions, setExceptions] = useState<Exception[]>([
-    { id: "default", keyword: "طلب سريع", captain: "75", office: "25" },
-  ]);
+  const [captainShareDraft, setCaptainShareDraft] = useState<string | null>(null);
+  const [officeShareDraft, setOfficeShareDraft] = useState<string | null>(null);
+  const [exceptionsDraft, setExceptionsDraft] = useState<Exception[] | null>(null);
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
+  const officeSettings = useOfficeSettings(isBackOffice);
+  const savedSettings = officeSettings.data;
+  const office = officeDraft ?? {
+    name: savedSettings?.name ?? defaultOffice.name,
+    phone: savedSettings?.phone ?? defaultOffice.phone,
+    address: savedSettings?.address ?? defaultOffice.address,
+  };
+  const captainShare = captainShareDraft ?? savedSettings?.captainShare ?? "70";
+  const officeShare = officeShareDraft ?? savedSettings?.officeShare ?? "30";
+  const exceptions = exceptionsDraft ?? savedSettings?.exceptions ?? defaultExceptions;
   const splitIsValid = validSplit(captainShare, officeShare);
 
   const updateOffice = (key: OfficeFieldKey, value: string) =>
-    setOffice((current) => ({ ...current, [key]: value }));
+    setOfficeDraft({ ...office, [key]: value });
+
+  const replaceExceptions = (updater: (items: Exception[]) => Exception[]) =>
+    setExceptionsDraft(updater(exceptions));
 
   const updateException = (
     id: string,
     key: "keyword" | "captain" | "office",
     value: string,
   ) =>
-    setExceptions((items) =>
+    replaceExceptions((items) =>
       items.map((item) => (item.id === id ? { ...item, [key]: value } : item)),
     );
 
@@ -78,7 +96,7 @@ export default function OfficeSettingsScreen() {
     setEditingValue("");
   };
 
-  const save = () => {
+  const save = async () => {
     if (!splitIsValid) {
       showToast({
         message: "يجب أن يكون مجموع نسب التوزيع الأساسية 100%.",
@@ -98,7 +116,23 @@ export default function OfficeSettingsScreen() {
       });
       return;
     }
-    showToast({ message: "تم حفظ إعدادات المكتب ضمن هذه الجلسة." });
+    try {
+      await officeSettings.save({
+        name: office.name,
+        phone: office.phone,
+        address: office.address,
+        captainShare,
+        officeShare,
+        exceptions,
+      });
+      showToast({ message: "تم حفظ إعدادات المكتب بشكل دائم." });
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : "تعذر حفظ إعدادات المكتب.",
+        tone: "error",
+        durationMs: 5000,
+      });
+    }
   };
 
   if (!isBackOffice) {
@@ -115,6 +149,37 @@ export default function OfficeSettingsScreen() {
           <Text style={styles.accessDeniedText}>
             هذه الواجهة مخصصة للأدمن والمشرف فقط.
           </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (officeSettings.isPending) {
+    return (
+      <ScreenContainer className="items-center justify-center bg-[#F0F7FF] p-5" containerClassName="bg-[#EAF5FF]">
+        <View style={styles.loadingCard}>
+          <MaterialIcons name="sync" size={23} color={BLUE} />
+          <Text style={styles.loadingText}>جارٍ تحميل إعدادات المكتب...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (officeSettings.error) {
+    return (
+      <ScreenContainer className="items-center justify-center bg-[#F0F7FF] p-5" containerClassName="bg-[#EAF5FF]">
+        <View style={styles.loadErrorCard}>
+          <MaterialIcons name="sync-problem" size={24} color={DANGER} />
+          <Text style={styles.loadErrorTitle}>تعذر تحميل إعدادات المكتب</Text>
+          <Text style={styles.loadErrorText}>
+            {officeSettings.error instanceof Error
+              ? officeSettings.error.message
+              : "تحقق من الاتصال ثم أعد المحاولة."}
+          </Text>
+          <MotionPressable onPress={() => void officeSettings.refetch()} style={styles.retryLoadButton}>
+            <MaterialIcons name="refresh" size={17} color="#FFFFFF" />
+            <Text style={styles.retryLoadButtonText}>إعادة المحاولة</Text>
+          </MotionPressable>
         </View>
       </ScreenContainer>
     );
@@ -200,13 +265,13 @@ export default function OfficeSettingsScreen() {
             <ShareInput
               label="حصة الكابتن"
               value={captainShare}
-              onChangeText={setCaptainShare}
+              onChangeText={setCaptainShareDraft}
               tone="captain"
             />
             <ShareInput
               label="حصة المكتب"
               value={officeShare}
-              onChangeText={setOfficeShare}
+              onChangeText={setOfficeShareDraft}
               tone="office"
             />
           </View>
@@ -247,7 +312,7 @@ export default function OfficeSettingsScreen() {
                 <Pressable
                   accessibilityLabel={`حذف الاستثناء ${index + 1}`}
                   onPress={() =>
-                    setExceptions((items) =>
+                    replaceExceptions((items) =>
                       items.filter((candidate) => candidate.id !== item.id),
                     )
                   }
@@ -292,7 +357,7 @@ export default function OfficeSettingsScreen() {
           ))}
           <MotionPressable
             onPress={() =>
-              setExceptions((items) => [
+              replaceExceptions((items) => [
                 ...items,
                 {
                   id: String(Date.now()),
@@ -309,12 +374,18 @@ export default function OfficeSettingsScreen() {
           </MotionPressable>
         </View>
 
-        <MotionPressable onPress={save} style={styles.saveButton}>
+        <MotionPressable
+          disabled={officeSettings.isSaving}
+          onPress={() => void save()}
+          style={[styles.saveButton, officeSettings.isSaving && styles.saveButtonDisabled]}
+        >
           <MaterialIcons name="save" size={20} color="#FFFFFF" />
-          <Text style={styles.saveButtonText}>حفظ ضمن الجلسة</Text>
+          <Text style={styles.saveButtonText}>
+            {officeSettings.isSaving ? "جارٍ الحفظ..." : "حفظ الإعدادات"}
+          </Text>
         </MotionPressable>
         <Text style={styles.saveHint}>
-          الحفظ الحالي مؤقت داخل هذه الجلسة فقط، حتى نربطه بالحفظ الدائم.
+          تُحفظ التغييرات في قاعدة البيانات وتبقى بعد إغلاق التطبيق.
         </Text>
       </ScrollView>
       <OfficeFieldEditModal
@@ -590,7 +661,15 @@ const styles = StyleSheet.create({
   addExceptionText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
   saveButton: { alignItems: "center", backgroundColor: BLUE, borderRadius: 14, flexDirection: "row-reverse", gap: 8, justifyContent: "center", minHeight: 49, marginTop: 5, shadowColor: BLUE, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.18, shadowRadius: 8 },
   saveButtonText: { color: "#FFFFFF", fontFamily: "Cairo_700Bold", fontSize: 13, writingDirection: "rtl" },
+  saveButtonDisabled: { opacity: 0.62 },
   saveHint: { color: "#748492", fontFamily: "Cairo_400Regular", fontSize: 9, marginTop: -5, textAlign: "center", writingDirection: "rtl" },
+  loadingCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#D7E7F2", borderRadius: 18, borderWidth: 1, gap: 9, padding: 24, width: "100%" },
+  loadingText: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
+  loadErrorCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#F4D2D4", borderRadius: 18, borderWidth: 1, padding: 22, width: "100%" },
+  loadErrorTitle: { color: "#7F1D1D", fontFamily: "Cairo_700Bold", fontSize: 14, marginTop: 8, textAlign: "center", writingDirection: "rtl" },
+  loadErrorText: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 11, marginTop: 4, textAlign: "center", writingDirection: "rtl" },
+  retryLoadButton: { alignItems: "center", backgroundColor: BLUE, borderRadius: 10, flexDirection: "row-reverse", gap: 5, justifyContent: "center", marginTop: 14, minHeight: 38, paddingHorizontal: 12 },
+  retryLoadButtonText: { color: "#FFFFFF", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   accessDenied: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#F4D2D4", borderRadius: 18, borderWidth: 1, padding: 22, width: "100%" },
   accessDeniedIcon: { alignItems: "center", backgroundColor: "#FFF2F2", borderRadius: 22, height: 44, justifyContent: "center", width: 44 },
   accessDeniedTitle: { color: "#7F1D1D", fontFamily: "Cairo_700Bold", fontSize: 15, marginTop: 10, textAlign: "center", writingDirection: "rtl" },
