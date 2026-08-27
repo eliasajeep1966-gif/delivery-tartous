@@ -139,28 +139,6 @@ export function AdminCompanyPdfReports({
             highlighted: true,
           },
         ],
-        breakdown: [
-          {
-            label: "أجور الكباتن للطلبات العادية",
-            value: summary.captain_wage_total,
-            color: "#1677C8",
-          },
-          {
-            label: "تعويض الكباتن للطلبات المجانية",
-            value: summary.captain_compensation_total,
-            color: "#8B5CF6",
-          },
-          {
-            label: "مصاريف المكتب",
-            value: summary.expense_total,
-            color: "#F59E0B",
-          },
-          {
-            label: "نتيجة الشركة قبل المصاريف",
-            value: summary.company_total,
-            color: summary.company_total >= 0 ? "#059669" : "#E05252",
-          },
-        ],
         generatedBy: userName,
       });
     } catch (error) {
