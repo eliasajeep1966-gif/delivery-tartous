@@ -27,13 +27,12 @@ const bundleId =
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
 
+const appIcon = "./assets/images/delivery-tartous-icon.png";
+
 const env = {
   // App branding - update these values directly (do not use env vars)
   appName: "Delivery Tartous",
   appSlug: "delivery-tartous-mobile",
-  // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
-  // Leave empty to use the default icon from assets/images/icon.png
-  logoUrl: "/manus-storage/delivery-tartous-sdk57-icon_940e97f9.png",
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,
@@ -47,7 +46,7 @@ const config: ExpoConfig = {
   slug: env.appSlug,
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: appIcon,
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
   runtimeVersion: { policy: "appVersion" },
@@ -71,10 +70,8 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
-      foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
-      monochromeImage: "./assets/images/android-icon-monochrome.png",
+      backgroundColor: "#FFFFFF",
+      foregroundImage: appIcon,
     },
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
@@ -97,7 +94,7 @@ const config: ExpoConfig = {
   web: {
     bundler: "metro",
     output: "static",
-    favicon: "./assets/images/favicon.png",
+    favicon: appIcon,
   },
   plugins: [
     "expo-router",
@@ -106,7 +103,7 @@ const config: ExpoConfig = {
     [
       "expo-notifications",
       {
-        icon: "./assets/images/icon.png",
+        icon: appIcon,
         color: "#0060B8",
         defaultChannel: "orders-v2",
         sounds: [
@@ -138,7 +135,7 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        image: "./assets/images/splash-icon.png",
+        image: appIcon,
         imageWidth: 200,
         resizeMode: "contain",
         backgroundColor: "#ffffff",
