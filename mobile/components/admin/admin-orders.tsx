@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { type ComponentProps, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -157,7 +156,6 @@ export function AdminOrders() {
     null,
   );
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [cancellationReason, setCancellationReason] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
   const orders = useAdminOrders(filter, isBackOffice);
@@ -215,7 +213,6 @@ export function AdminOrders() {
     setAssignmentOpen(false);
     setCancelOpen(false);
     setSelectedCaptainId(null);
-    setCancellationReason("");
   };
 
   const refreshOrderData = async () => {
@@ -261,23 +258,23 @@ export function AdminOrders() {
   };
 
   const cancelOrder = async () => {
-    if (!selectedOrder || !cancellationReason.trim()) return;
+    if (!selectedOrder) return;
     setIsSaving(true);
     try {
       const { error } = await getNativeSupabaseClient().rpc("cancel_order", {
         p_order_id: selectedOrder.id,
-        p_cancellation_reason: cancellationReason.trim(),
+        p_cancellation_reason: "أُلغي من الإدارة قبل بدء التوصيل.",
       });
       if (error) throw new Error(error.message);
       showToast({ message: `تم إلغاء الطلب #${selectedOrder.orderNumber}.` });
       setCancelOpen(false);
-      setCancellationReason("");
       await refreshOrderData();
     } catch (error) {
-      Alert.alert(
-        "تعذر الإلغاء",
-        error instanceof Error ? error.message : "تعذر إلغاء الطلب.",
-      );
+      showToast({
+        message: error instanceof Error ? error.message : "تعذر إلغاء الطلب.",
+        tone: "error",
+        durationMs: 5000,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -432,13 +429,12 @@ export function AdminOrders() {
         assignmentOpen={assignmentOpen}
         cancelOpen={cancelOpen}
         selectedCaptainId={selectedCaptainId}
-        cancellationReason={cancellationReason}
         isSaving={isSaving}
         onClose={closeDetails}
         onOpenAssignment={() => setAssignmentOpen(true)}
         onOpenCancellation={() => setCancelOpen(true)}
+        onCloseCancellation={() => setCancelOpen(false)}
         onChooseCaptain={setSelectedCaptainId}
-        onChangeCancellationReason={setCancellationReason}
         onAssign={() => void assignCaptain()}
         onCancel={() => void cancelOrder()}
       />
@@ -575,13 +571,12 @@ function OrderDetailsModal({
   assignmentOpen,
   cancelOpen,
   selectedCaptainId,
-  cancellationReason,
   isSaving,
   onClose,
   onOpenAssignment,
   onOpenCancellation,
+  onCloseCancellation,
   onChooseCaptain,
-  onChangeCancellationReason,
   onAssign,
   onCancel,
 }: {
@@ -591,13 +586,12 @@ function OrderDetailsModal({
   assignmentOpen: boolean;
   cancelOpen: boolean;
   selectedCaptainId: string | null;
-  cancellationReason: string;
   isSaving: boolean;
   onClose: () => void;
   onOpenAssignment: () => void;
   onOpenCancellation: () => void;
+  onCloseCancellation: () => void;
   onChooseCaptain: (id: string) => void;
-  onChangeCancellationReason: (value: string) => void;
   onAssign: () => void;
   onCancel: () => void;
 }) {
@@ -608,10 +602,12 @@ function OrderDetailsModal({
   const destinations =
     details.data?.stops.filter((stop) => stop.type === "delivery") ?? [];
   const canAssign = order.status === "pending";
-  const canCancel = order.status === "pending";
+  const canCancel = ["pending", "assigned", "received"].includes(order.status);
+  const cancellationLocked = ["in_delivery", "completed", "false_order"].includes(order.status);
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <>
+      <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.modalSheet}>
@@ -752,6 +748,7 @@ function OrderDetailsModal({
                 <View style={styles.timeline}>
                   {details.data.timeline.map((item) => {
                     const meta = statusAppearance[item.status];
+                    const isCreationEvent = item.status === "pending";
                     return (
                       <View key={item.id} style={styles.timelineRow}>
                         <View
@@ -768,6 +765,27 @@ function OrderDetailsModal({
                           {item.note ? (
                             <Text style={styles.placeNote}>{item.note}</Text>
                           ) : null}
+                          {isCreationEvent && canCancel ? (
+                            <Pressable
+                              disabled={isSaving}
+                              onPress={onOpenCancellation}
+                              style={({ pressed }) => [
+                                styles.cancelTimelineAction,
+                                pressed && styles.pressed,
+                                isSaving && styles.disabled,
+                              ]}
+                            >
+                              <MaterialIcons name="cancel" size={16} color="#BA1A1A" />
+                              <Text style={styles.cancelTimelineActionText}>إلغاء الطلب</Text>
+                            </Pressable>
+                          ) : isCreationEvent && cancellationLocked ? (
+                            <View style={styles.cancelPlaceholder}>
+                              <MaterialIcons name="lock" size={14} color="#8D3E45" />
+                              <Text style={styles.cancelPlaceholderText}>
+                                الإلغاء غير متاح بعد بدء التوصيل
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
                       </View>
                     );
@@ -779,38 +797,23 @@ function OrderDetailsModal({
                 </Text>
               )}
             </View>
-            {canAssign || canCancel ? (
+            {canAssign ? (
               <View style={styles.actionsRow}>
-                {canAssign ? (
-                  <Pressable
-                    onPress={onOpenAssignment}
-                    disabled={isSaving}
-                    style={({ pressed }) => [
-                      styles.assignAction,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <MaterialIcons
-                      name="two-wheeler"
-                      size={17}
-                      color="#0060B8"
-                    />
-                    <Text style={styles.assignActionText}>تعيين كابتن</Text>
-                  </Pressable>
-                ) : null}
-                {canCancel ? (
-                  <Pressable
-                    onPress={onOpenCancellation}
-                    disabled={isSaving}
-                    style={({ pressed }) => [
-                      styles.cancelAction,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <MaterialIcons name="cancel" size={17} color="#BA1A1A" />
-                    <Text style={styles.cancelActionText}>إلغاء مع سبب</Text>
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  onPress={onOpenAssignment}
+                  disabled={isSaving}
+                  style={({ pressed }) => [
+                    styles.assignAction,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <MaterialIcons
+                    name="two-wheeler"
+                    size={17}
+                    color="#0060B8"
+                  />
+                  <Text style={styles.assignActionText}>تعيين كابتن</Text>
+                </Pressable>
               </View>
             ) : null}
             {assignmentOpen ? (
@@ -874,37 +877,82 @@ function OrderDetailsModal({
                 </Pressable>
               </View>
             ) : null}
-            {cancelOpen ? (
-              <View style={styles.inlineModal}>
-                <Text style={styles.inlineModalTitle}>إلغاء الطلب</Text>
-                <Text style={styles.inlineModalDescription}>
-                  سبب الإلغاء إلزامي وسيظهر في التسلسل الزمني للطلب.
-                </Text>
-                <TextInput
-                  multiline
-                  value={cancellationReason}
-                  onChangeText={onChangeCancellationReason}
-                  placeholder="اكتب سبب الإلغاء"
-                  placeholderTextColor="#89939E"
-                  style={styles.reasonInput}
-                  textAlign="right"
-                />
-                <Pressable
-                  disabled={!cancellationReason.trim() || isSaving}
-                  onPress={onCancel}
-                  style={({ pressed }) => [
-                    styles.confirmCancel,
-                    (!cancellationReason.trim() || isSaving) && styles.disabled,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={styles.confirmCancelText}>
-                    {isSaving ? "جارٍ الإلغاء..." : "تأكيد الإلغاء"}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null}
+
           </ScrollView>
+        </View>
+        </View>
+      </Modal>
+      <CancelOrderConfirmation
+      visible={cancelOpen}
+      orderNumber={order.orderNumber}
+      isSaving={isSaving}
+      onClose={onCloseCancellation}
+      onConfirm={onCancel}
+      />
+    </>
+  );
+}
+
+function CancelOrderConfirmation({
+  visible,
+  orderNumber,
+  isSaving,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  orderNumber: number;
+  isSaving: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={isSaving ? undefined : onClose}
+    >
+      <View style={styles.cancelDialogOverlay}>
+        <Pressable
+          disabled={isSaving}
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.cancelDialog}>
+          <View style={styles.cancelDialogIcon}>
+            <MaterialIcons name="warning-amber" size={25} color="#BA1A1A" />
+          </View>
+          <Text style={styles.cancelDialogTitle}>تأكيد إلغاء الطلب #{orderNumber}</Text>
+          <Text style={styles.cancelDialogDescription}>
+            سيُلغى الطلب قبل بدء التوصيل، ولن تُحتسب أي أجور للكابتن أو للشركة: 0 ل.س.
+          </Text>
+          <View style={styles.cancelDialogActions}>
+            <Pressable
+              disabled={isSaving}
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.cancelDialogBack,
+                isSaving && styles.disabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.cancelDialogBackText}>تراجع</Text>
+            </Pressable>
+            <Pressable
+              disabled={isSaving}
+              onPress={onConfirm}
+              style={({ pressed }) => [
+                styles.cancelDialogConfirm,
+                isSaving && styles.disabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.cancelDialogConfirmText}>
+                {isSaving ? "جارٍ الإلغاء..." : "تأكيد الإلغاء"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -1570,22 +1618,120 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     writingDirection: "rtl",
   },
-  cancelAction: {
+  cancelDialogOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    backgroundColor: "rgba(20, 30, 38, 0.42)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  cancelDialog: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#F4C5C7",
+    borderRadius: 20,
+    borderWidth: 1,
+    maxWidth: 400,
+    padding: 22,
+    width: "100%",
+  },
+  cancelDialogIcon: {
     alignItems: "center",
     backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
-    borderRadius: 12,
+    borderRadius: 24,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  cancelDialogTitle: {
+    color: "#7F1D1D",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 16,
+    marginTop: 11,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  cancelDialogDescription: {
+    color: "#58616B",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 11,
+    lineHeight: 19,
+    marginTop: 7,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  cancelDialogActions: {
+    flexDirection: "row-reverse",
+    gap: 9,
+    marginTop: 18,
+    width: "100%",
+  },
+  cancelDialogBack: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#C9D9E7",
+    borderRadius: 11,
     borderWidth: 1,
     flex: 1,
-    flexDirection: "row-reverse",
-    gap: 6,
-    height: 44,
     justifyContent: "center",
+    minHeight: 44,
   },
-  cancelActionText: {
+  cancelDialogBackText: {
+    color: "#536B7B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
+  cancelDialogConfirm: {
+    alignItems: "center",
+    backgroundColor: "#BA1A1A",
+    borderRadius: 11,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  cancelDialogConfirmText: {
+    color: "#FFFFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
+  cancelTimelineAction: {
+    alignItems: "center",
+    alignSelf: "flex-end",
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 5,
+    marginTop: 9,
+    minHeight: 35,
+    paddingHorizontal: 10,
+  },
+  cancelTimelineActionText: {
     color: "#BA1A1A",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  cancelPlaceholder: {
+    alignItems: "center",
+    alignSelf: "flex-end",
+    backgroundColor: "#FFF5F5",
+    borderColor: "#F6CDD0",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    gap: 5,
+    marginTop: 9,
+    minHeight: 35,
+    paddingHorizontal: 10,
+  },
+  cancelPlaceholderText: {
+    color: "#8D3E45",
+    fontSize: 10,
+    fontWeight: "700",
     writingDirection: "rtl",
   },
   inlineModal: {
