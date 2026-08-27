@@ -451,7 +451,16 @@ export function CaptainWages() {
                         <MaterialIcons name="inventory-2" size={15} color="#0878D1" />
                         <Text style={styles.wageRouteLabel}>المصدر</Text>
                       </View>
-                      <Text numberOfLines={3} style={styles.wageRouteAddress}>
+                      <Text numberOfLines={1} style={styles.wageRouteContactName}>
+                        {row.pickup_contact_name}
+                      </Text>
+                      <MotionPressable
+                        accessibilityLabel={`الاتصال بمصدر الطلب ${row.pickup_contact_name}`}
+                        onPress={() => void Linking.openURL(`tel:${row.pickup_contact_phone}`)}
+                      >
+                        <Text style={styles.wageRoutePhone}>{row.pickup_contact_phone}</Text>
+                      </MotionPressable>
+                      <Text numberOfLines={1} style={styles.wageRouteAddress}>
                         {row.pickup_address}
                       </Text>
                     </View>
@@ -460,7 +469,16 @@ export function CaptainWages() {
                         <MaterialIcons name="location-on" size={15} color="#D35B38" />
                         <Text style={styles.wageRouteLabel}>الوجهة</Text>
                       </View>
-                      <Text numberOfLines={3} style={styles.wageRouteAddress}>
+                      <Text numberOfLines={1} style={styles.wageRouteContactName}>
+                        {row.delivery_contact_name}
+                      </Text>
+                      <MotionPressable
+                        accessibilityLabel={`الاتصال بوجهة الطلب ${row.delivery_contact_name}`}
+                        onPress={() => void Linking.openURL(`tel:${row.delivery_contact_phone}`)}
+                      >
+                        <Text style={styles.wageRoutePhone}>{row.delivery_contact_phone}</Text>
+                      </MotionPressable>
+                      <Text numberOfLines={1} style={styles.wageRouteAddress}>
                         {row.delivery_address}
                       </Text>
                     </View>
@@ -1445,7 +1463,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     flex: 1,
-    minHeight: 88,
+    minHeight: 126,
     padding: 9,
   },
   wageRouteHead: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
@@ -1455,12 +1473,27 @@ const styles = StyleSheet.create({
     fontSize: 10,
     writingDirection: "rtl",
   },
-  wageRouteAddress: {
-    color: "#294F66",
-    fontFamily: "Cairo_600SemiBold",
+  wageRouteContactName: {
+    color: "#194B6E",
+    fontFamily: "Cairo_700Bold",
     fontSize: 11,
-    lineHeight: 19,
-    marginTop: 6,
+    marginTop: 7,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageRoutePhone: {
+    color: "#0878D1",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    marginTop: 2,
+    writingDirection: "ltr",
+  },
+  wageRouteAddress: {
+    color: "#668597",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    lineHeight: 16,
+    marginTop: 4,
     textAlign: "right",
     writingDirection: "rtl",
   },
