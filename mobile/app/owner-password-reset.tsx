@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -12,6 +11,7 @@ import { CheckCircle2, KeyRound, UserRound } from "lucide-react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { KeyboardSafeScrollView } from "@/components/ui/keyboard-safe-scroll-view";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
@@ -186,7 +186,7 @@ export default function OwnerPasswordResetScreen() {
   }
 
   return (
-    <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
+    <ScreenContainer safeBottom className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
       <DeliveryAppHeader
         leadingAction={{
           accessibilityLabel: "العودة",
@@ -195,7 +195,7 @@ export default function OwnerPasswordResetScreen() {
         }}
         trailingAction={{ accessibilityLabel: "تعيين كلمة المرور", icon: "key" }}
       />
-      <ScrollView contentContainerClassName="gap-4 p-4 pb-8" keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerClassName="gap-4 p-4">
         <View className="overflow-hidden rounded-3xl bg-[#0060B8] p-5 shadow-sm">
           <View className="h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
             <KeyRound size={24} color="#FFFFFF" />
@@ -311,7 +311,7 @@ export default function OwnerPasswordResetScreen() {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </ScreenContainer>
   );
 }

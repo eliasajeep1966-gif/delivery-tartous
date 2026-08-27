@@ -10,8 +10,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { type AdminHomeCaptain } from "@/features/admin/use-admin-home";
 import { type NativeAdminOrderStopInput } from "@/lib/supabase/native-admin-contract";
@@ -66,6 +68,9 @@ export function AdminNewOrderModal({
   const [captainId, setCaptainId] = useState("");
   const [step, setStep] = useState(1);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  const { fontScale, width } = useWindowDimensions();
+  const compactLayout = width <= 360 || fontScale >= 1.3;
 
   const reset = () => {
     setPickups([blankLocation(`pickup-${sequence.current++}`)]);
@@ -159,10 +164,10 @@ export function AdminNewOrderModal({
     >
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={close} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, compactLayout && styles.sheetCompact]}>
                   <View style={styles.header}>
           <View style={styles.headerAccent} />
           <Pressable
@@ -181,12 +186,12 @@ export function AdminNewOrderModal({
           </View>
         </View>
 
-        <View style={styles.routeSteps}>
-          <RouteStep number="1" label="مصدر الاستلام" active={step === 1} complete={step > 1} />
+        <View style={[styles.routeSteps, compactLayout && styles.routeStepsCompact]}>
+          <RouteStep number="1" label="مصدر الاستلام" active={step === 1} complete={step > 1} compact={compactLayout} />
           <View style={[styles.routeConnector, step > 1 && styles.routeConnectorComplete]} />
-          <RouteStep number="2" label="وجهة التوصيل" active={step === 2} complete={step > 2} />
+          <RouteStep number="2" label="وجهة التوصيل" active={step === 2} complete={step > 2} compact={compactLayout} />
           <View style={[styles.routeConnector, step > 2 && styles.routeConnectorComplete]} />
-          <RouteStep number="3" label="التعيين" active={step === 3} />
+          <RouteStep number="3" label="التعيين" active={step === 3} compact={compactLayout} />
         </View>
 
         <ScrollView
@@ -204,6 +209,7 @@ export function AdminNewOrderModal({
                 disabled={isSubmitting}
                 setLocations={setPickups}
                 nextId={() => `pickup-${sequence.current++}`}
+                compact={compactLayout}
               />
             ) : null}
 
@@ -216,6 +222,7 @@ export function AdminNewOrderModal({
                 disabled={isSubmitting}
                 setLocations={setDestinations}
                 nextId={() => `delivery-${sequence.current++}`}
+                compact={compactLayout}
               />
             ) : null}
 
@@ -297,7 +304,7 @@ export function AdminNewOrderModal({
             ) : null}
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
             {validationError || errorMessage ? (
               <Text style={styles.error}>
                 {validationError ?? errorMessage}
@@ -383,6 +390,7 @@ function LocationSection({
   disabled,
   setLocations,
   nextId,
+  compact,
 }: {
   title: string;
   description: string;
@@ -391,6 +399,7 @@ function LocationSection({
   disabled: boolean;
   setLocations: Dispatch<SetStateAction<LocationEntry[]>>;
   nextId: () => string;
+  compact: boolean;
 }) {
   const update = (
     id: string,
@@ -424,8 +433,8 @@ function LocationSection({
         />
       </View>
       {locations.map((location, index) => (
-        <View key={location.id} style={styles.locationCardRow}>
-          <View style={styles.locationCard}>
+        <View key={location.id} style={[styles.locationCardRow, compact && styles.locationCardRowCompact]}>
+          <View style={[styles.locationCard, compact && styles.locationCardCompact]}>
             <View style={styles.locationCardHeading}>
               {locations.length > 1 ? (
                 <Pressable
@@ -493,7 +502,7 @@ function LocationSection({
               />
             ) : null}
           </View>
-          <View pointerEvents="none" style={styles.scrollLane}>
+          <View pointerEvents="none" style={[styles.scrollLane, compact && styles.scrollLaneCompact]}>
             <View style={styles.scrollLaneHint} />
           </View>
         </View>
@@ -507,14 +516,16 @@ function RouteStep({
   label,
   active = false,
   complete = false,
+  compact = false,
 }: {
   number: string;
   label: string;
   active?: boolean;
   complete?: boolean;
+  compact?: boolean;
 }) {
   return (
-    <View style={styles.routeStep}>
+    <View style={[styles.routeStep, compact && styles.routeStepCompact]}>
       <View
         style={[
           styles.routeNumber,
@@ -531,6 +542,7 @@ function RouteStep({
         )}
       </View>
       <Text
+        numberOfLines={compact ? 2 : 1}
         style={[
           styles.routeLabel,
           active && styles.routeLabelActive,
@@ -582,6 +594,7 @@ const styles = StyleSheet.create({
     maxHeight: "94%",
     overflow: "hidden",
   },
+  sheetCompact: { maxHeight: "97%" },
   header: {
     alignItems: "flex-start",
     backgroundColor: "#FFFFFF",
@@ -623,16 +636,18 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   routeSteps: { alignItems: "center", backgroundColor: "#FFFFFF", flexDirection: "row-reverse", justifyContent: "center", paddingBottom: 12, paddingHorizontal: 18, paddingTop: 9 },
-  routeStep: { alignItems: "center", gap: 3 },
+  routeStepsCompact: { paddingHorizontal: 12 },
+  routeStep: { alignItems: "center", flexShrink: 1, gap: 3, minWidth: 0 },
+  routeStepCompact: { flex: 1 },
   routeNumber: { alignItems: "center", backgroundColor: "#EDF4F8", borderRadius: 10, height: 20, justifyContent: "center", width: 20 },
   routeNumberActive: { backgroundColor: "#0878D1" },
   routeNumberComplete: { backgroundColor: "#18A775" },
   routeNumberText: { color: "#6D8799", fontFamily: "Cairo_700Bold", fontSize: 10 },
   routeNumberTextActive: { color: "#FFFFFF" },
-  routeLabel: { color: "#8399A8", fontFamily: "Cairo_700Bold", fontSize: 9, writingDirection: "rtl" },
+  routeLabel: { color: "#8399A8", fontFamily: "Cairo_700Bold", fontSize: 9, textAlign: "center", writingDirection: "rtl" },
   routeLabelActive: { color: "#0878D1" },
   routeLabelComplete: { color: "#15916C" },
-  routeConnector: { backgroundColor: "#D8E8F2", height: 1, marginBottom: 16, marginHorizontal: 8, width: 46 },
+  routeConnector: { backgroundColor: "#D8E8F2", flex: 1, height: 1, marginBottom: 16, marginHorizontal: 8, maxWidth: 46, minWidth: 12 },
   routeConnectorComplete: { backgroundColor: "#18A775" },
   content: { gap: 10, padding: 14, paddingBottom: 16 },
   formCard: {
@@ -706,6 +721,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   locationCardRow: { alignItems: "stretch", flexDirection: "row-reverse", gap: 10, marginTop: 8 },
+  locationCardRowCompact: { flexDirection: "column" },
   locationCard: {
     backgroundColor: "#F9FCFF",
     borderColor: "rgba(22,206,255,0.82)",
@@ -719,7 +735,9 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     width: "64%",
   },
+  locationCardCompact: { alignSelf: "stretch", width: "100%" },
   scrollLane: { alignItems: "center", flex: 1, justifyContent: "center" },
+  scrollLaneCompact: { display: "none" },
   scrollLaneHint: { backgroundColor: "rgba(22,206,255,0.2)", borderRadius: 2, height: 34, width: 2 },
   locationCardHeading: {
     alignItems: "center",

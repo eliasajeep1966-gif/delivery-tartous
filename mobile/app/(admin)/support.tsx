@@ -21,6 +21,7 @@ import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { KeyboardSafeScrollView } from "@/components/ui/keyboard-safe-scroll-view";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 
@@ -121,7 +122,7 @@ export default function AdminSupportScreen() {
       </ScreenContainer>
     );
   return (
-    <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
+    <ScreenContainer safeBottom className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
       <DeliveryAppHeader
         leadingAction={{
           accessibilityLabel: "العودة",
@@ -131,10 +132,7 @@ export default function AdminSupportScreen() {
         }}
         trailingAction={{ accessibilityLabel: "المساعدة والدعم", icon: "headset-mic" }}
       />
-      <ScrollView
-        contentContainerClassName="gap-4 p-4 pb-8"
-        showsVerticalScrollIndicator={false}
-      >
+      <KeyboardSafeScrollView contentContainerClassName="gap-4 p-4">
         <View className="rounded-3xl bg-[#0060B8] p-5 shadow-[0_8px_30px_rgba(0,96,184,0.04)]">
           <Headphones size={28} color="#FFF" />
             <Text className="mt-3 text-right text-[19px] font-bold text-white">
@@ -286,7 +284,7 @@ export default function AdminSupportScreen() {
             Delivery Tartous — مركز مساعدة التطبيق
           </Text>
         </View>
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </ScreenContainer>
   );
 }
@@ -302,10 +300,10 @@ function Contact({
   return (
     <Pressable
       onPress={onPress}
-      className="h-10 flex-1 flex-row items-center justify-center gap-1 rounded-2xl bg-white active:scale-95"
+      className="min-h-10 flex-1 flex-row items-center justify-center gap-1 rounded-2xl bg-white px-2 py-2 active:scale-95"
     >
       {icon}
-      <Text className="text-[11px] font-bold text-[#0060B8]">{label}</Text>
+      <Text className="flex-shrink text-center text-[11px] font-bold text-[#0060B8]">{label}</Text>
     </Pressable>
   );
 }

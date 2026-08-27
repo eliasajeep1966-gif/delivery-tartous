@@ -65,7 +65,7 @@ export function AdminCaptainWageDetail() {
   );
 
   return (
-    <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
+    <ScreenContainer safeBottom className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
         leadingAction={{
           accessibilityLabel: "العودة إلى أجور الكباتن",

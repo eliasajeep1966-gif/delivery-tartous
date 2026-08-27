@@ -15,6 +15,7 @@ import { LogoutConfirmationDialog } from "@/components/auth/logout-confirmation-
 import { ScreenContainer } from "@/components/screen-container";
 import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { KeyboardSafeScrollView } from "@/components/ui/keyboard-safe-scroll-view";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useScreenLiveUpdates } from "@/hooks/use-screen-live-updates";
@@ -265,7 +266,7 @@ function CaptainOrderCard({
             <MaterialIcons name="inventory-2" size={15} color="#0878D1" />
             <Text style={styles.wageRouteLabel}>المصدر</Text>
           </View>
-          <Text numberOfLines={1} style={styles.wageRouteContactName}>
+          <Text numberOfLines={2} style={styles.wageRouteContactName}>
             {order.pickup_contact_name ?? "نقطة الاستلام"}
           </Text>
           {order.pickup_contact_phone ? (
@@ -284,7 +285,7 @@ function CaptainOrderCard({
               </Text>
             </MotionPressable>
           ) : null}
-          <Text numberOfLines={2} style={styles.wageRouteAddress}>
+          <Text numberOfLines={3} style={styles.wageRouteAddress}>
             {order.pickup_address}
           </Text>
         </View>
@@ -293,7 +294,7 @@ function CaptainOrderCard({
             <MaterialIcons name="location-on" size={15} color="#D35B38" />
             <Text style={styles.wageRouteLabel}>الوجهة</Text>
           </View>
-          <Text numberOfLines={1} style={styles.wageRouteContactName}>
+          <Text numberOfLines={2} style={styles.wageRouteContactName}>
             {order.customer_name}
           </Text>
           <MotionPressable
@@ -306,7 +307,7 @@ function CaptainOrderCard({
             <MaterialIcons name="call-made" size={14} color="#0878D1" />
             <Text style={styles.wageRoutePhone}>{order.customer_phone}</Text>
           </MotionPressable>
-          <Text numberOfLines={2} style={styles.wageRouteAddress}>
+          <Text numberOfLines={3} style={styles.wageRouteAddress}>
             {order.delivery_address}
           </Text>
         </View>
@@ -672,7 +673,7 @@ export function CaptainSettings() {
     }
   };
   return (
-    <Page title="إعدادات الحساب" subtitle="إدارة ملفك وحماية حسابك">
+    <Page title="إعدادات الحساب" subtitle="إدارة ملفك وحماية حسابك" keyboardAware>
       <Animated.View
         entering={FadeInDown.delay(70).duration(190)}
         style={styles.settingsProfileCard}
@@ -684,10 +685,10 @@ export function CaptainSettings() {
             </Text>
           </View>
           <View style={styles.settingsProfileCopy}>
-            <Text numberOfLines={1} style={styles.settingsProfileName}>
+            <Text numberOfLines={2} style={styles.settingsProfileName}>
               {auth.profile?.full_name || "كابتن دليفري"}
             </Text>
-            <Text numberOfLines={1} style={styles.settingsProfileEmail}>
+            <Text numberOfLines={2} style={styles.settingsProfileEmail}>
               {auth.profile?.email || "البريد الإلكتروني غير متاح"}
             </Text>
           </View>
@@ -845,20 +846,23 @@ function Page({
   children,
   refreshing = false,
   onRefresh,
+  keyboardAware = false,
 }: {
   title: string;
   subtitle: string;
   children: React.ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
+  keyboardAware?: boolean;
 }) {
+  const PageScrollView = keyboardAware ? KeyboardSafeScrollView : ScrollView;
   return (
     <ScreenContainer
       className="bg-transparent"
       containerClassName="bg-transparent"
     >
       <DeliveryAppHeader />
-      <ScrollView
+      <PageScrollView
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -883,7 +887,7 @@ function Page({
         >
           {children}
         </Animated.View>
-      </ScrollView>
+      </PageScrollView>
     </ScreenContainer>
   );
 }
@@ -1405,6 +1409,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     flex: 1,
+    minWidth: 0,
     padding: 9,
   },
   wageRouteHead: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
@@ -1417,6 +1422,7 @@ const styles = StyleSheet.create({
   wageRouteContactName: {
     color: "#194B6E",
     fontFamily: "Cairo_700Bold",
+    flexShrink: 1,
     fontSize: 13,
     marginTop: 7,
     textAlign: "right",
@@ -1450,6 +1456,7 @@ const styles = StyleSheet.create({
   wageRouteAddress: {
     color: "#668597",
     fontFamily: "Cairo_400Regular",
+    flexShrink: 1,
     fontSize: 10,
     lineHeight: 16,
     marginTop: 4,

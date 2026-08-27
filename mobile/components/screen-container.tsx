@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 export interface ScreenContainerProps extends ViewProps {
   /** Safe-area edges; bottom is normally owned by the tab bar. */
   edges?: Edge[];
+  /** Adds the bottom device safe area for screens that are not behind a tab bar. */
+  safeBottom?: boolean;
   /** NativeWind classes for the screen content. */
   className?: string;
   /** NativeWind classes for the outer background layer. */
@@ -22,12 +24,16 @@ export interface ScreenContainerProps extends ViewProps {
 export function ScreenContainer({
   children,
   edges = ["top", "left", "right"],
+  safeBottom = false,
   className,
   containerClassName,
   safeAreaClassName,
   style,
   ...props
 }: ScreenContainerProps) {
+  const resolvedEdges: readonly Edge[] =
+    safeBottom && !edges.includes("bottom") ? [...edges, "bottom"] : edges;
+
   return (
     <View
       className={cn("flex-1", containerClassName)}
@@ -41,7 +47,7 @@ export function ScreenContainer({
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView
-        edges={edges}
+        edges={resolvedEdges}
         className={cn("flex-1", safeAreaClassName)}
         style={style}
       >

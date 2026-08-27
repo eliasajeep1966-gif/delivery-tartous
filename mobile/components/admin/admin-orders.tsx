@@ -14,6 +14,7 @@ import {
   TextInput as NativeTextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
@@ -143,7 +144,7 @@ function formatCompactDate(value: string) {
   }
 }
 
-export function AdminOrders() {
+export function AdminOrders({ safeBottom = false }: { safeBottom?: boolean }) {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
   const { showToast } = useAppToast();
@@ -197,7 +198,7 @@ export function AdminOrders() {
 
   if (!isBackOffice) {
     return (
-      <ScreenContainer className="p-5">
+      <ScreenContainer safeBottom={safeBottom} className="p-5">
         <View style={styles.roleNotice}>
           <Text style={styles.roleNoticeTitle}>لا تملك صلاحية لوحة العمل</Text>
           <Text style={styles.roleNoticeText}>
@@ -319,7 +320,7 @@ export function AdminOrders() {
   };
 
   return (
-    <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
+    <ScreenContainer safeBottom={safeBottom} className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
         leadingAction={{
           accessibilityLabel: "العودة",
@@ -526,16 +527,16 @@ function OrderRow({
         <View style={styles.orderCustomerRow}>
           <View style={styles.customerNameRow}>
             <MaterialIcons name="person-outline" size={14} color="#5E7C90" />
-            <Text numberOfLines={1} style={styles.orderCustomer}>{item.customerName}</Text>
+              <Text numberOfLines={2} style={styles.orderCustomer}>{item.customerName}</Text>
           </View>
           <Text style={styles.orderFee}>{formatMoney(item.fee)}</Text>
         </View>
         <View style={styles.routeRow}>
           <MaterialIcons name="storefront" size={13} color="#0878D1" />
-          <Text numberOfLines={1} style={styles.routeText}>{item.pickupAddress}</Text>
+          <Text numberOfLines={2} style={styles.routeText}>{item.pickupAddress}</Text>
           <MaterialIcons name="arrow-back" size={12} color="#91A8B8" />
           <MaterialIcons name="location-on" size={13} color="#16A879" />
-          <Text numberOfLines={1} style={styles.routeText}>{item.deliveryAddress}</Text>
+          <Text numberOfLines={2} style={styles.routeText}>{item.deliveryAddress}</Text>
         </View>
         <OrderDeliveryJourney timing={item.deliveryTiming} />
       </View>
@@ -633,6 +634,7 @@ function OrderDetailsModal({
   onAssign: () => void;
   onCancel: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   if (!order) return null;
   const status = statusAppearance[order.status];
   const pickups =
@@ -670,7 +672,7 @@ function OrderDetailsModal({
             </View>
           </View>
           <ScrollView
-            contentContainerStyle={styles.modalContent}
+            contentContainerStyle={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.detailCard}>
@@ -1225,7 +1227,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 5,
   },
-  customerNameRow: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 4, marginLeft: 10 },
+  customerNameRow: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 4, marginLeft: 10, minWidth: 0 },
   orderCustomer: { color: "#234B66", flexShrink: 1, fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
   orderFee: {
     color: "#163E5C",
@@ -1234,7 +1236,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   routeRow: { alignItems: "center", flexDirection: "row-reverse", gap: 3, marginTop: 5 },
-  routeText: { color: "#5A7487", flex: 1, fontSize: 10, fontWeight: "700", textAlign: "right", writingDirection: "rtl" },
+  routeText: { color: "#5A7487", flex: 1, flexShrink: 1, fontSize: 10, fontWeight: "700", minWidth: 0, textAlign: "right", writingDirection: "rtl" },
   orderJourney: {
     backgroundColor: "#F4FBF8",
     borderColor: "#D8EEE5",

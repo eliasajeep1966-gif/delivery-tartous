@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -13,6 +12,7 @@ import { KeyRound, ShieldAlert, Trash2 } from "lucide-react-native";
 import { ActionConfirmationDialog } from "@/components/ui/action-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { KeyboardSafeScrollView } from "@/components/ui/keyboard-safe-scroll-view";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
@@ -125,7 +125,7 @@ export default function OwnerDataResetScreen() {
   }
 
   return (
-    <ScreenContainer className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
+    <ScreenContainer safeBottom className="bg-[#F8FAFC]" containerClassName="bg-[#F8FAFC]">
       <DeliveryAppHeader
         leadingAction={{
           accessibilityLabel: "العودة",
@@ -134,7 +134,7 @@ export default function OwnerDataResetScreen() {
         }}
         trailingAction={{ accessibilityLabel: "مسح بيانات التطبيق", icon: "warning" }}
       />
-      <ScrollView contentContainerClassName="p-4 pb-8" keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerClassName="p-4">
         <View className="rounded-3xl border border-[#F2B8B5] bg-[#FFF7F6] p-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1 items-end">
@@ -188,7 +188,7 @@ export default function OwnerDataResetScreen() {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardSafeScrollView>
       <ActionConfirmationDialog
         visible={resetConfirmationOpen}
         isConfirming={submitting}

@@ -413,7 +413,7 @@ function CaptainDetails({
   );
 }
 
-export function AdminCaptainsScreen() {
+export function AdminCaptainsScreen({ safeBottom = false }: { safeBottom?: boolean }) {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
   const { showToast } = useAppToast();
@@ -484,7 +484,7 @@ export function AdminCaptainsScreen() {
 
   if (profile?.role !== "admin" && profile?.role !== "supervisor") {
     return (
-      <ScreenContainer className="items-center justify-center p-5">
+      <ScreenContainer safeBottom={safeBottom} className="items-center justify-center p-5">
         <Text className="text-center text-base font-bold text-[#173B59]">
           هذه الشاشة مخصصة للأدمن والمشرف.
         </Text>
@@ -493,7 +493,7 @@ export function AdminCaptainsScreen() {
   }
 
   return (
-    <ScreenContainer className="bg-[#F3FBFF]" containerClassName="bg-[#EAF5FF]">
+    <ScreenContainer safeBottom={safeBottom} className="bg-[#F3FBFF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
         leadingAction={{
           accessibilityLabel: "الرئيسية",

@@ -11,11 +11,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { ActionConfirmationDialog } from "@/components/ui/action-confirmation-dialog";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
+import { KeyboardSafeScrollView } from "@/components/ui/keyboard-safe-scroll-view";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import {
@@ -319,6 +321,7 @@ export function AdminOfficeExpenses() {
 
   return (
     <ScreenContainer
+      safeBottom
       className="bg-[#F0F7FF]"
       containerClassName="bg-[#EAF5FF]"
     >
@@ -333,10 +336,9 @@ export function AdminOfficeExpenses() {
           icon: "receipt-long",
         }}
       />
-      <ScrollView
+      <KeyboardSafeScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={expenses.isRefetching}
@@ -582,8 +584,7 @@ export function AdminOfficeExpenses() {
             </Pressable>
           </View>
         ) : null}
-      </ScrollView>
-
+            </KeyboardSafeScrollView>
       <DayExpensesModal
         day={selectedDay}
         onClose={() => setSelectedDay(null)}
@@ -651,6 +652,7 @@ function DayExpensesModal({
   onEdit: (expense: NativeOfficeExpense) => void;
   onDelete: (expense: NativeOfficeExpense) => void;
 }) {
+  const insets = useSafeAreaInsets();
   if (!day) return null;
 
   return (
@@ -672,7 +674,7 @@ function DayExpensesModal({
             </View>
           </View>
           <ScrollView
-            contentContainerStyle={styles.modalContent}
+            contentContainerStyle={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {day.expenses.map((expense, index) => (

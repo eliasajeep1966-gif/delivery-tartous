@@ -1,10 +1,11 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { KeyboardSafeScrollView } from "@/components/ui/keyboard-safe-scroll-view";
 import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -204,6 +205,7 @@ export default function OfficeSettingsScreen() {
 
   return (
     <ScreenContainer
+      safeBottom
       className="bg-[#F0F7FF]"
       containerClassName="bg-[#EAF5FF]"
     >
@@ -215,11 +217,7 @@ export default function OfficeSettingsScreen() {
         }}
         trailingAction={{ accessibilityLabel: "إعدادات المكتب", icon: "business" }}
       />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <KeyboardSafeScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <MaterialIcons name="tune" size={25} color={BLUE} />
@@ -386,7 +384,7 @@ export default function OfficeSettingsScreen() {
         <Text style={styles.saveHint}>
           تُحفظ التغييرات في قاعدة البيانات وتبقى بعد إغلاق التطبيق.
         </Text>
-      </ScrollView>
+      </KeyboardSafeScrollView>
       <OfficeFieldEditModal
         field={officeFields.find((field) => field.key === editingField) ?? null}
         value={editingValue}
@@ -448,7 +446,7 @@ function OfficeInfoRow({
       </View>
       <View style={styles.settingsFieldCopy}>
         <Text style={styles.inputLabel}>{label}</Text>
-        <Text numberOfLines={1} style={styles.fieldValue}>{value || "—"}</Text>
+        <Text numberOfLines={2} style={styles.fieldValue}>{value || "—"}</Text>
       </View>
       <MotionPressable onPress={onEdit} style={styles.editFieldButton}>
         <MaterialIcons name="edit" size={15} color={BLUE} />
@@ -486,7 +484,11 @@ function OfficeFieldEditModal({
     >
       <View style={styles.editModalOverlay}>
         <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
-        <View style={styles.editModalCard}>
+        <KeyboardSafeScrollView
+          bottomSpacing={24}
+          contentContainerStyle={styles.editModalScrollContent}
+        >
+          <View style={styles.editModalCard}>
           <View style={styles.editModalIcon}>
             <MaterialIcons name={field?.icon ?? "edit"} size={23} color={BLUE} />
           </View>
@@ -512,7 +514,8 @@ function OfficeFieldEditModal({
               <Text style={styles.editModalSaveText}>حفظ التعديل</Text>
             </MotionPressable>
           </View>
-        </View>
+          </View>
+        </KeyboardSafeScrollView>
       </View>
     </Modal>
   );
@@ -608,12 +611,13 @@ const styles = StyleSheet.create({
   settingsField: { alignItems: "center", flexDirection: "row-reverse", gap: 10, minHeight: 68, paddingHorizontal: 13, paddingVertical: 8 },
   fieldDivider: { borderBottomColor: "#E6EFF5", borderBottomWidth: 1 },
   fieldIcon: { alignItems: "center", backgroundColor: "#F2F8FC", borderRadius: 11, height: 38, justifyContent: "center", width: 38 },
-  settingsFieldCopy: { flex: 1 },
+  settingsFieldCopy: { flex: 1, minWidth: 0 },
   inputLabel: { color: "#547086", fontFamily: "Cairo_700Bold", fontSize: 10, textAlign: "right", writingDirection: "rtl" },
   fieldValue: { color: DEEP_BLUE, fontFamily: "Cairo_400Regular", fontSize: 12, marginTop: 1, textAlign: "right", writingDirection: "rtl" },
   editFieldButton: { alignItems: "center", backgroundColor: "#EAF4FF", borderRadius: 9, flexDirection: "row-reverse", gap: 3, justifyContent: "center", minHeight: 32, paddingHorizontal: 8 },
   editFieldButtonText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
-  editModalOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", backgroundColor: "rgba(20, 30, 38, 0.42)", justifyContent: "center", padding: 24 },
+  editModalOverlay: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(20, 30, 38, 0.42)" },
+  editModalScrollContent: { alignItems: "center", flexGrow: 1, justifyContent: "center", padding: 24 },
   editModalCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#CDE1F0", borderRadius: 20, borderWidth: 1, maxWidth: 400, padding: 22, width: "100%" },
   editModalIcon: { alignItems: "center", backgroundColor: "#EAF4FF", borderRadius: 24, height: 48, justifyContent: "center", width: 48 },
   editModalTitle: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 16, marginTop: 10, textAlign: "center", writingDirection: "rtl" },

@@ -86,7 +86,7 @@ export function AdminUsers() {
 
   if (profile?.role === "captain") {
     return (
-      <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
+      <ScreenContainer safeBottom className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
         <View style={styles.restricted}>
           <MaterialIcons name="lock-outline" size={34} color="#0060B8" />
           <Text style={styles.restrictedTitle}>الوصول غير مسموح</Text>
@@ -150,6 +150,7 @@ export function AdminUsers() {
 
   return (
     <ScreenContainer
+      safeBottom
       className="bg-[#F0F7FF]"
       containerClassName="bg-[#EAF5FF]"
     >

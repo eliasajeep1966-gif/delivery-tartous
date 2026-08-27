@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import {
   CheckCircle2,
@@ -14,6 +14,7 @@ import {
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
+import { KeyboardSafeScrollView } from "@/components/ui/keyboard-safe-scroll-view";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { presentAccountSettingsError } from "@/lib/auth/account-settings-errors";
@@ -148,7 +149,7 @@ export default function AccountSettingsScreen() {
         : "كابتن";
 
   return (
-    <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
+    <ScreenContainer safeBottom className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
         leadingAction={{
           accessibilityLabel: "العودة",
@@ -157,11 +158,7 @@ export default function AccountSettingsScreen() {
         }}
         trailingAction={{ accessibilityLabel: "إعدادات الحساب", icon: "manage-accounts" }}
       />
-      <ScrollView
-        contentContainerClassName="gap-4 p-4 pb-9"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <KeyboardSafeScrollView contentContainerClassName="gap-4 p-4">
         <View className="overflow-hidden rounded-3xl border border-[#CDE5F7] bg-white p-5 shadow-sm">
           <View className="flex-row items-start justify-end gap-3">
             <View className="flex-1 items-end">
@@ -278,7 +275,7 @@ export default function AccountSettingsScreen() {
             onPress={() => void savePassword()}
           />
         </SettingsCard>
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </ScreenContainer>
   );
 }
@@ -323,7 +320,7 @@ function AccountInfo({
         <Text className="text-right text-[10px] text-[#6D879A]">{label}</Text>
         {icon}
       </View>
-      <Text numberOfLines={1} className="mt-1 text-right text-xs font-bold text-[#244B67]">
+      <Text numberOfLines={2} className="mt-1 text-right text-xs font-bold text-[#244B67]">
         {value}
       </Text>
     </View>
