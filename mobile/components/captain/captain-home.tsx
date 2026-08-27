@@ -359,6 +359,19 @@ export function CaptainHome() {
                 onLayout={handleCurrentCardLayout}
                 style={styles.currentCard}
               >
+                {!current ? (
+                  <LinearGradient
+                    colors={[
+                      "rgba(197,249,255,0.34)",
+                      "rgba(78,222,255,0.12)",
+                      "rgba(3,96,174,0)",
+                    ]}
+                    end={{ x: 0.12, y: 1 }}
+                    pointerEvents="none"
+                    start={{ x: 0.92, y: 0 }}
+                    style={styles.emptyCurrentBacklight}
+                  />
+                ) : null}
                 {showCurrentOrderLed ? (
                   <>
                     <AnimatedLinearGradient
@@ -853,6 +866,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 7 },
     shadowOpacity: 0.28,
     shadowRadius: 16,
+  },
+  emptyCurrentBacklight: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
   },
   currentLedTail: { borderRadius: 3, height: 3, position: "absolute" },
   currentLedGlow: { backgroundColor: "rgba(70,224,255,0.45)", borderRadius: 10, height: 20, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 10, width: 20 },
