@@ -23,15 +23,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type AuthShellProps = PropsWithChildren<{
   title: string;
   subtitle: string;
+  visual?: "default" | "delivery-login";
 }>;
 
-export function AuthShell({ title, subtitle, children }: AuthShellProps) {
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+  visual = "default",
+}: AuthShellProps) {
   const { height, width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const isDeliveryLogin = visual === "delivery-login";
   const cardWidth = Math.min(410, Math.max(width - 32, 0));
   const compact = height < 720;
-  const heroHeight = keyboardVisible ? 164 : compact ? 250 : 316;
+  const heroHeight = keyboardVisible ? 156 : compact ? 244 : 320;
   const contentStyle = useMemo(
     () => [
       styles.content,
@@ -81,12 +88,19 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
       style={styles.safeArea}
     >
       <LinearGradient
-        colors={["#C7EDFF", "#EEF9FF", "#CEE7FB"]}
-        end={{ x: 1, y: 1 }}
-        start={{ x: 0, y: 0 }}
+        colors={
+          isDeliveryLogin
+            ? ["#83BDE9", "#D9EFFD", "#F4FAFF"]
+            : ["#C7EDFF", "#EEF9FF", "#CEE7FB"]
+        }
+        end={{ x: 0.82, y: 1 }}
+        start={{ x: 0.1, y: 0 }}
         style={StyleSheet.absoluteFill}
       />
-      <View pointerEvents="none" style={styles.topGlow} />
+      <View
+        pointerEvents="none"
+        style={isDeliveryLogin ? styles.loginTopGlow : styles.topGlow}
+      />
       <View pointerEvents="none" style={styles.bottomGlow} />
 
       <KeyboardAvoidingView
@@ -108,31 +122,65 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.layout, { width: cardWidth }]}>
-            <View style={[styles.hero, { height: heroHeight }]}>
-              <View pointerEvents="none" style={styles.heroHalo} />
-              <Image
-                source={require("@/assets/images/auth-captain.jpg")}
-                resizeMode="contain"
-                style={styles.captain}
-              />
-              <View style={styles.brandPill}>
-                <Image
-                  source={require("@/assets/images/delivery-tartous-office-logo.jpg")}
-                  style={styles.brandLogo}
-                />
-                <Text style={styles.brand}>دليفري طرطوس</Text>
-              </View>
+            <View
+              style={[
+                styles.hero,
+                { height: heroHeight },
+                isDeliveryLogin && styles.loginHero,
+              ]}
+            >
+              {isDeliveryLogin ? (
+                <>
+                  <View pointerEvents="none" style={styles.loginHeroHalo} />
+                  <Text style={styles.loginWordmark}>Delivery Tartous</Text>
+                  <Image
+                    source={require("@/assets/images/auth-captain-cartoon.png")}
+                    resizeMode="contain"
+                    style={styles.loginCaptain}
+                  />
+                </>
+              ) : (
+                <>
+                  <View pointerEvents="none" style={styles.heroHalo} />
+                  <Image
+                    source={require("@/assets/images/auth-captain.jpg")}
+                    resizeMode="contain"
+                    style={styles.captain}
+                  />
+                  <View style={styles.brandPill}>
+                    <Image
+                      source={require("@/assets/images/delivery-tartous-office-logo.jpg")}
+                      style={styles.brandLogo}
+                    />
+                    <Text style={styles.brand}>دليفري طرطوس</Text>
+                  </View>
+                </>
+              )}
             </View>
 
             <BlurView
               intensity={Platform.OS === "android" ? 34 : 58}
-              style={styles.glassCard}
+              style={[
+                styles.glassCard,
+                isDeliveryLogin && styles.loginGlassCard,
+              ]}
               tint="light"
             >
-              <View style={styles.cardContent}>
+              <View
+                style={[
+                  styles.cardContent,
+                  isDeliveryLogin && styles.loginCardContent,
+                ]}
+              >
                 <View style={styles.heading}>
-                  <Text style={styles.title}>{title}</Text>
-                  <Text style={styles.subtitle}>{subtitle}</Text>
+                  <Text style={[styles.title, isDeliveryLogin && styles.loginTitle]}>
+                    {title}
+                  </Text>
+                  <Text
+                    style={[styles.subtitle, isDeliveryLogin && styles.loginSubtitle]}
+                  >
+                    {subtitle}
+                  </Text>
                 </View>
                 {children}
               </View>
@@ -156,6 +204,15 @@ const styles = StyleSheet.create({
     top: -142,
     width: 340,
   },
+  loginTopGlow: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: 220,
+    height: 430,
+    left: -140,
+    position: "absolute",
+    top: -190,
+    width: 430,
+  },
   bottomGlow: {
     backgroundColor: "rgba(0,96,184,0.10)",
     borderRadius: 210,
@@ -173,6 +230,7 @@ const styles = StyleSheet.create({
     overflow: "visible",
     position: "relative",
   },
+  loginHero: { zIndex: 1 },
   heroHalo: {
     backgroundColor: "rgba(255,255,255,0.36)",
     borderColor: "rgba(255,255,255,0.52)",
@@ -183,12 +241,36 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 276,
   },
+  loginHeroHalo: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: 180,
+    bottom: -54,
+    height: 250,
+    position: "absolute",
+    width: 300,
+  },
   captain: {
     bottom: -12,
     height: "112%",
     maxWidth: 365,
     position: "absolute",
     width: "100%",
+  },
+  loginCaptain: {
+    bottom: -152,
+    height: 486,
+    maxWidth: 462,
+    position: "absolute",
+    width: "124%",
+  },
+  loginWordmark: {
+    color: "#075BA6",
+    fontFamily: "Parisienne_400Regular",
+    fontSize: 28,
+    position: "absolute",
+    right: 2,
+    top: 12,
+    zIndex: 2,
   },
   brandPill: {
     alignItems: "center",
@@ -229,7 +311,17 @@ const styles = StyleSheet.create({
     shadowRadius: 26,
     elevation: 7,
   },
+  loginGlassCard: {
+    backgroundColor: "rgba(244,250,255,0.51)",
+    borderColor: "rgba(255,255,255,0.88)",
+    borderRadius: 32,
+    marginTop: -18,
+    shadowColor: "#0C5794",
+    shadowOpacity: 0.2,
+    zIndex: 2,
+  },
   cardContent: { padding: 20 },
+  loginCardContent: { paddingBottom: 22, paddingHorizontal: 20, paddingTop: 22 },
   heading: { alignItems: "center" },
   title: {
     color: "#123B5D",
@@ -239,6 +331,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
+  loginTitle: { fontSize: 25, lineHeight: 35 },
   subtitle: {
     color: "#526E84",
     fontFamily: "Cairo_400Regular",
@@ -248,4 +341,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
+  loginSubtitle: { color: "#365E7A", fontSize: 13, marginTop: 2 },
 });

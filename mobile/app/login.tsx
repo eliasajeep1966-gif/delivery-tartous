@@ -29,7 +29,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <AuthShell title="مرحباً بعودتك" subtitle="سجّل الدخول للوصول إلى حسابك">
+    <AuthShell
+      title="مرحباً بعودتك"
+      subtitle="سجّل الدخول للوصول إلى حسابك"
+      visual="delivery-login"
+    >
       {canRetryProfile ? (
         <AuthStatusBox>
           <Text style={styles.statusText}>{issue?.message ?? "تعذر التحقق من ملف الحساب."}</Text>
