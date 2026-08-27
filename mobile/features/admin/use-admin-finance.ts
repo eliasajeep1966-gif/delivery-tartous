@@ -576,6 +576,24 @@ export const nativeOfficeExpensesContract = {
         "تعذر تسجيل مصروف المكتب.",
       );
     },
+    async update(input: {
+      id: string;
+      title: string;
+      amount: number;
+      expenseDate: string;
+      notes?: string;
+    }): Promise<NativeOfficeExpense> {
+      return first(
+        (await getNativeSupabaseClient().rpc("update_office_expense", {
+          p_id: input.id,
+          p_title: input.title.trim(),
+          p_amount: Number(input.amount.toFixed(2)),
+          p_expense_date: input.expenseDate,
+          p_notes: input.notes?.trim() || undefined,
+        })) as RpcResult<NativeOfficeExpense[]>,
+        "تعذر تعديل المصروف.",
+      );
+    },
     async remove(id: string): Promise<boolean> {
       return unwrap(
         (await getNativeSupabaseClient().rpc("delete_office_expense", {
@@ -710,6 +728,16 @@ export function useNativeOfficeExpenses(input: {
     setPageIndex((current) => Math.max(0, current - 1));
   }, [hasPreviousPage, query.isFetching]);
 
+  const refreshFinancialViews = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-wage-periods"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-company-profit-history"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-company-profit-full-history"] }),
+    ]);
+  };
+
   const createExpense = async (input: {
     title: string;
     amount: number;
@@ -717,15 +745,25 @@ export function useNativeOfficeExpenses(input: {
     notes?: string;
   }) => {
     const result = await nativeOfficeExpensesContract.actions.create(input);
-    await queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
-    await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
+    await refreshFinancialViews();
+    return result;
+  };
+
+  const updateExpense = async (input: {
+    id: string;
+    title: string;
+    amount: number;
+    expenseDate: string;
+    notes?: string;
+  }) => {
+    const result = await nativeOfficeExpensesContract.actions.update(input);
+    await refreshFinancialViews();
     return result;
   };
 
   const deleteExpense = async (id: string) => {
     const result = await nativeOfficeExpensesContract.actions.remove(id);
-    await queryClient.invalidateQueries({ queryKey: ["admin-office-expenses"] });
-    await queryClient.invalidateQueries({ queryKey: ["admin-office-expense-periods"] });
+    await refreshFinancialViews();
     return result;
   };
 
@@ -738,6 +776,7 @@ export function useNativeOfficeExpenses(input: {
     nextPage,
     previousPage,
     createExpense,
+    updateExpense,
     deleteExpense,
   };
 }
