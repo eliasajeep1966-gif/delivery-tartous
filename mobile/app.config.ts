@@ -105,9 +105,10 @@ const config: ExpoConfig = {
       {
         icon: appIcon,
         color: "#0060B8",
-        defaultChannel: "orders-v2",
+        defaultChannel: "new_order_alerts",
         sounds: [
           "./assets/sounds/new_order.mp3",
+          "./assets/sounds/order_cancelled.mp3",
           "./assets/sounds/captain_order_success.mp3",
           "./assets/sounds/admin_order_success.mp3",
         ],

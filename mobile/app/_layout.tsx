@@ -14,6 +14,7 @@ import {
   useRouter,
   useSegments,
 } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { I18nManager, Platform, StyleSheet, View } from "react-native";
@@ -32,7 +33,10 @@ import {
 import "@/lib/_core/nativewind-pressable";
 import { AuthStateScreen } from "@/components/auth/auth-state-screen";
 import { AppToastProvider } from "@/contexts/app-toast-context";
-import { AppSoundProvider } from "@/contexts/app-sound-context";
+import {
+  AppSoundProvider,
+  useAppSound,
+} from "@/contexts/app-sound-context";
 import {
   DeliveryAuthProvider,
   useDeliveryAuth,
@@ -42,6 +46,7 @@ import {
   initManusRuntime,
   subscribeSafeAreaInsets,
 } from "@/lib/_core/manus-runtime";
+import { subscribeToCaptainOrderCancellation } from "@/lib/notifications";
 import { ThemeProvider } from "@/lib/theme-provider";
 
 I18nManager.allowRTL(true);
@@ -50,6 +55,26 @@ const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 
 export const unstable_settings = { anchor: "(tabs)" };
+
+function CaptainCancellationAlert() {
+  const { profile } = useDeliveryAuth();
+  const { playSound } = useAppSound();
+
+  useEffect(() => {
+    if (profile?.role !== "captain") return;
+
+    return subscribeToCaptainOrderCancellation(() => {
+      playSound("orderCancelled");
+      if (Platform.OS !== "web") {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
+          (error) => console.warn("Cancellation haptic feedback failed.", error),
+        );
+      }
+    });
+  }, [playSound, profile?.role]);
+
+  return null;
+}
 
 function AuthAwareNavigator() {
   const {
@@ -196,6 +221,7 @@ export default function RootLayout() {
         <AppToastProvider>
           <AppSoundProvider>
             <DeliveryAuthProvider>
+              <CaptainCancellationAlert />
               <AuthAwareNavigator />
             </DeliveryAuthProvider>
           </AppSoundProvider>

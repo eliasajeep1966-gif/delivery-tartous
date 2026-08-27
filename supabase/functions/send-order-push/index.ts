@@ -68,7 +68,7 @@ Deno.serve(async (req: Request) => {
       body: `تم إسناد الطلب #${order.order_number} إليك`,
       data: { orderId: order.id, type: "assigned_order" },
       priority: "high",
-      channelId: "orders-v2",
+      channelId: "new_order_alerts",
     }));
 
     if (messages.length) {

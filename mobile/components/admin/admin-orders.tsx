@@ -34,7 +34,10 @@ import {
   type DeliveryTiming,
 } from "@/lib/admin/delivery-duration";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
-import { notifyCaptainOfOrder } from "@/lib/notifications";
+import {
+  notifyCaptainOfOrder,
+  notifyCaptainOfOrderCancellation,
+} from "@/lib/notifications";
 
 import { nativeAdminContract } from "@/lib/supabase/native-admin-contract";
 
@@ -259,25 +262,62 @@ export function AdminOrders() {
 
   const cancelOrder = async () => {
     if (!selectedOrder) return;
+    const cancelledOrderId = selectedOrder.id;
+    const cancelledOrderNumber = selectedOrder.orderNumber;
     setIsSaving(true);
+
     try {
       const { error } = await getNativeSupabaseClient().rpc("cancel_order", {
-        p_order_id: selectedOrder.id,
+        p_order_id: cancelledOrderId,
         p_cancellation_reason: "أُلغي من الإدارة قبل بدء التوصيل.",
       });
       if (error) throw new Error(error.message);
-      showToast({ message: `تم إلغاء الطلب #${selectedOrder.orderNumber}.` });
-      setCancelOpen(false);
-      await refreshOrderData();
     } catch (error) {
       showToast({
         message: error instanceof Error ? error.message : "تعذر إلغاء الطلب.",
         tone: "error",
         durationMs: 5000,
       });
+      setIsSaving(false);
+      return;
+    }
+
+    showToast({ message: `تم إلغاء الطلب #${cancelledOrderNumber}.` });
+    setCancelOpen(false);
+    try {
+      await refreshOrderData();
+    } catch (refreshError) {
+      console.warn("Order cancellation refresh failed.", refreshError);
+      showToast({
+        message: `تم إلغاء الطلب #${cancelledOrderNumber}، لكن تعذر تحديث القائمة الآن.`,
+        tone: "error",
+        durationMs: 5000,
+      });
     } finally {
       setIsSaving(false);
     }
+
+    void notifyCaptainOfOrderCancellation(cancelledOrderId)
+      .then((result) => {
+        if (result.sent > 0) return;
+        showToast({
+          message: `تم إلغاء الطلب #${cancelledOrderNumber}، لكن لا يوجد جهاز مسجل للكابتن لإرسال التنبيه.`,
+          tone: "error",
+          durationMs: 5000,
+        });
+      })
+      .catch((notificationError) => {
+        const reason =
+          notificationError instanceof Error && notificationError.message
+            ? notificationError.message
+            : "تعذر إرسال التنبيه للكابتن.";
+        console.warn("Order cancellation notification failed.", notificationError);
+        showToast({
+          message: `تم إلغاء الطلب #${cancelledOrderNumber}، لكن ${reason}`,
+          tone: "error",
+          durationMs: 5000,
+        });
+      });
   };
 
   return (

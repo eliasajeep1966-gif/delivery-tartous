@@ -2,10 +2,12 @@ import { useAudioPlayer } from "expo-audio";
 import { createContext, useCallback, useContext, type PropsWithChildren } from "react";
 
 const NEW_ORDER_SOUND = require("@/assets/sounds/new_order.mp3");
+const ORDER_CANCELLED_SOUND = require("@/assets/sounds/order_cancelled.mp3");
 const CAPTAIN_ORDER_SUCCESS_SOUND = require("@/assets/sounds/captain_order_success.mp3");
 const ADMIN_ORDER_SUCCESS_SOUND = require("@/assets/sounds/admin_order_success.mp3");
 
 type AppSoundName =
+  | "orderCancelled"
   | "captainOrderSuccess"
   | "adminOrderSuccess";
 
@@ -16,19 +18,22 @@ type AppSoundContextValue = Readonly<{
 const AppSoundContext = createContext<AppSoundContextValue | null>(null);
 
 export function AppSoundProvider({ children }: PropsWithChildren) {
+  const orderCancelled = useAudioPlayer(ORDER_CANCELLED_SOUND);
   const captainOrderSuccess = useAudioPlayer(CAPTAIN_ORDER_SUCCESS_SOUND);
   const adminOrderSuccess = useAudioPlayer(ADMIN_ORDER_SUCCESS_SOUND);
 
   const playSound = useCallback(
     (name: AppSoundName) => {
       const player =
-        name === "captainOrderSuccess"
-          ? captainOrderSuccess
-          : adminOrderSuccess;
+        name === "orderCancelled"
+          ? orderCancelled
+          : name === "captainOrderSuccess"
+            ? captainOrderSuccess
+            : adminOrderSuccess;
       player.seekTo(0);
       player.play();
     },
-    [adminOrderSuccess, captainOrderSuccess],
+    [adminOrderSuccess, captainOrderSuccess, orderCancelled],
   );
 
   return (
