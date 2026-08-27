@@ -26,17 +26,22 @@ describe("mobile logout guards", () => {
     expect(signOutImplementation).not.toContain("auth.signOut();");
   });
 
-  it("requires explicit confirmation from every direct logout control", () => {
+  it("requires the in-app confirmation dialog from every direct logout control", () => {
     for (const path of [
       "../components/admin/admin-more.tsx",
       "../components/captain/captain-home.tsx",
+      "../components/captain/captain-pages.tsx",
     ]) {
       const source = readSource(path);
 
-      expect(source).toContain('Alert.alert("تسجيل الخروج"');
-      expect(source).toContain('text: "إلغاء", style: "cancel"');
-      expect(source).toContain('style: "destructive"');
-      expect(source).toContain("onPress: () => void signOut()");
+      expect(source).toContain("LogoutConfirmationDialog");
+      expect(source).toContain("setLogoutConfirmationOpen(true)");
+      expect(source).toContain('isSigningOut={');
     }
+
+    const dialog = readSource("../components/auth/logout-confirmation-dialog.tsx");
+    expect(dialog).toContain("تأكيد تسجيل الخروج");
+    expect(dialog).toContain("تراجع");
+    expect(dialog).toContain("تسجيل الخروج");
   });
 });

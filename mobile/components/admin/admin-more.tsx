@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { LogoutConfirmationDialog } from "@/components/auth/logout-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
@@ -59,8 +60,9 @@ const items = [
 
 export function AdminMore() {
   const router = useRouter();
-  const { profile, signOut } = useDeliveryAuth();
+  const { profile, signOut, operation } = useDeliveryAuth();
   const [isOwner, setIsOwner] = useState(false);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -167,22 +169,19 @@ export function AdminMore() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="تسجيل الخروج"
-          onPress={() =>
-            Alert.alert("تسجيل الخروج", "هل تريد تسجيل الخروج من حسابك؟", [
-              { text: "إلغاء", style: "cancel" },
-              {
-                text: "تسجيل الخروج",
-                style: "destructive",
-                onPress: () => void signOut(),
-              },
-            ])
-          }
+          onPress={() => setLogoutConfirmationOpen(true)}
           style={styles.signOut}
         >
           <MaterialIcons name="logout" size={19} color="#BA1A1A" />
           <Text style={styles.signOutText}>تسجيل الخروج</Text>
         </Pressable>
       </ScrollView>
+      <LogoutConfirmationDialog
+        visible={logoutConfirmationOpen}
+        isSigningOut={operation === "signing-out"}
+        onClose={() => setLogoutConfirmationOpen(false)}
+        onConfirm={() => void signOut()}
+      />
     </ScreenContainer>
   );
 }

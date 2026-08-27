@@ -9,9 +9,9 @@ import {
   Text,
   TextInput,
   View,
-  Alert,
 } from "react-native";
 
+import { LogoutConfirmationDialog } from "@/components/auth/logout-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
 import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
@@ -627,6 +627,7 @@ export function CaptainSettings() {
   const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const saveName = async () => {
     if (!name.trim()) return setMessage("اكتب الاسم الجديد.");
     setSaving(true);
@@ -813,19 +814,16 @@ export function CaptainSettings() {
         </View>
         <Button
           label="تسجيل الخروج"
-          onPress={() =>
-            Alert.alert("تسجيل الخروج", "هل تريد تسجيل الخروج من حسابك؟", [
-              { text: "إلغاء", style: "cancel" },
-              {
-                text: "تسجيل الخروج",
-                style: "destructive",
-                onPress: () => void auth.signOut(),
-              },
-            ])
-          }
+          onPress={() => setLogoutConfirmationOpen(true)}
           danger
         />
       </Animated.View>
+      <LogoutConfirmationDialog
+        visible={logoutConfirmationOpen}
+        isSigningOut={auth.operation === "signing-out"}
+        onClose={() => setLogoutConfirmationOpen(false)}
+        onConfirm={() => void auth.signOut()}
+      />
     </Page>
   );
 }

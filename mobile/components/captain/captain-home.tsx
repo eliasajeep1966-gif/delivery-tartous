@@ -5,7 +5,6 @@ import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 import {
-  Alert,
   Linking,
   Modal,
   Platform,
@@ -17,6 +16,7 @@ import {
   View,
 } from "react-native";
 
+import { LogoutConfirmationDialog } from "@/components/auth/logout-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
@@ -102,11 +102,12 @@ function nextAction(status: CaptainOrderStatus) {
 
 export function CaptainHome() {
   const router = useRouter();
-  const { profile, signOut } = useDeliveryAuth();
+  const { profile, signOut, operation } = useDeliveryAuth();
   const { showToast } = useAppToast();
   const { playSound } = useAppSound();
   const dashboard = useNativeCaptainDashboard();
   const [falseOrderOpen, setFalseOrderOpen] = useState(false);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
   const current = dashboard.currentOrder;
   const action = current ? nextAction(current.status) : null;
@@ -175,16 +176,7 @@ export function CaptainHome() {
           </View>
           <MotionPressable
             accessibilityLabel="تسجيل الخروج"
-            onPress={() =>
-              Alert.alert("تسجيل الخروج", "هل تريد تسجيل الخروج من حسابك؟", [
-                { text: "إلغاء", style: "cancel" },
-                {
-                  text: "تسجيل الخروج",
-                  style: "destructive",
-                  onPress: () => void signOut(),
-                },
-              ])
-            }
+            onPress={() => setLogoutConfirmationOpen(true)}
             style={styles.iconButton}
           >
             <MaterialIcons name="logout" size={19} color={BLUE} />
@@ -392,6 +384,12 @@ export function CaptainHome() {
           </Animated.View>
         </View>
       </Modal>
+      <LogoutConfirmationDialog
+        visible={logoutConfirmationOpen}
+        isSigningOut={operation === "signing-out"}
+        onClose={() => setLogoutConfirmationOpen(false)}
+        onConfirm={() => void signOut()}
+      />
     </ScreenContainer>
   );
 }
