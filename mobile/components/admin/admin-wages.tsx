@@ -533,7 +533,7 @@ export function AdminWages() {
       >
         <Animated.View style={[styles.profitHero, profitAnimatedStyle]}>
           <View style={styles.profitHeading}>
-            <Text style={styles.profitKicker}>صافي حصة الشركة بعد المصاريف</Text>
+            <Text style={styles.profitKicker}>الصافي</Text>
             <MaterialIcons
               name="account-balance-wallet"
               size={21}

@@ -56,9 +56,9 @@ export function AdminCompanyWages() {
       gross: sum.gross + row.gross_total,
       company: sum.company + row.company_total,
       captain: sum.captain + row.captain_net_total,
-      orders: sum.orders + row.order_count,
+      compensation: sum.compensation + row.settlement_total,
     }),
-    { gross: 0, company: 0, captain: 0, orders: 0 },
+    { gross: 0, company: 0, captain: 0, compensation: 0 },
   );
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
@@ -101,11 +101,11 @@ export function AdminCompanyWages() {
         <View style={styles.metrics}>
           {[
             ["إجمالي الأجور", totals.gross, "#1C1B1B"],
-            ["حصة الشركة (30%)", totals.company, "#6D28D9"],
+            ["نتيجة الشركة", totals.company, "#6D28D9"],
             ["مصاريف المكتب", expenseRows.reduce((sum, row) => sum + Number(row.expense_total), 0), "#B54708"],
-            ["الصافي بعد المصاريف", totals.company - expenseRows.reduce((sum, row) => sum + Number(row.expense_total), 0), "#047857"],
+            ["الصافي", totals.company - expenseRows.reduce((sum, row) => sum + Number(row.expense_total), 0), "#047857"],
             ["صافي الكباتن", totals.captain, "#047857"],
-            ["طلبات الفترة", totals.orders, BLUE],
+            ["تعويض الكباتن", totals.compensation, BLUE],
           ].map(([label, value, color]) => (
             <View key={String(label)} style={styles.metric}>
               <Text style={[styles.metricValue, { color: String(color) }]}>
@@ -204,12 +204,12 @@ export function AdminCompanyWages() {
                   color="#1C1B1B"
                 />
                 <RecordCell
-                  label="حصة الشركة"
+                  label="نتيجة الشركة"
                   value={money(row.company_total)}
                   color="#6D28D9"
                 />
                 <RecordCell
-                  label="الصافي بعد المصاريف"
+                  label="الصافي"
                   value={money(row.company_total - expenses)}
                   color="#047857"
                 />
