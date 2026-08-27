@@ -270,6 +270,7 @@ const COMPANY_PROFIT_HISTORY_PAGE_SIZE = 5;
 export function useNativeFullCompanyProfitHistory() {
   const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
   const [customDate, setCustomDate] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
   const query = useInfiniteQuery({
     queryKey: ["admin-company-profit-full-history", period, customDate],
     initialPageParam: undefined as string | undefined,
@@ -289,32 +290,53 @@ export function useNativeFullCompanyProfitHistory() {
     retry: 1,
   });
 
+  const pages = query.data?.pages ?? [];
+  const activePage = Math.min(page, Math.max(pages.length - 1, 0));
+  const data = customDate
+    ? (pages[0] ?? []).filter((row) => row.period_start === customDate)
+    : (pages[activePage] ?? []);
+  const hasPreviousPage = !customDate && activePage > 0;
+  const hasNextPage =
+    !customDate &&
+    (activePage < pages.length - 1 || Boolean(query.hasNextPage));
+
   const changePeriod = useCallback((next: NativeFinancePeriod) => {
     setCustomDate(null);
+    setPage(0);
     setPeriod(next);
   }, []);
   const selectCustomDate = useCallback((date: string) => {
+    setPage(0);
     setCustomDate(date);
   }, []);
-  const loadMore = useCallback(() => {
-    if (!customDate && query.hasNextPage && !query.isFetchingNextPage) {
-      void query.fetchNextPage();
+  const previousPage = useCallback(() => {
+    if (hasPreviousPage) setPage((current) => current - 1);
+  }, [hasPreviousPage]);
+  const nextPage = useCallback(async () => {
+    if (customDate || query.isFetchingNextPage) return;
+    if (activePage < pages.length - 1) {
+      setPage((current) => current + 1);
+      return;
     }
-  }, [customDate, query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
+    if (!query.hasNextPage) return;
+    const result = await query.fetchNextPage();
+    if (result.data?.pages[activePage + 1]?.length) {
+      setPage((current) => current + 1);
+    }
+  }, [activePage, customDate, pages.length, query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
 
   return {
     ...query,
-    data: customDate
-      ? (query.data?.pages.flat() ?? []).filter(
-          (row) => row.period_start === customDate,
-        )
-      : query.data?.pages.flat() ?? [],
+    data,
     period: customDate ? "daily" : period,
     customDate,
+    page: customDate ? 0 : activePage,
+    hasNextPage,
+    hasPreviousPage,
     changePeriod,
     selectCustomDate,
-    loadMore,
-    hasMore: customDate ? false : Boolean(query.hasNextPage),
+    previousPage,
+    nextPage,
   };
 }
 

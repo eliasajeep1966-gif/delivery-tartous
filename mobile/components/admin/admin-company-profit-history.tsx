@@ -106,24 +106,24 @@ export function AdminCompanyProfitHistory() {
         <View style={styles.heroText}>
           <Text style={styles.heroTitle}>سجل أرباح الشركة الكامل</Text>
           <Text style={styles.muted}>
-            جميع فترات الأرباح تُحمّل تدريجيًا حسب الفترة المختارة.
+            تُعرض خمس فترات فقط في كل صفحة حسب الفترة المختارة.
           </Text>
         </View>
       </View>
 
       <View style={styles.metrics}>
         <Metric
-          label="إجمالي الأجور المحمّلة"
+          label="إجمالي أجور الصفحة"
           value={money(totals.gross)}
           color="#1C1B1B"
         />
         <Metric
-          label="نتيجة الشركة المحمّلة"
+          label="نتيجة الشركة للصفحة"
           value={money(totals.company)}
           color={VIOLET}
         />
         <Metric
-          label="طلبات الفترات المحمّلة"
+          label="طلبات الصفحة"
           value={String(totals.orders)}
           color={BLUE}
         />
@@ -174,8 +174,10 @@ export function AdminCompanyProfitHistory() {
       </MotionPressable>
 
       <View style={styles.heading}>
-        <Text style={styles.title}>الفترات المعروضة</Text>
-        <Text style={styles.badge}>{rows.length} فترات</Text>
+        <Text style={styles.title}>فترات الصفحة</Text>
+        <Text style={styles.badge}>
+          {history.customDate ? "تاريخ محدد" : `صفحة ${history.page + 1}`}
+        </Text>
       </View>
     </>
   );
@@ -235,29 +237,76 @@ export function AdminCompanyProfitHistory() {
           )
         }
         ListFooterComponent={
-          rows.length ? (
+          rows.length && !history.customDate ? (
             <View style={styles.footer}>
               {history.isFetchingNextPage ? (
                 <View style={styles.loadingMore}>
                   <ActivityIndicator size="small" color={BLUE} />
                   <Text style={styles.loadingMoreText}>
-                    جارٍ تحميل فترات أقدم...
+                    جارٍ تحميل الصفحة التالية...
                   </Text>
                 </View>
               ) : null}
-              {history.hasMore ? (
-                <MotionPressable
-                  onPress={history.loadMore}
-                  style={styles.loadMore}
-                >
-                  <MaterialIcons name="expand-more" size={19} color={BLUE} />
-                  <Text style={styles.loadMoreText}>تحميل فترات أقدم</Text>
-                </MotionPressable>
-              ) : (
-                <Text style={styles.endText}>
-                  وصلت إلى أقدم الفترات المتاحة.
-                </Text>
-              )}
+              <View style={styles.pagination}>
+                <View style={styles.paginationAction}>
+                  <MotionPressable
+                    accessibilityLabel="الصفحة الأحدث"
+                    disabled={!history.hasPreviousPage || history.isFetchingNextPage}
+                    onPress={history.previousPage}
+                    style={[
+                      styles.pageButton,
+                      (!history.hasPreviousPage || history.isFetchingNextPage) &&
+                        styles.pageButtonDisabled,
+                    ]}
+                  >
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={20}
+                      color={history.hasPreviousPage ? BLUE : "#A2B4C0"}
+                    />
+                    <Text
+                      style={[
+                        styles.pageButtonText,
+                        !history.hasPreviousPage && styles.pageButtonTextDisabled,
+                      ]}
+                    >
+                      السابق
+                    </Text>
+                  </MotionPressable>
+                </View>
+                <View style={styles.pageIndicator}>
+                  <Text style={styles.pageIndicatorValue}>
+                    صفحة {history.page + 1}
+                  </Text>
+                  <Text style={styles.pageIndicatorHint}>5 فترات</Text>
+                </View>
+                <View style={styles.paginationAction}>
+                  <MotionPressable
+                    accessibilityLabel="الصفحة الأقدم"
+                    disabled={!history.hasNextPage || history.isFetchingNextPage}
+                    onPress={history.nextPage}
+                    style={[
+                      styles.pageButton,
+                      (!history.hasNextPage || history.isFetchingNextPage) &&
+                        styles.pageButtonDisabled,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.pageButtonText,
+                        !history.hasNextPage && styles.pageButtonTextDisabled,
+                      ]}
+                    >
+                      التالي
+                    </Text>
+                    <MaterialIcons
+                      name="chevron-left"
+                      size={20}
+                      color={history.hasNextPage ? BLUE : "#A2B4C0"}
+                    />
+                  </MotionPressable>
+                </View>
+              </View>
             </View>
           ) : null
         }
@@ -503,19 +552,29 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   loadingMoreText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
-  loadMore: {
+  pagination: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 8,
+  },
+  paginationAction: { flex: 1 },
+  pageButton: {
     alignItems: "center",
     backgroundColor: "#FFF",
     borderColor: "#B9D6ED",
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row-reverse",
-    gap: 7,
+    gap: 4,
     justifyContent: "center",
     minHeight: 44,
   },
-  loadMoreText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
-  endText: { color: "#75818E", fontFamily: "Cairo_400Regular", fontSize: 10, textAlign: "center", writingDirection: "rtl" },
+  pageButtonDisabled: { backgroundColor: "#F4F8FB", borderColor: "#E1EAF0" },
+  pageButtonText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 11, writingDirection: "rtl" },
+  pageButtonTextDisabled: { color: "#A2B4C0" },
+  pageIndicator: { alignItems: "center", minWidth: 62 },
+  pageIndicatorValue: { color: "#1C1B1B", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
+  pageIndicatorHint: { color: "#75818E", fontFamily: "Cairo_400Regular", fontSize: 9, marginTop: 1, writingDirection: "rtl" },
   statusCard: {
     alignItems: "center",
     backgroundColor: "#FFF",
