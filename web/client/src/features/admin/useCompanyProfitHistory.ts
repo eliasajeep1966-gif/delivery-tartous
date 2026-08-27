@@ -21,7 +21,7 @@ type DayDetailsState = {
   hasMore: boolean;
 };
 
-const PERIOD_PAGE_SIZE = 30;
+const PERIOD_PAGE_SIZE = 5;
 const DAY_PAGE_SIZE = 50;
 const HISTORY_TIMEOUT = 'انتهت مهلة تحميل سجل أرباح الفترة.';
 const DAY_DETAILS_TIMEOUT = 'انتهت مهلة تحميل تفاصيل اليوم.';

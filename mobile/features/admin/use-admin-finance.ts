@@ -109,7 +109,7 @@ export const nativeAdminFinanceContract = {
           "get_company_profit_period_history",
           {
             p_period: input.period,
-            p_limit: input.limit ?? 100,
+            p_limit: Math.min(Math.max(Math.floor(input.limit ?? 5), 1), 5),
             p_before_period_start: input.beforePeriodStart,
           },
         )) as RpcResult<NativeCompanyProfitPeriodRow[]>,
@@ -265,7 +265,7 @@ export function useNativeCompanyProfitHistory(
   });
 }
 
-const COMPANY_PROFIT_HISTORY_PAGE_SIZE = 30;
+const COMPANY_PROFIT_HISTORY_PAGE_SIZE = 5;
 
 export function useNativeFullCompanyProfitHistory() {
   const [period, setPeriod] = useState<NativeFinancePeriod>("daily");
