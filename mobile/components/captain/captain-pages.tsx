@@ -243,46 +243,59 @@ function CaptainOrderCard({
       entering={FadeInDown.delay(55 + index * 20).duration(170)}
       style={[styles.card, styles.orderCard]}
     >
-      <View style={styles.orderCardTop}>
-        <View style={styles.orderIdentity}>
-          <Text style={styles.orderNumber}>الطلب #{order.order_number}</Text>
-          <Text numberOfLines={1} style={styles.orderCustomer}>{order.customer_name}</Text>
+      <View style={styles.between}>
+        <View style={styles.orderPrimaryCopy}>
+          <Text style={styles.wageOrderNumber}>الطلب #{order.order_number}</Text>
+          <Text style={styles.wageRowDate}>
+            {date(order.completed_at ?? order.updated_at)}
+          </Text>
         </View>
-        <CaptainOrderStatusBadge status={order.status} />
+        <View style={[styles.left, styles.orderStatusSummary]}>
+          <CaptainOrderStatusBadge status={order.status} />
+          <Text style={styles.wageRowAmount}>{money(order.fee)}</Text>
+          <Text style={styles.wageRowHint}>قيمة الطلب</Text>
+        </View>
       </View>
 
-      <View style={styles.orderRoute}>
-        <View style={styles.orderRouteStop}>
-          <View style={[styles.orderRouteIcon, styles.orderRouteIconPickup]}>
-            <MaterialIcons name="inventory-2" size={14} color="#0878D1" />
+      <View style={styles.wageRouteGrid}>
+        <View style={styles.wageRouteCard}>
+          <View style={styles.wageRouteHead}>
+            <MaterialIcons name="inventory-2" size={15} color="#0878D1" />
+            <Text style={styles.wageRouteLabel}>المصدر</Text>
           </View>
-          <Text numberOfLines={1} style={styles.orderRouteText}>{order.pickup_address}</Text>
+          <Text numberOfLines={1} style={styles.wageRouteContactName}>
+            نقطة الاستلام
+          </Text>
+          <Text numberOfLines={3} style={styles.wageRouteAddress}>
+            {order.pickup_address}
+          </Text>
         </View>
-        <View style={styles.orderRouteConnector} />
-        <View style={styles.orderRouteStop}>
-          <View style={[styles.orderRouteIcon, styles.orderRouteIconDelivery]}>
-            <MaterialIcons name="location-on" size={15} color="#C65031" />
+        <View style={styles.wageRouteCard}>
+          <View style={styles.wageRouteHead}>
+            <MaterialIcons name="location-on" size={15} color="#D35B38" />
+            <Text style={styles.wageRouteLabel}>الوجهة</Text>
           </View>
-          <Text numberOfLines={1} style={styles.orderRouteText}>{order.delivery_address}</Text>
+          <Text numberOfLines={1} style={styles.wageRouteContactName}>
+            {order.customer_name}
+          </Text>
+          <MotionPressable
+            accessibilityLabel={`الاتصال بـ ${order.customer_name}`}
+            onPress={() => void Linking.openURL(`tel:${order.customer_phone}`)}
+            style={styles.wageRoutePhoneButton}
+          >
+            <MaterialIcons name="phone-in-talk" size={15} color="#0878D1" />
+            <Text style={styles.wageRouteCallText}>اتصال</Text>
+            <MaterialIcons name="call-made" size={14} color="#0878D1" />
+            <Text style={styles.wageRoutePhone}>{order.customer_phone}</Text>
+          </MotionPressable>
+          <Text numberOfLines={2} style={styles.wageRouteAddress}>
+            {order.delivery_address}
+          </Text>
         </View>
       </View>
 
       <View style={styles.orderCardFooter}>
-        <View style={styles.orderFooterMeta}>
-          <MaterialIcons name="event" size={14} color="#6E8A9B" />
-          <Text style={styles.orderDate}>{date(order.completed_at ?? order.updated_at)}</Text>
-        </View>
         <OrderDeliveryTiming status={order.status} timing={order.deliveryTiming} />
-        <View style={styles.orderFooterRight}>
-          <Text style={styles.orderFee}>{money(order.fee)}</Text>
-          <MotionPressable
-            accessibilityLabel={`الاتصال بـ ${order.customer_name}`}
-            onPress={() => void Linking.openURL(`tel:${order.customer_phone}`)}
-            style={styles.orderCallButton}
-          >
-            <MaterialIcons name="phone" size={15} color="#0878D1" />
-          </MotionPressable>
-        </View>
       </View>
     </Animated.View>
   );
@@ -1103,89 +1116,14 @@ const styles = StyleSheet.create({
   orderCard: {
     backgroundColor: "#FFFFFF",
     gap: 12,
-    padding: 13,
+    padding: 14,
     shadowOpacity: 0.025,
   },
-  orderCardTop: {
-    alignItems: "flex-start",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-  },
-  orderIdentity: { flex: 1, paddingLeft: 10 },
-  orderNumber: {
-    color: "#356277",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  orderCustomer: {
-    color: "#143F57",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 14,
-    marginTop: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  orderRoute: {
-    alignItems: "center",
-    backgroundColor: "#F7FBFD",
-    borderColor: "#E2EFF4",
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 6,
-    minHeight: 48,
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-  },
-  orderRouteStop: { alignItems: "center", flex: 1, flexDirection: "row-reverse", gap: 5 },
-  orderRouteIcon: {
-    alignItems: "center",
-    borderRadius: 9,
-    height: 25,
-    justifyContent: "center",
-    width: 25,
-  },
-  orderRouteIconPickup: { backgroundColor: "#E3F4FF" },
-  orderRouteIconDelivery: { backgroundColor: "#FFF0EA" },
-  orderRouteText: {
-    color: "#355E73",
-    flex: 1,
-    fontFamily: "Cairo_600SemiBold",
-    fontSize: 10,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  orderRouteConnector: { backgroundColor: "#A9D8EB", height: 1, width: 14 },
+  orderStatusSummary: { gap: 4 },
   orderCardFooter: {
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-  },
-  orderFooterMeta: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
-  orderDate: {
-    color: "#6E8A9B",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 9,
-    writingDirection: "rtl",
-  },
-  orderFooterRight: { alignItems: "center", flexDirection: "row-reverse", gap: 7 },
-  orderFee: {
-    color: "#075D9F",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 11,
-    writingDirection: "rtl",
-  },
-  orderCallButton: {
-    alignItems: "center",
-    backgroundColor: "#E8F8FF",
-    borderColor: "#C6EAF7",
-    borderRadius: 11,
-    borderWidth: 1,
-    height: 31,
-    justifyContent: "center",
-    width: 31,
   },
   orderTimingPill: {
     alignItems: "center",
