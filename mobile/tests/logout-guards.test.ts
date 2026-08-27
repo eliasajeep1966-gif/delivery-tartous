@@ -1,0 +1,30 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const readSource = (path: string) =>
+  readFileSync(resolve(__dirname, path), "utf8");
+
+describe("mobile logout guards", () => {
+  it("prevents concurrent logout requests from repeated taps", () => {
+    const source = readSource("../contexts/delivery-auth-context.tsx");
+
+    expect(source).toContain(
+      'if (current.operation === "signing-out") return;',
+    );
+  });
+
+  it("requires explicit confirmation from every direct logout control", () => {
+    for (const path of [
+      "../components/admin/admin-more.tsx",
+      "../components/captain/captain-home.tsx",
+    ]) {
+      const source = readSource(path);
+
+      expect(source).toContain('Alert.alert("تسجيل الخروج"');
+      expect(source).toContain('text: "إلغاء", style: "cancel"');
+      expect(source).toContain('style: "destructive"');
+      expect(source).toContain("onPress: () => void signOut()");
+    }
+  });
+});

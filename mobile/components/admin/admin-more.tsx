@@ -164,7 +164,21 @@ export function AdminMore() {
           bg="#EAF4FF"
           onPress={() => open("/account-settings", "إعدادات الحساب")}
         />
-        <Pressable onPress={() => void signOut()} style={styles.signOut}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="تسجيل الخروج"
+          onPress={() =>
+            Alert.alert("تسجيل الخروج", "هل تريد تسجيل الخروج من حسابك؟", [
+              { text: "إلغاء", style: "cancel" },
+              {
+                text: "تسجيل الخروج",
+                style: "destructive",
+                onPress: () => void signOut(),
+              },
+            ])
+          }
+          style={styles.signOut}
+        >
           <MaterialIcons name="logout" size={19} color="#BA1A1A" />
           <Text style={styles.signOutText}>تسجيل الخروج</Text>
         </Pressable>

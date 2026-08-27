@@ -452,6 +452,8 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(async () => {
     const current = stateRef.current;
+    if (current.operation === "signing-out") return;
+
     applyState({ ...current, operation: "signing-out" });
     clearQueryCache();
     try {

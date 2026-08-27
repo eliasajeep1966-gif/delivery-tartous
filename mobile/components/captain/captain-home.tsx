@@ -161,7 +161,20 @@ export function CaptainHome() {
               تابع طلبك الحالي وحالة التوفر من مكان واحد.
             </Text>
           </View>
-          <MotionPressable onPress={() => void signOut()} style={styles.iconButton}>
+          <MotionPressable
+            accessibilityLabel="تسجيل الخروج"
+            onPress={() =>
+              Alert.alert("تسجيل الخروج", "هل تريد تسجيل الخروج من حسابك؟", [
+                { text: "إلغاء", style: "cancel" },
+                {
+                  text: "تسجيل الخروج",
+                  style: "destructive",
+                  onPress: () => void signOut(),
+                },
+              ])
+            }
+            style={styles.iconButton}
+          >
             <MaterialIcons name="logout" size={19} color={BLUE} />
           </MotionPressable>
         </View>

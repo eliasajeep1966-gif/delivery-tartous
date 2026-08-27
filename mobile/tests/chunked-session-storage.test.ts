@@ -86,6 +86,21 @@ describe("chunked native session storage", () => {
     );
   });
 
+  it("clears the committed session and all of its chunks on logout", async () => {
+    const secureStore = new MemorySecureStore();
+    const storage = createChunkedSessionStorage(secureStore, {
+      chunkSize: 4,
+      createGeneration: () => "first",
+    });
+
+    await storage.setItem("session", "active-refresh-token");
+    await storage.removeItem("session");
+
+    expect(await storage.getItem("session")).toBeNull();
+    expect(await secureStore.getItemAsync("session.meta")).toBeNull();
+    expect(await secureStore.getItemAsync("session.chunk.first.0")).toBeNull();
+  });
+
   it("continues to read a legacy single-value session until Supabase writes a replacement", async () => {
     const secureStore = new MemorySecureStore();
     const storage = createChunkedSessionStorage(secureStore, {
