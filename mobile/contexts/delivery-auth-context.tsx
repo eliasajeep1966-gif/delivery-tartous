@@ -460,7 +460,7 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
       // Keep the captain's device Push Token across logout and app restarts.
       // It is refreshed by registerCaptainPushNotifications on the next login
       // and should only be removed when the account is permanently deleted.
-      await getClient().auth.signOut();
+      await getClient().auth.signOut({ scope: "local" });
       applyState({
         status: "unauthenticated",
         session: null,

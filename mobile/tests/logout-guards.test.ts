@@ -14,6 +14,18 @@ describe("mobile logout guards", () => {
     );
   });
 
+  it("limits a user-initiated logout to the current device session", () => {
+    const source = readSource("../contexts/delivery-auth-context.tsx");
+    const signOutStart = source.indexOf("const signOut = useCallback");
+    const resetToLoginStart = source.indexOf("const resetToLogin = useCallback");
+    const signOutImplementation = source.slice(signOutStart, resetToLoginStart);
+
+    expect(signOutImplementation).toContain(
+      'await getClient().auth.signOut({ scope: "local" });',
+    );
+    expect(signOutImplementation).not.toContain("auth.signOut();");
+  });
+
   it("requires explicit confirmation from every direct logout control", () => {
     for (const path of [
       "../components/admin/admin-more.tsx",
