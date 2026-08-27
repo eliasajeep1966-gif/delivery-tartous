@@ -1,3 +1,4 @@
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -18,12 +19,14 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import Animated, { FadeInLeft, FadeInRight } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type AuthShellProps = PropsWithChildren<{
   title: string;
   subtitle: string;
   visual?: "default" | "delivery-login";
+  cardTransition?: "login" | "activation";
 }>;
 
 export function AuthShell({
@@ -31,11 +34,16 @@ export function AuthShell({
   subtitle,
   children,
   visual = "default",
+  cardTransition = "login",
 }: AuthShellProps) {
   const { height, width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const isDeliveryLogin = visual === "delivery-login";
+  const cardEntering =
+    cardTransition === "activation"
+      ? FadeInRight.duration(220)
+      : FadeInLeft.duration(220);
   const cardWidth = Math.min(410, Math.max(width - 32, 0));
   const compact = height < 720;
   const heroHeight = keyboardVisible ? 156 : compact ? 244 : 320;
@@ -88,12 +96,32 @@ export function AuthShell({
       style={styles.safeArea}
     >
       {isDeliveryLogin ? (
-        <Image
-          accessibilityElementsHidden
-          source={require("@/assets/images/auth-login-scene.png")}
-          resizeMode="cover"
-          style={styles.loginScene}
-        />
+        <>
+          <Image
+            accessibilityElementsHidden
+            source={require("@/assets/images/auth-login-scene.png")}
+            resizeMode="cover"
+            style={styles.loginScene}
+          />
+          <View pointerEvents="none" style={styles.sceneBranding}>
+            <View style={styles.chestLogo}>
+              <MaterialIcons name="two-wheeler" size={22} color="#F4FFFF" />
+            </View>
+            <View style={styles.cargoSign}>
+              <Text style={styles.cargoTitle}>دليفري طرطوس</Text>
+              <View style={styles.cargoLine}>
+                <MaterialIcons name="phone" size={11} color="#E9FFFF" />
+                <Text style={styles.cargoNumber}>0931 724449</Text>
+              </View>
+              <View style={styles.cargoLine}>
+                <MaterialIcons name="phone" size={11} color="#E9FFFF" />
+                <Text style={styles.cargoNumber}>0937 960394</Text>
+              </View>
+              <Text style={styles.cargoComplaint}>رقم الشكاوي</Text>
+              <Text style={styles.cargoNumber}>0994 440 915</Text>
+            </View>
+          </View>
+        </>
       ) : (
         <>
           <LinearGradient
@@ -154,33 +182,43 @@ export function AuthShell({
               )}
             </View>
 
-            <BlurView
-              intensity={Platform.OS === "android" ? 34 : 58}
-              style={[
-                styles.glassCard,
-                isDeliveryLogin && styles.loginGlassCard,
-              ]}
-              tint="light"
+            <Animated.View
+              entering={isDeliveryLogin ? cardEntering : undefined}
+              style={isDeliveryLogin && styles.loginCardLayer}
             >
-              <View
+              <BlurView
+                intensity={Platform.OS === "android" ? 34 : 58}
                 style={[
-                  styles.cardContent,
-                  isDeliveryLogin && styles.loginCardContent,
+                  styles.glassCard,
+                  isDeliveryLogin && styles.loginGlassCard,
                 ]}
+                tint="light"
               >
-                <View style={styles.heading}>
-                  <Text style={[styles.title, isDeliveryLogin && styles.loginTitle]}>
-                    {title}
-                  </Text>
-                  <Text
-                    style={[styles.subtitle, isDeliveryLogin && styles.loginSubtitle]}
-                  >
-                    {subtitle}
-                  </Text>
+                <View
+                  style={[
+                    styles.cardContent,
+                    isDeliveryLogin && styles.loginCardContent,
+                  ]}
+                >
+                  <View style={styles.heading}>
+                    <Text
+                      style={[styles.title, isDeliveryLogin && styles.loginTitle]}
+                    >
+                      {title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.subtitle,
+                        isDeliveryLogin && styles.loginSubtitle,
+                      ]}
+                    >
+                      {subtitle}
+                    </Text>
+                  </View>
+                  {children}
                 </View>
-                {children}
-              </View>
-            </BlurView>
+              </BlurView>
+            </Animated.View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -209,6 +247,66 @@ const styles = StyleSheet.create({
     right: -210,
     width: 390,
   },
+  loginScene: {
+    bottom: 0,
+    height: "100%",
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: "100%",
+  },
+  sceneBranding: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  chestLogo: {
+    alignItems: "center",
+    justifyContent: "center",
+    left: "47.5%",
+    position: "absolute",
+    top: "34%",
+  },
+  cargoSign: {
+    alignItems: "flex-end",
+    position: "absolute",
+    right: -9,
+    top: "34%",
+    width: 145,
+  },
+  cargoTitle: {
+    color: "#F4FFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  cargoLine: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 3,
+    marginTop: 1,
+  },
+  cargoNumber: {
+    color: "#E9FFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    lineHeight: 15,
+    textAlign: "right",
+  },
+  cargoComplaint: {
+    color: "#F4FFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 2,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   content: { alignItems: "center", flexGrow: 1, paddingHorizontal: 16 },
   layout: { alignSelf: "center", maxWidth: 410 },
   hero: {
@@ -235,17 +333,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
   },
-  loginScene: {
-    bottom: 0,
-    height: "100%",
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
-    width: "100%",
-  },
   loginWordmark: {
-    color: "#075BA6",
+    color: "#008A96",
     fontFamily: "Parisienne_400Regular",
     fontSize: 28,
     position: "absolute",
@@ -278,6 +367,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     writingDirection: "rtl",
   },
+  loginCardLayer: { zIndex: 2 },
   glassCard: {
     backgroundColor: "rgba(255,255,255,0.42)",
     borderColor: "rgba(255,255,255,0.82)",
@@ -298,7 +388,6 @@ const styles = StyleSheet.create({
     marginTop: -18,
     shadowColor: "#0C5794",
     shadowOpacity: 0.2,
-    zIndex: 2,
   },
   cardContent: { padding: 20 },
   loginCardContent: { paddingBottom: 22, paddingHorizontal: 20, paddingTop: 22 },
@@ -311,7 +400,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
-  loginTitle: { fontSize: 25, lineHeight: 35 },
+  loginTitle: { color: "#008A96", fontSize: 25, lineHeight: 35 },
   subtitle: {
     color: "#526E84",
     fontFamily: "Cairo_400Regular",
@@ -321,5 +410,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
-  loginSubtitle: { color: "#365E7A", fontSize: 13, marginTop: 2 },
+  loginSubtitle: { color: "#08717D", fontSize: 13, marginTop: 2 },
 });

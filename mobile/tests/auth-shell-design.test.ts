@@ -8,6 +8,15 @@ describe("authentication visual shell", () => {
     "utf8",
   );
   const loginSource = readFileSync(resolve(__dirname, "../app/login.tsx"), "utf8");
+  const activationSource = readFileSync(
+    resolve(__dirname, "../app/activate-account.tsx"),
+    "utf8",
+  );
+  const navigationSource = readFileSync(resolve(__dirname, "../app/_layout.tsx"), "utf8");
+  const authUiSource = readFileSync(
+    resolve(__dirname, "../components/auth/auth-ui.tsx"),
+    "utf8",
+  );
 
   it("uses a translucent BlurView card and retains the fallback captain asset", () => {
     expect(shellSource).toContain('import { BlurView } from "expo-blur";');
@@ -16,13 +25,34 @@ describe("authentication visual shell", () => {
     expect(shellSource).toContain("styles.glassCard");
   });
 
-  it("uses the full-width cartoon delivery scene only for the login visual", () => {
+  it("uses the full-width cartoon delivery scene only for the branded auth screens", () => {
     expect(shellSource).toContain(
       'require("@/assets/images/auth-login-scene.png")',
     );
     expect(shellSource).toContain('resizeMode="cover"');
     expect(shellSource).toContain('fontFamily: "Parisienne_400Regular"');
     expect(loginSource).toContain('visual="delivery-login"');
+    expect(activationSource).toContain('visual="delivery-login"');
+  });
+
+  it("animates only the glass card when changing between login and activation", () => {
+    expect(shellSource).toContain("FadeInLeft");
+    expect(shellSource).toContain("FadeInRight");
+    expect(shellSource).toContain("cardTransition");
+    expect(loginSource).toContain('cardTransition="login"');
+    expect(activationSource).toContain('cardTransition="activation"');
+    expect(navigationSource).toContain(
+      '<Stack.Screen name="login" options={{ animation: "none" }} />',
+    );
+    expect(navigationSource).toContain(
+      '<Stack.Screen name="activate-account" options={{ animation: "none" }} />',
+    );
+  });
+
+  it("uses the turquoise authentication palette", () => {
+    expect(authUiSource).toContain('color: "#007C88"');
+    expect(authUiSource).toContain('backgroundColor: "#008F96"');
+    expect(shellSource).toContain('color: "#008A96"');
   });
 
   it("preserves keyboard-aware compacting for the login and activation forms", () => {

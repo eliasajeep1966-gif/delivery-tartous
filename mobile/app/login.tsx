@@ -33,6 +33,7 @@ export default function LoginScreen() {
       title="مرحباً بعودتك"
       subtitle="سجّل الدخول للوصول إلى حسابك"
       visual="delivery-login"
+      cardTransition="login"
     >
       {canRetryProfile ? (
         <AuthStatusBox>

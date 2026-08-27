@@ -29,7 +29,12 @@ export default function ActivateAccountScreen() {
   };
 
   return (
-    <AuthShell title="تفعيل حساب جديد" subtitle="أدخل البريد الإلكتروني وكلمة مرور لحسابك">
+    <AuthShell
+      title="تفعيل حساب جديد"
+      subtitle="أدخل البريد الإلكتروني وكلمة مرور لحسابك"
+      visual="delivery-login"
+      cardTransition="activation"
+    >
       <View style={styles.form}>
         {formError || issue ? <AuthErrorBox title={issue?.title ?? "تحقق من البيانات"} message={formError ?? issue?.message ?? ""} /> : null}
         <AuthTextField label="البريد الإلكتروني" icon="email" value={email} onChangeText={setEmail} placeholder="example.com@" editable={!isActivating} keyboardType="email-address" direction="ltr" />

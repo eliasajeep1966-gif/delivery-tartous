@@ -130,8 +130,8 @@ function AuthAwareNavigator() {
           animationDuration: 220,
         }}
       >
-        <Stack.Screen name="login" />
-        <Stack.Screen name="activate-account" />
+        <Stack.Screen name="login" options={{ animation: "none" }} />
+        <Stack.Screen name="activate-account" options={{ animation: "none" }} />
         <Stack.Screen name="orders" />
         <Stack.Screen name="users" />
         <Stack.Screen name="(tabs)" />
