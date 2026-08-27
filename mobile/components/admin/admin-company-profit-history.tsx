@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -84,18 +84,6 @@ export function AdminCompanyProfitHistory() {
     dateStyle: "medium",
   }).format(dateValue);
   const rows = history.data;
-  const totals = useMemo(
-    () =>
-      rows.reduce(
-        (sum, row) => ({
-          gross: sum.gross + row.gross_total,
-          company: sum.company + row.company_total,
-          orders: sum.orders + row.order_count,
-        }),
-        { gross: 0, company: 0, orders: 0 },
-      ),
-    [rows],
-  );
 
   const header = (
     <>
@@ -109,24 +97,6 @@ export function AdminCompanyProfitHistory() {
             تُعرض خمس فترات فقط في كل صفحة حسب الفترة المختارة.
           </Text>
         </View>
-      </View>
-
-      <View style={styles.metrics}>
-        <Metric
-          label="إجمالي أجور الصفحة"
-          value={money(totals.gross)}
-          color="#1C1B1B"
-        />
-        <Metric
-          label="نتيجة الشركة للصفحة"
-          value={money(totals.company)}
-          color={VIOLET}
-        />
-        <Metric
-          label="طلبات الصفحة"
-          value={String(totals.orders)}
-          color={BLUE}
-        />
       </View>
 
       <View style={styles.periods}>
@@ -337,23 +307,6 @@ export function AdminCompanyProfitHistory() {
   );
 }
 
-function Metric({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <View style={styles.metric}>
-      <Text style={[styles.metricValue, { color }]}>{value}</Text>
-      <Text style={styles.muted}>{label}</Text>
-    </View>
-  );
-}
-
 function RecordCell({
   label,
   value,
@@ -451,17 +404,6 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   muted: { color: "#66727E", fontFamily: "Cairo_400Regular", fontSize: 10, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
-  metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 },
-  metric: {
-    backgroundColor: "#FFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 14,
-    borderWidth: 1,
-    minHeight: 84,
-    padding: 12,
-    width: "48.5%",
-  },
-  metricValue: { fontFamily: "Cairo_700Bold", fontSize: 14, textAlign: "right", writingDirection: "rtl" },
   periods: {
     flexDirection: "row-reverse",
     gap: 8,
