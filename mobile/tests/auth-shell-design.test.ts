@@ -25,12 +25,15 @@ describe("authentication visual shell", () => {
     expect(shellSource).toContain("styles.glassCard");
   });
 
-  it("uses the untouched full-width cartoon delivery scene without logo or cargo text overlays", () => {
+  it("uses the supplied full Delivery Tartous logo on the captain pocket without cargo overlays", () => {
     expect(shellSource).toContain(
       'require("@/assets/images/auth-login-scene.png")',
     );
+    expect(shellSource).toContain(
+      'require("@/assets/images/auth-captain-chest-logo.jpg")',
+    );
+    expect(shellSource).toContain("styles.chestLogo");
     expect(shellSource).not.toContain("cargoBoxFill");
-    expect(shellSource).not.toContain('require("@/assets/images/icon.png")');
     expect(shellSource).not.toContain("cargoSign");
     expect(shellSource).toContain('resizeMode="cover"');
     expect(shellSource).toContain('fontFamily: "Parisienne_400Regular"');

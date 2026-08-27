@@ -102,6 +102,12 @@ export function AuthShell({
             resizeMode="cover"
             style={styles.loginScene}
           />
+          <Image
+            accessibilityElementsHidden
+            source={require("@/assets/images/auth-captain-chest-logo.jpg")}
+            resizeMode="contain"
+            style={styles.chestLogo}
+          />
         </>
       ) : (
         <>
@@ -236,6 +242,13 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     width: "100%",
+  },
+  chestLogo: {
+    height: 48,
+    left: "43.5%",
+    position: "absolute",
+    top: "29.5%",
+    width: 48,
   },
   content: { alignItems: "center", flexGrow: 1, paddingHorizontal: 16 },
   layout: { alignSelf: "center", maxWidth: 410 },
