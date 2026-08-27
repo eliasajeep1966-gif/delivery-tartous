@@ -68,8 +68,6 @@ export default function TabLayout() {
             paddingBottom: bottomPadding,
           },
         ],
-        animation: "fade",
-        transitionSpec: { animation: "timing", config: { duration: 160 } },
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
       }}
