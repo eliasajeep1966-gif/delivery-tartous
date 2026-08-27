@@ -137,6 +137,7 @@ function AuthAwareNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="navigation-test" />
         <Stack.Screen name="activity-logs" />
+        <Stack.Screen name="owner-data-reset" />
       </Stack>
 
       {status === "initializing" ? (
