@@ -505,6 +505,7 @@ export type NativeCaptainPdfReportSummary = {
   order_count: number;
   gross_total: number;
   captain_total: number;
+  company_total: number;
 };
 
 function finiteNumber(value: unknown): number {
@@ -639,6 +640,7 @@ export const nativeCompanyPdfReportContract = {
         order_count: finiteNumber(row.order_count),
         gross_total: finiteNumber(row.gross_total),
         captain_total: finiteNumber(row.captain_total),
+        company_total: finiteNumber(row.company_total),
       };
     },
   },

@@ -102,6 +102,10 @@ export function AdminCompanyPdfReports({
               value: money(summary.captain_total),
               highlighted: true,
             },
+            {
+              label: "المبلغ المستحق للشركة (30٪)",
+              value: money(summary.company_total),
+            },
           ],
           generatedBy: userName,
         });
@@ -176,7 +180,7 @@ export function AdminCompanyPdfReports({
             <View style={styles.modeRow}>
               <ReportChoice
                 active={mode === "captain"}
-                description="كابتن واحد: الطلبات، أجر الطلبات، وصافيه"
+                description="كابتن واحد: الطلبات، الصافي، ومبلغ الشركة"
                 icon="person"
                 onPress={() => setMode("captain")}
                 title="تقرير كابتن"
@@ -276,7 +280,7 @@ export function AdminCompanyPdfReports({
               <Text style={styles.summaryTitle}>ما سيظهر في PDF</Text>
               <Text style={styles.summaryText}>
                 {mode === "captain"
-                  ? "اسم الكابتن، عدد الطلبات، إجمالي أجر الطلبات، وصافي الكابتن."
+                  ? "اسم الكابتن، عدد الطلبات، إجمالي أجر الطلبات، صافي الكابتن، والمبلغ المستحق للشركة (30٪)."
                   : "إجمالي الطلبات، إجمالي أجر الطلبات، أجور الكباتن، مصاريف المكتب، وصافي الشركة."}
               </Text>
             </View>
