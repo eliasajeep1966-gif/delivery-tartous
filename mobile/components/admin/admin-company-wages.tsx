@@ -23,25 +23,6 @@ import {
 const BLUE = "#0060B8";
 const money = (value: number) =>
   `${new Intl.NumberFormat("en-US").format(value)} ل.س`;
-const day = (value: string) =>
-  new Intl.DateTimeFormat("ar-SY", {
-    timeZone: "Asia/Damascus",
-    dateStyle: "medium",
-  }).format(new Date(`${value}T12:00:00Z`));
-const year = (value: string) =>
-  new Intl.DateTimeFormat("ar-SY", {
-    timeZone: "Asia/Damascus",
-    year: "numeric",
-  }).format(new Date(`${value}T12:00:00Z`));
-function periodLabel(
-  period: NativeFinancePeriod,
-  periodStart: string,
-  periodEnd: string,
-) {
-  if (period === "daily") return day(periodStart);
-  if (period === "annual") return `سنة ${year(periodStart)}`;
-  return `من ${day(periodStart)} إلى ${day(periodEnd)}`;
-}
 
 export function AdminCompanyWages() {
   const router = useRouter();
@@ -50,16 +31,17 @@ export function AdminCompanyWages() {
   const expenseHistory = useNativeOfficeExpensePeriods(period);
   const rows = history.data ?? [];
   const expenseRows = expenseHistory.data ?? [];
-  const expenseByPeriod = new Map(expenseRows.map((row) => [row.period_start, row]));
-  const totals = rows.reduce(
-    (sum, row) => ({
-      gross: sum.gross + row.gross_total,
-      company: sum.company + row.company_total,
-      captain: sum.captain + row.captain_net_total,
-      compensation: sum.compensation + row.settlement_total,
-    }),
-    { gross: 0, company: 0, captain: 0, compensation: 0 },
+  const currentPeriod = rows[0];
+  const officeExpenses = Number(
+    expenseRows.find((row) => row.period_start === currentPeriod?.period_start)
+      ?.expense_total ?? 0,
   );
+  const totals = {
+    gross: currentPeriod?.gross_total ?? 0,
+    company: currentPeriod?.company_total ?? 0,
+    captain: currentPeriod?.captain_net_total ?? 0,
+    compensation: currentPeriod?.settlement_total ?? 0,
+  };
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
@@ -92,32 +74,15 @@ export function AdminCompanyWages() {
             />
           </View>
           <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>سجل أرباح الشركة</Text>
+            <Text style={styles.heroTitle}>ملخص أرباح الشركة</Text>
             <Text style={styles.muted}>
-              أرباح الشركة المجمّعة من كل الكباتن حسب التاريخ.
+              عرض أحدث يوم أو شهر أو سنة، حسب الفترة التي تختارها.
             </Text>
           </View>
         </View>
-        <View style={styles.metrics}>
-          {[
-            ["إجمالي الأجور", totals.gross, "#1C1B1B"],
-            ["نتيجة الشركة", totals.company, "#6D28D9"],
-            ["مصاريف المكتب", expenseRows.reduce((sum, row) => sum + Number(row.expense_total), 0), "#B54708"],
-            ["الصافي", totals.company - expenseRows.reduce((sum, row) => sum + Number(row.expense_total), 0), "#047857"],
-            ["صافي الكباتن", totals.captain, "#047857"],
-            ["تعويض الكباتن", totals.compensation, BLUE],
-          ].map(([label, value, color]) => (
-            <View key={String(label)} style={styles.metric}>
-              <Text style={[styles.metricValue, { color: String(color) }]}>
-                {money(Number(value))}
-              </Text>
-              <Text style={styles.muted}>{String(label)}</Text>
-            </View>
-          ))}
-        </View>
         <View style={styles.periodHeading}>
-          <Text style={styles.periodTitle}>عرض حساب الشركة حسب</Text>
-          <Text style={styles.periodHint}>اختر الفترة</Text>
+          <Text style={styles.periodTitle}>فترة الملخص المالي</Text>
+          <Text style={styles.periodHint}>أحدث فترة متاحة</Text>
         </View>
         <View style={styles.periods}>
           {(["daily", "monthly", "annual"] as const).map((value) => (
@@ -147,19 +112,44 @@ export function AdminCompanyWages() {
             </Pressable>
           ))}
         </View>
-        <View style={styles.heading}>
-          <Text style={styles.title}>سجل الأرباح حسب التاريخ</Text>
-          <Text style={styles.badge}>{rows.length} فترات</Text>
-        </View>
+        {history.isPending || expenseHistory.isPending ? (
+          <Message text="جارٍ تحميل ملخص الأرباح والمصاريف..." />
+        ) : history.error || expenseHistory.error ? (
+          <Message
+            text={
+              history.error instanceof Error
+                ? history.error.message
+                : "تعذر تحميل ملخص الأرباح."
+            }
+          />
+        ) : (
+          <View style={styles.metrics}>
+            {[
+              ["إجمالي الأجور", totals.gross, "#1C1B1B"],
+              ["نتيجة الشركة", totals.company, "#6D28D9"],
+              ["مصاريف المكتب", officeExpenses, "#B54708"],
+              ["الصافي", totals.company - officeExpenses, "#047857"],
+              ["صافي الكباتن", totals.captain, "#047857"],
+              ["تعويض الكباتن", totals.compensation, BLUE],
+            ].map(([label, value, color]) => (
+              <View key={String(label)} style={styles.metric}>
+                <Text style={[styles.metricValue, { color: String(color) }]}>
+                  {money(Number(value))}
+                </Text>
+                <Text style={styles.muted}>{String(label)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
         <MotionPressable
-          accessibilityLabel="فتح سجل أرباح الشركة الكامل"
+          accessibilityLabel="فتح سجل الأرباح حسب التاريخ"
           onPress={() => router.push("/company-profit-history" as never)}
           style={styles.fullHistoryButton}
         >
           <View style={styles.fullHistoryCopy}>
-            <Text style={styles.fullHistoryTitle}>عرض السجل الكامل</Text>
+            <Text style={styles.fullHistoryTitle}>سجل الأرباح حسب التاريخ</Text>
             <Text style={styles.fullHistoryText}>
-              استعرض فترات أقدم مع تحميل متدرج.
+              استعرض جميع الفترات بخمس فترات في كل صفحة.
             </Text>
           </View>
           <View style={styles.fullHistoryIcon}>
@@ -181,63 +171,10 @@ export function AdminCompanyWages() {
           </View>
           <MaterialIcons name="arrow-back" size={19} color="#B54708" />
         </MotionPressable>
-        {history.isPending || expenseHistory.isPending ? (
-          <Message text="جارٍ تحميل سجل الأرباح والمصاريف..." />
-        ) : history.error || expenseHistory.error ? (
-          <Message
-            text={
-              history.error instanceof Error
-                ? history.error.message
-                : "تعذر تحميل سجل الأرباح."
-            }
-          />
-        ) : (
-          rows.map((row) => {
-            const expenses = Number(
-              expenseByPeriod.get(row.period_start)?.expense_total ?? 0,
-            );
-            return (
-              <View key={row.period_start} style={styles.recordCard}>
-                <RecordCell
-                  label={periodLabel(period, row.period_start, row.period_end)}
-                  value={`${row.order_count} طلبات`}
-                  color="#1C1B1B"
-                />
-                <RecordCell
-                  label="نتيجة الشركة"
-                  value={money(row.company_total)}
-                  color="#6D28D9"
-                />
-                <RecordCell
-                  label="الصافي"
-                  value={money(row.company_total - expenses)}
-                  color="#047857"
-                />
-              </View>
-            );
-          })
-        )}
       </ScrollView>
     </ScreenContainer>
   );
 }
-function RecordCell({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <View style={styles.recordCell}>
-      <Text style={styles.muted}>{label}</Text>
-      <Text style={[styles.recordValue, { color }]}>{value}</Text>
-    </View>
-  );
-}
-
 function Message({ text }: { text: string }) {
   return (
     <View style={styles.message}>
@@ -333,22 +270,6 @@ const styles = StyleSheet.create({
   active: { backgroundColor: BLUE, borderColor: BLUE },
   periodText: { color: "#5C7C90", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   activeText: { color: "#FFF" },
-  heading: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-  },
-  title: { color: "#1C1B1B", fontFamily: "Cairo_700Bold", fontSize: 14, writingDirection: "rtl" },
-  badge: {
-    backgroundColor: "#EAE8FF",
-    borderRadius: 14,
-    color: "#6D28D9",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 9,
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
   expenseHistoryButton: {
     alignItems: "center",
     backgroundColor: "#FFF8F1",
@@ -389,41 +310,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  recordCard: {
-    backgroundColor: "#FFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 15,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 7,
-    padding: 8,
-  },
-  recordCell: {
-    backgroundColor: "#F7FAFD",
-    borderColor: "#E1ECF4",
-    borderRadius: 11,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 76,
-    padding: 8,
-  },
-  recordValue: {
-    fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    marginTop: 5,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  rowTitle: {
-    color: "#1C1B1B",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 12,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  expense: { color: "#B54708", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
-  net: { color: "#047857", fontFamily: "Cairo_700Bold", fontSize: 11, marginTop: 3, writingDirection: "rtl" },
   message: {
     alignItems: "center",
     backgroundColor: "#FFF",
