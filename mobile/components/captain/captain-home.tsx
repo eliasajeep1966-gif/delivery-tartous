@@ -452,12 +452,21 @@ export function CaptainHome() {
                     ) : null}
                     {current.status === "in_delivery" ? (
                       <MotionPressable
+                        accessibilityLabel="تسجيل الطلب كطلب كاذب"
                         disabled={dashboard.orderSaving}
+                        haptic="medium"
                         pressedScale={0.97}
                         onPress={() => setFalseOrderOpen(true)}
-                        style={styles.dangerButton}
+                        style={styles.falseOrderButton}
                       >
-                        <Text style={styles.dangerText}>تسجيل طلب كاذب</Text>
+                        <View style={styles.falseOrderIcon}>
+                          <MaterialIcons name="warning-amber" size={19} color="#FFFFFF" />
+                        </View>
+                        <View style={styles.falseOrderCopy}>
+                          <Text style={styles.falseOrderTitle}>تسجيل طلب كاذب</Text>
+                          <Text style={styles.falseOrderHint}>أوقف الطلب عند تعذّر تسليمه</Text>
+                        </View>
+                        <MaterialIcons name="chevron-left" size={23} color="#FEE2E2" />
                       </MotionPressable>
                     ) : null}
                   </Animated.View>
@@ -1063,6 +1072,46 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
     fontSize: 12,
+    writingDirection: "rtl",
+  },
+  falseOrderButton: {
+    alignItems: "center",
+    backgroundColor: "#BE2433",
+    borderColor: "rgba(255,220,224,0.82)",
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    minHeight: 58,
+    paddingHorizontal: 12,
+    shadowColor: "#690A15",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.26,
+    shadowRadius: 9,
+  },
+  falseOrderIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderColor: "rgba(255,255,255,0.28)",
+    borderRadius: 13,
+    borderWidth: 1,
+    height: 30,
+    justifyContent: "center",
+    width: 30,
+  },
+  falseOrderCopy: { flex: 1, marginHorizontal: 9 },
+  falseOrderTitle: {
+    color: "#FFFFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  falseOrderHint: {
+    color: "rgba(255,238,240,0.88)",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: 1,
+    textAlign: "right",
     writingDirection: "rtl",
   },
   dangerButton: {
