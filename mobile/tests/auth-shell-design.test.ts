@@ -16,10 +16,11 @@ describe("authentication visual shell", () => {
     expect(shellSource).toContain("styles.glassCard");
   });
 
-  it("uses the cartoon delivery captain only for the login visual", () => {
+  it("uses the full-width cartoon delivery scene only for the login visual", () => {
     expect(shellSource).toContain(
-      'require("@/assets/images/auth-captain-cartoon.png")',
+      'require("@/assets/images/auth-login-scene.png")',
     );
+    expect(shellSource).toContain('resizeMode="cover"');
     expect(shellSource).toContain('fontFamily: "Parisienne_400Regular"');
     expect(loginSource).toContain('visual="delivery-login"');
   });

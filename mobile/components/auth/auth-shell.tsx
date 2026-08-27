@@ -87,21 +87,25 @@ export function AuthShell({
       edges={["top", "bottom", "left", "right"]}
       style={styles.safeArea}
     >
-      <LinearGradient
-        colors={
-          isDeliveryLogin
-            ? ["#83BDE9", "#D9EFFD", "#F4FAFF"]
-            : ["#C7EDFF", "#EEF9FF", "#CEE7FB"]
-        }
-        end={{ x: 0.82, y: 1 }}
-        start={{ x: 0.1, y: 0 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <View
-        pointerEvents="none"
-        style={isDeliveryLogin ? styles.loginTopGlow : styles.topGlow}
-      />
-      <View pointerEvents="none" style={styles.bottomGlow} />
+      {isDeliveryLogin ? (
+        <Image
+          accessibilityElementsHidden
+          source={require("@/assets/images/auth-login-scene.png")}
+          resizeMode="cover"
+          style={styles.loginScene}
+        />
+      ) : (
+        <>
+          <LinearGradient
+            colors={["#C7EDFF", "#EEF9FF", "#CEE7FB"]}
+            end={{ x: 1, y: 1 }}
+            start={{ x: 0, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View pointerEvents="none" style={styles.topGlow} />
+          <View pointerEvents="none" style={styles.bottomGlow} />
+        </>
+      )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -130,15 +134,7 @@ export function AuthShell({
               ]}
             >
               {isDeliveryLogin ? (
-                <>
-                  <View pointerEvents="none" style={styles.loginHeroHalo} />
-                  <Text style={styles.loginWordmark}>Delivery Tartous</Text>
-                  <Image
-                    source={require("@/assets/images/auth-captain-cartoon.png")}
-                    resizeMode="contain"
-                    style={styles.loginCaptain}
-                  />
-                </>
+                <Text style={styles.loginWordmark}>Delivery Tartous</Text>
               ) : (
                 <>
                   <View pointerEvents="none" style={styles.heroHalo} />
@@ -204,15 +200,6 @@ const styles = StyleSheet.create({
     top: -142,
     width: 340,
   },
-  loginTopGlow: {
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderRadius: 220,
-    height: 430,
-    left: -140,
-    position: "absolute",
-    top: -190,
-    width: 430,
-  },
   bottomGlow: {
     backgroundColor: "rgba(0,96,184,0.10)",
     borderRadius: 210,
@@ -241,14 +228,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 276,
   },
-  loginHeroHalo: {
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderRadius: 180,
-    bottom: -54,
-    height: 250,
-    position: "absolute",
-    width: 300,
-  },
   captain: {
     bottom: -12,
     height: "112%",
@@ -256,12 +235,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
   },
-  loginCaptain: {
-    bottom: -152,
-    height: 486,
-    maxWidth: 462,
+  loginScene: {
+    bottom: 0,
+    height: "100%",
+    left: 0,
     position: "absolute",
-    width: "124%",
+    right: 0,
+    top: 0,
+    width: "100%",
   },
   loginWordmark: {
     color: "#075BA6",
@@ -270,7 +251,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 2,
     top: 12,
-    zIndex: 2,
   },
   brandPill: {
     alignItems: "center",
