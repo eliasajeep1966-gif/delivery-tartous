@@ -890,7 +890,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   emptyText: {
-    color: "#587386",
+    color: "rgba(255,255,255,0.92)",
     fontFamily: "Cairo_400Regular",
     fontSize: 12,
     padding: 18,
