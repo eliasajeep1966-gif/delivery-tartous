@@ -102,20 +102,6 @@ export function AuthShell({
             resizeMode="cover"
             style={styles.loginScene}
           />
-          <View pointerEvents="none" style={styles.sceneBranding}>
-            <Image
-              source={require("@/assets/images/icon.png")}
-              style={styles.chestLogo}
-            />
-            <View style={styles.cargoSign}>
-              <Text style={styles.cargoTitle}>دليفري طرطوس</Text>
-              <View style={styles.cargoDivider} />
-              <Text style={styles.cargoNumber}>0931 724449</Text>
-              <Text style={styles.cargoNumber}>0937 960394</Text>
-              <Text style={styles.cargoComplaint}>رقم الشكاوى</Text>
-              <Text style={styles.cargoNumber}>0994 440 915</Text>
-            </View>
-          </View>
         </>
       ) : (
         <>
@@ -251,60 +237,6 @@ const styles = StyleSheet.create({
     top: 0,
     width: "100%",
   },
-  sceneBranding: {
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
-  chestLogo: {
-    borderRadius: 6,
-    height: 25,
-    left: "46.5%",
-    position: "absolute",
-    top: "34.2%",
-    width: 25,
-  },
-  cargoSign: {
-    alignItems: "flex-end",
-    paddingRight: 13,
-    position: "absolute",
-    right: -5,
-    top: "33.9%",
-    width: 151,
-  },
-  cargoTitle: {
-    color: "#F4FFFF",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  cargoDivider: {
-    backgroundColor: "rgba(233,255,255,0.62)",
-    height: 1,
-    marginBottom: 4,
-    marginTop: 2,
-    width: 92,
-  },
-  cargoNumber: {
-    color: "#E9FFFF",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    lineHeight: 15,
-    textAlign: "right",
-  },
-  cargoComplaint: {
-    color: "rgba(233,255,255,0.82)",
-    fontFamily: "Cairo_600SemiBold",
-    fontSize: 9,
-    lineHeight: 14,
-    marginTop: 2,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
   content: { alignItems: "center", flexGrow: 1, paddingHorizontal: 16 },
   layout: { alignSelf: "center", maxWidth: 410 },
   hero: {
@@ -332,7 +264,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   loginWordmark: {
-    color: "#55B5EA",
+    color: "#075BA6",
     fontFamily: "Parisienne_400Regular",
     fontSize: 28,
     position: "absolute",
@@ -398,7 +330,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
-  loginTitle: { color: "#55B5EA", fontSize: 25, lineHeight: 35 },
+  loginTitle: { color: "#075BA6", fontSize: 25, lineHeight: 35 },
   subtitle: {
     color: "#526E84",
     fontFamily: "Cairo_400Regular",
@@ -408,5 +340,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
-  loginSubtitle: { color: "#4FADDF", fontSize: 13, marginTop: 2 },
+  loginSubtitle: { color: "#3478A9", fontSize: 13, marginTop: 2 },
 });
