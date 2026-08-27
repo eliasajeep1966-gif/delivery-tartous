@@ -22,6 +22,7 @@ export type AdminHomeCaptain = {
 
 export type AdminHomeActivityWithTiming = AdminHomeActivity & {
   deliveryTiming: DeliveryTiming | null;
+  currentOrderStatus: AdminOrderStatus | null;
 };
 
 export type AdminHomeSnapshot = {
@@ -42,44 +43,78 @@ function canShowDeliveryTiming(status: AdminOrderStatus | null): status is "rece
   return status === "received" || status === "in_delivery" || status === "completed";
 }
 
+function orderStatusValue(value: unknown): AdminOrderStatus | null {
+  return ["pending", "assigned", "received", "in_delivery", "completed", "cancelled", "false_order"].includes(value as string)
+    ? value as AdminOrderStatus
+    : null;
+}
+
 async function enrichActivitiesWithDeliveryTiming(
   activities: AdminHomeActivity[],
 ): Promise<AdminHomeActivityWithTiming[]> {
   const candidateActivities = activities.filter(
     (activity) => activity.orderId && canShowDeliveryTiming(activity.status),
   );
-  const orderIds = Array.from(new Set(candidateActivities.flatMap((activity) => activity.orderId ? [activity.orderId] : [])));
-  if (!orderIds.length) return activities.map((activity) => ({ ...activity, deliveryTiming: null }));
+  const activityOrderIds = Array.from(new Set(
+    activities.flatMap((activity) => activity.orderId ? [activity.orderId] : []),
+  ));
+  const timingOrderIds = Array.from(new Set(
+    candidateActivities.flatMap((activity) => activity.orderId ? [activity.orderId] : []),
+  ));
+  if (!activityOrderIds.length) {
+    return activities.map((activity) => ({
+      ...activity,
+      deliveryTiming: null,
+      currentOrderStatus: null,
+    }));
+  }
 
   const client = getNativeSupabaseClient();
-  const { data, error } = await client
-    .from("order_status_history")
-    .select("order_id,next_status,changed_at")
-    .in("order_id", orderIds)
-    .in("next_status", ["received", "in_delivery", "completed"]);
-  if (error) throw new Error(error.message);
+  const [historyResult, ordersResult] = await Promise.all([
+    timingOrderIds.length
+      ? client
+          .from("order_status_history")
+          .select("order_id,next_status,changed_at")
+          .in("order_id", timingOrderIds)
+          .in("next_status", ["received", "in_delivery", "completed"])
+      : Promise.resolve({ data: [], error: null }),
+    client
+      .from("orders")
+      .select("id,status")
+      .in("id", activityOrderIds),
+  ]);
+  if (historyResult.error) throw new Error(historyResult.error.message);
+  if (ordersResult.error) throw new Error(ordersResult.error.message);
 
   const historyByOrder = new Map<string, { status: string; timestamp: string }[]>();
-  for (const row of data ?? []) {
+  for (const row of historyResult.data ?? []) {
     if (typeof row.order_id !== "string" || typeof row.next_status !== "string" || typeof row.changed_at !== "string") continue;
     const entries = historyByOrder.get(row.order_id) ?? [];
     entries.push({ status: row.next_status, timestamp: row.changed_at });
     historyByOrder.set(row.order_id, entries);
   }
 
-  return activities.map((activity) => {
-    if (!activity.orderId || !canShowDeliveryTiming(activity.status)) {
-      return { ...activity, deliveryTiming: null };
-    }
-    return {
-      ...activity,
-      deliveryTiming: deriveDeliveryTiming(
-        activity.status,
-        activity.occurredAt,
-        historyByOrder.get(activity.orderId) ?? [],
-      ),
-    };
-  });
+  const currentStatusByOrder = new Map<string, AdminOrderStatus>();
+  for (const order of ordersResult.data ?? []) {
+    if (typeof order.id !== "string") continue;
+    const status = orderStatusValue(order.status);
+    if (status) currentStatusByOrder.set(order.id, status);
+  }
+
+  return activities.map((activity) => ({
+    ...activity,
+    currentOrderStatus: activity.orderId
+      ? currentStatusByOrder.get(activity.orderId) ?? null
+      : null,
+    deliveryTiming:
+      activity.orderId && canShowDeliveryTiming(activity.status)
+        ? deriveDeliveryTiming(
+            activity.status,
+            activity.occurredAt,
+            historyByOrder.get(activity.orderId) ?? [],
+          )
+        : null,
+  }));
 }
 
 async function loadAdminHome(): Promise<AdminHomeSnapshot> {

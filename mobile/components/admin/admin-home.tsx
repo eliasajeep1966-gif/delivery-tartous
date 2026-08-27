@@ -7,6 +7,8 @@ import {
   AppState,
   FlatList,
   type LayoutChangeEvent,
+  Modal,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text as NativeText,
@@ -45,6 +47,7 @@ import {
 } from "@/lib/supabase/native-admin-contract";
 import { presentDeliveryTiming, type DeliveryTiming } from "@/lib/admin/delivery-duration";
 import { notifyCaptainOfOrder } from "@/lib/notifications";
+import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
 type IconName = ComponentProps<typeof MaterialIcons>["name"];
@@ -124,6 +127,9 @@ export function AdminHome() {
   const [createOpen, setCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [cancellingActivity, setCancellingActivity] =
+    useState<AdminHomeActivityWithTiming | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const realtimeRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleRealtimeRefresh = useCallback(() => {
@@ -356,6 +362,29 @@ export function AdminHome() {
     }
   };
 
+  const cancelOrderFromActivity = async () => {
+    if (!cancellingActivity?.orderId) return;
+    setIsCancelling(true);
+    try {
+      const { error } = await getNativeSupabaseClient().rpc("cancel_order", {
+        p_order_id: cancellingActivity.orderId,
+        p_cancellation_reason: "أُلغي من أحدث النشاطات قبل بدء التوصيل.",
+      });
+      if (error) throw new Error(error.message);
+      showToast({ message: "تم إلغاء الطلب بنجاح." });
+      setCancellingActivity(null);
+      await refetch();
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : "تعذر إلغاء الطلب.",
+        tone: "error",
+        durationMs: 5000,
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const availableCount = snapshot?.availableCaptains.length ?? 0;
 
   return (
@@ -378,7 +407,12 @@ export function AdminHome() {
         data={snapshot?.activities ?? []}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <ActivityRow item={item} onPress={openOrders} index={index} />
+          <ActivityRow
+            item={item}
+            onPress={openOrders}
+            onRequestCancellation={setCancellingActivity}
+            index={index}
+          />
         )}
         refreshControl={
           <RefreshControl
@@ -581,6 +615,12 @@ export function AdminHome() {
           </View>
         }
       />
+      <ActivityCancellationConfirmation
+        activity={cancellingActivity}
+        isSaving={isCancelling}
+        onClose={() => setCancellingActivity(null)}
+        onConfirm={() => void cancelOrderFromActivity()}
+      />
       <AdminNewOrderModal
         visible={createOpen}
         captains={snapshot?.availableCaptains ?? []}
@@ -690,14 +730,20 @@ function MetricCard({
 function ActivityRow({
   item,
   onPress,
+  onRequestCancellation,
   index,
 }: {
   item: AdminHomeActivityWithTiming;
   onPress: () => void;
+  onRequestCancellation: (activity: AdminHomeActivityWithTiming) => void;
   index: number;
 }) {
   const meta = item.status ? statusStyle[item.status] : null;
   const actorName = item.subtitle.replace(/^بواسطة\s+/, "");
+  const canCancelQuickly =
+    item.orderId !== null &&
+    item.title.startsWith("تم إنشاء الطلب") &&
+    ["pending", "assigned", "received"].includes(item.currentOrderStatus ?? "");
 
   return (
     <Animated.View
@@ -735,10 +781,90 @@ function ActivityRow({
             </Text>
           </View>
           <ActivityDeliveryJourney timing={item.deliveryTiming} />
+          {canCancelQuickly ? (
+            <Pressable
+              accessibilityLabel={`إلغاء ${item.title}`}
+              onPress={(event) => {
+                event.stopPropagation();
+                onRequestCancellation(item);
+              }}
+              style={({ pressed }) => [
+                styles.activityCancelAction,
+                pressed && styles.activityPressed,
+              ]}
+            >
+              <MaterialIcons name="cancel" size={15} color="#BA1A1A" />
+              <Text style={styles.activityCancelActionText}>إلغاء الطلب</Text>
+            </Pressable>
+          ) : null}
         </View>
         <MaterialIcons name="chevron-left" size={18} color="#8EAABB" />
       </MotionPressable>
     </Animated.View>
+  );
+}
+
+function ActivityCancellationConfirmation({
+  activity,
+  isSaving,
+  onClose,
+  onConfirm,
+}: {
+  activity: AdminHomeActivityWithTiming | null;
+  isSaving: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal
+      visible={Boolean(activity)}
+      transparent
+      animationType="fade"
+      onRequestClose={isSaving ? undefined : onClose}
+    >
+      <View style={styles.cancelConfirmOverlay}>
+        <Pressable
+          disabled={isSaving}
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.cancelConfirmDialog}>
+          <View style={styles.cancelConfirmIcon}>
+            <MaterialIcons name="warning-amber" size={25} color="#BA1A1A" />
+          </View>
+          <Text style={styles.cancelConfirmTitle}>تأكيد إلغاء الطلب</Text>
+          <Text style={styles.cancelConfirmDescription}>
+            {activity?.title ?? "هذا الطلب"} سيُلغى قبل بدء التوصيل، ولن تُحتسب له أي أجور للكابتن أو حصة للشركة.
+          </Text>
+          <View style={styles.cancelConfirmActions}>
+            <Pressable
+              disabled={isSaving}
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.cancelConfirmBack,
+                isSaving && styles.disabled,
+                pressed && styles.smallPressed,
+              ]}
+            >
+              <Text style={styles.cancelConfirmBackText}>تراجع</Text>
+            </Pressable>
+            <Pressable
+              disabled={isSaving}
+              onPress={onConfirm}
+              style={({ pressed }) => [
+                styles.cancelConfirmButton,
+                isSaving && styles.disabled,
+                pressed && styles.smallPressed,
+              ]}
+            >
+              <Text style={styles.cancelConfirmButtonText}>
+                {isSaving ? "جارٍ الإلغاء..." : "تأكيد الإلغاء"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -1002,6 +1128,19 @@ const styles = StyleSheet.create({
   activityDate: { color: "#718B9D", fontSize: 10, fontWeight: "700", writingDirection: "rtl" },
   activityActorRow: { alignItems: "center", flexDirection: "row-reverse", gap: 4, marginTop: 3 },
   activityActorName: { color: "#4B7691", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
+  activityCancelAction: { alignItems: "center", alignSelf: "flex-end", backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderRadius: 9, borderWidth: 1, flexDirection: "row-reverse", gap: 4, marginTop: 7, minHeight: 31, paddingHorizontal: 8 },
+  activityCancelActionText: { color: "#BA1A1A", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
+  cancelConfirmOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", backgroundColor: "rgba(20, 30, 38, 0.42)", justifyContent: "center", padding: 24 },
+  cancelConfirmDialog: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#F4C5C7", borderRadius: 20, borderWidth: 1, maxWidth: 400, padding: 22, width: "100%" },
+  cancelConfirmIcon: { alignItems: "center", backgroundColor: "#FEF2F2", borderRadius: 24, height: 48, justifyContent: "center", width: 48 },
+  cancelConfirmTitle: { color: "#7F1D1D", fontSize: 16, fontWeight: "800", marginTop: 11, textAlign: "center", writingDirection: "rtl" },
+  cancelConfirmDescription: { color: "#58616B", fontSize: 11, lineHeight: 19, marginTop: 7, textAlign: "center", writingDirection: "rtl" },
+  cancelConfirmActions: { flexDirection: "row-reverse", gap: 9, marginTop: 18, width: "100%" },
+  cancelConfirmBack: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#C9D9E7", borderRadius: 11, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 44 },
+  cancelConfirmBackText: { color: "#536B7B", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  cancelConfirmButton: { alignItems: "center", backgroundColor: "#BA1A1A", borderRadius: 11, flex: 1, justifyContent: "center", minHeight: 44 },
+  cancelConfirmButtonText: { color: "#FFFFFF", fontSize: 11, fontWeight: "800", writingDirection: "rtl" },
+  disabled: { opacity: 0.5 },
   activityJourney: { backgroundColor: "#F7FBFD", borderColor: "#DCEAF1", borderRadius: 10, borderWidth: 1, marginTop: 6, paddingHorizontal: 8, paddingVertical: 7 },
   activityDurationRow: { alignItems: "flex-end", flexDirection: "row-reverse" },
   activityDurationBadge: { alignItems: "center", backgroundColor: "#EAF9F3", borderRadius: 8, flexDirection: "row-reverse", gap: 4, paddingHorizontal: 8, paddingVertical: 4 },
