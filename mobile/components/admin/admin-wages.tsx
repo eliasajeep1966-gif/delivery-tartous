@@ -785,7 +785,7 @@ export function AdminWages() {
 function ProductivityChart({ points }: { points: readonly ProductivityPoint[] }) {
   const pulseScale = useSharedValue(0.78);
   const pulseStyle = useAnimatedStyle(() => ({
-    opacity: 0.22,
+    opacity: 0.32,
     transform: [{ scale: pulseScale.value }],
   }));
   const chart = useMemo(() => {
@@ -824,8 +824,8 @@ function ProductivityChart({ points }: { points: readonly ProductivityPoint[] })
     pulseScale.set(
       withRepeat(
         withSequence(
-          withTiming(1.18, { duration: 780, easing: Easing.inOut(Easing.quad) }),
-          withTiming(0.78, { duration: 780, easing: Easing.inOut(Easing.quad) }),
+          withTiming(1.25, { duration: 780, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.72, { duration: 780, easing: Easing.inOut(Easing.quad) }),
         ),
         -1,
         false,
@@ -906,7 +906,7 @@ function ProductivityChart({ points }: { points: readonly ProductivityPoint[] })
           pointerEvents="none"
           style={[
             styles.productivityChartPulse,
-            { left: endPoint.x - 7, top: endPoint.y - 7 },
+            { left: endPoint.x - 11, top: endPoint.y - 11 },
             pulseStyle,
           ]}
         />
@@ -1794,19 +1794,20 @@ const styles = StyleSheet.create({
   },
   profitComparison: {
     alignItems: "center",
-    alignSelf: "flex-start",
-    borderRadius: 9,
+    alignSelf: "flex-end",
+    borderRadius: 10,
     flexDirection: "row-reverse",
     gap: 4,
+    marginRight: 1,
     marginTop: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   profitComparisonPositive: { backgroundColor: "#E6F8EE" },
   profitComparisonNegative: { backgroundColor: "#FFF0E7" },
   profitComparisonText: {
     fontFamily: "Cairo_700Bold",
-    fontSize: 9,
+    fontSize: 10,
     writingDirection: "ltr",
   },
   profitComparisonTextPositive: { color: "#07875D" },
@@ -1852,10 +1853,10 @@ const styles = StyleSheet.create({
   productivityChartSurface: { height: 72, marginTop: 1, width: 140 },
   productivityChartPulse: {
     backgroundColor: "#16CEFF",
-    borderRadius: 7,
-    height: 14,
+    borderRadius: 11,
+    height: 22,
     position: "absolute",
-    width: 14,
+    width: 22,
   },
   profitFooter: {
     alignItems: "center",
