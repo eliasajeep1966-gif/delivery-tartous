@@ -2,9 +2,19 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { useState } from "react";
-import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
+import { useEffect, useState } from "react";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  FadeInDown,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import {
+  LayoutChangeEvent,
   Linking,
   Modal,
   Platform,
@@ -37,6 +47,52 @@ import { presentDeliveryTiming } from "@/lib/admin/delivery-duration";
 const DEEP_BLUE = "#063B78";
 const BLUE = "#0878D1";
 const NEON = "#16CEFF";
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
+type LedPoint = { x: number; y: number; perimeter: number };
+
+function getRoundedRectLedPoint(distance: number, width: number, height: number): LedPoint {
+  "worklet";
+  const inset = 1;
+  const innerWidth = Math.max(width - inset * 2, 1);
+  const innerHeight = Math.max(height - inset * 2, 1);
+  const radius = Math.min(19, innerWidth / 2, innerHeight / 2);
+  const horizontal = Math.max(innerWidth - radius * 2, 0);
+  const vertical = Math.max(innerHeight - radius * 2, 0);
+  const corner = (Math.PI * radius) / 2;
+  const perimeter = horizontal * 2 + vertical * 2 + corner * 4;
+  let travel = distance % perimeter;
+  const left = inset;
+  const right = inset + innerWidth;
+  const top = inset;
+  const bottom = inset + innerHeight;
+
+  if (travel <= horizontal) return { x: left + radius + travel, y: top, perimeter };
+  travel -= horizontal;
+  if (travel <= corner) {
+    const theta = -Math.PI / 2 + (travel / corner) * (Math.PI / 2);
+    return { x: right - radius + radius * Math.cos(theta), y: top + radius + radius * Math.sin(theta), perimeter };
+  }
+  travel -= corner;
+  if (travel <= vertical) return { x: right, y: top + radius + travel, perimeter };
+  travel -= vertical;
+  if (travel <= corner) {
+    const theta = (travel / corner) * (Math.PI / 2);
+    return { x: right - radius + radius * Math.cos(theta), y: bottom - radius + radius * Math.sin(theta), perimeter };
+  }
+  travel -= corner;
+  if (travel <= horizontal) return { x: right - radius - travel, y: bottom, perimeter };
+  travel -= horizontal;
+  if (travel <= corner) {
+    const theta = Math.PI / 2 + (travel / corner) * (Math.PI / 2);
+    return { x: left + radius + radius * Math.cos(theta), y: bottom - radius + radius * Math.sin(theta), perimeter };
+  }
+  travel -= corner;
+  if (travel <= vertical) return { x: left, y: bottom - radius - travel, perimeter };
+  travel -= vertical;
+  const theta = Math.PI + (travel / corner) * (Math.PI / 2);
+  return { x: left + radius + radius * Math.cos(theta), y: top + radius + radius * Math.sin(theta), perimeter };
+}
 const statusLabels: Record<CaptainOrderStatus, string> = {
   pending: "قيد الانتظار",
   assigned: "تم إسناد الطلب",
@@ -110,9 +166,78 @@ export function CaptainHome() {
   const dashboard = useNativeCaptainDashboard(isLiveUpdatesActive);
   const [falseOrderOpen, setFalseOrderOpen] = useState(false);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
+  const currentLedProgress = useSharedValue(0);
+  const currentLedWidth = useSharedValue(0);
+  const currentLedHeight = useSharedValue(0);
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
   const current = dashboard.currentOrder;
+  const showCurrentOrderLed = current?.status === "in_delivery";
   const action = current ? nextAction(current.status) : null;
+
+  const handleCurrentCardLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    currentLedWidth.value = width;
+    currentLedHeight.value = height;
+  };
+
+  useEffect(() => {
+    if (!showCurrentOrderLed) {
+      cancelAnimation(currentLedProgress);
+      currentLedProgress.value = 0;
+      return;
+    }
+    currentLedProgress.value = withRepeat(
+      withTiming(1, { duration: 4200, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(currentLedProgress);
+  }, [currentLedProgress, showCurrentOrderLed]);
+
+  const currentLedDotStyle = useAnimatedStyle(() => {
+    if (!currentLedWidth.value || !currentLedHeight.value) return { opacity: 0 };
+    const start = getRoundedRectLedPoint(0, currentLedWidth.value, currentLedHeight.value);
+    const point = getRoundedRectLedPoint(
+      currentLedProgress.value * start.perimeter,
+      currentLedWidth.value,
+      currentLedHeight.value,
+    );
+    return { opacity: 1, left: point.x - 4, top: point.y - 4 };
+  });
+
+  const currentLedGlowStyle = useAnimatedStyle(() => {
+    if (!currentLedWidth.value || !currentLedHeight.value) return { opacity: 0 };
+    const start = getRoundedRectLedPoint(0, currentLedWidth.value, currentLedHeight.value);
+    const point = getRoundedRectLedPoint(
+      currentLedProgress.value * start.perimeter,
+      currentLedWidth.value,
+      currentLedHeight.value,
+    );
+    return { opacity: 0.72, left: point.x - 10, top: point.y - 10 };
+  });
+
+  const currentLedTailStyle = useAnimatedStyle(() => {
+    if (!currentLedWidth.value || !currentLedHeight.value) return { opacity: 0 };
+    const start = getRoundedRectLedPoint(0, currentLedWidth.value, currentLedHeight.value);
+    const currentDistance = currentLedProgress.value * start.perimeter;
+    const point = getRoundedRectLedPoint(currentDistance, currentLedWidth.value, currentLedHeight.value);
+    const previous = getRoundedRectLedPoint(
+      (currentDistance - 26 + start.perimeter) % start.perimeter,
+      currentLedWidth.value,
+      currentLedHeight.value,
+    );
+    const dx = point.x - previous.x;
+    const dy = point.y - previous.y;
+    const length = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    return {
+      opacity: 0.96,
+      left: (point.x + previous.x) / 2 - length / 2,
+      top: (point.y + previous.y) / 2 - 1.5,
+      width: length,
+      transform: [{ rotate: `${angle}deg` }],
+    };
+  });
   const pickup = dashboard.currentStops.find(
     (stop) => stop.stop_type === "pickup",
   );
@@ -231,8 +356,28 @@ export function CaptainHome() {
                 colors={["#063B78", "#0872CC", "#0CBDF2"]}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 0, y: 1 }}
+                onLayout={handleCurrentCardLayout}
                 style={styles.currentCard}
               >
+                {showCurrentOrderLed ? (
+                  <>
+                    <AnimatedLinearGradient
+                      colors={["rgba(126,238,255,0)", "rgba(188,250,255,0.96)"]}
+                      end={{ x: 1, y: 0.5 }}
+                      pointerEvents="none"
+                      start={{ x: 0, y: 0.5 }}
+                      style={[styles.currentLedTail, currentLedTailStyle]}
+                    />
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[styles.currentLedGlow, currentLedGlowStyle]}
+                    />
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[styles.currentLedDot, currentLedDotStyle]}
+                    />
+                  </>
+                ) : null}
                 <View style={styles.currentHeader}>
                 <View style={styles.currentHeaderIcon}>
                   <MaterialIcons name="two-wheeler" size={25} color="#0C679D" />
@@ -709,6 +854,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 16,
   },
+  currentLedTail: { borderRadius: 3, height: 3, position: "absolute" },
+  currentLedGlow: { backgroundColor: "rgba(70,224,255,0.45)", borderRadius: 10, height: 20, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 10, width: 20 },
+  currentLedDot: { backgroundColor: "#F2FEFF", borderColor: "#8AF1FF", borderRadius: 4, borderWidth: 1, height: 8, position: "absolute", shadowColor: "#E7FDFF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 7, width: 8 },
   currentHeader: {
     alignItems: "center",
     flexDirection: "row-reverse",
