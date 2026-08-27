@@ -38,6 +38,14 @@ const questions = [
     "أين أجد سجل العمليات؟",
     "من المزيد افتح سجل الحركات، وستظهر عمليات الطلبات والمستخدمين وتغييرات الحالة.",
   ],
+  [
+    "لماذا لم يصل إشعار الطلب؟",
+    "تأكد من تفعيل إشعارات Delivery Tartous من إعدادات Android، ثم افتح التطبيق مرة واحدة واتصل بالإنترنت. إذا استمرت المشكلة، أرسل رقم الطلب ضمن البلاغ.",
+  ],
+  [
+    "كيف أتأكد من حالة الطلب؟",
+    "افتح الطلب من شاشة الطلبات. ستظهر الحالة الحالية والكابتن المعيّن وآخر تحديث مسجّل.",
+  ],
 ] as const;
 const categories = [
   "مشكلة في طلب",
@@ -232,6 +240,15 @@ export default function AdminSupportScreen() {
             </View>
           );
         })}
+        <View className="rounded-3xl border border-[#E4EEF7] bg-white p-4 shadow-[0_8px_30px_rgba(0,96,184,0.04)]">
+          <View className="flex-row items-center justify-end gap-2">
+            <Text className="text-sm font-bold text-[#0060B8]">قبل إرسال البلاغ</Text>
+            <ShieldCheck size={20} color="#0060B8" />
+          </View>
+          <Text className="mt-2 text-right text-xs leading-5 text-[#58616B]">
+            أرفق رقم الطلب ووقت حدوث المشكلة، واذكر إن كان التطبيق مفتوحًا أو مغلقًا. هذه التفاصيل تسرّع تحديد السبب.
+          </Text>
+        </View>
         <View className="rounded-3xl border border-blue-100 bg-white p-4 shadow-[0_8px_30px_rgba(0,96,184,0.04)]">
           <View className="flex-row items-center justify-end gap-2">
             <Text className="text-sm font-bold text-[#0060B8]">
@@ -242,6 +259,9 @@ export default function AdminSupportScreen() {
           <Text className="mt-2 text-right text-xs leading-5 text-[#58616B]">
             لا يتم حفظ البلاغ داخل التطبيق؛ تفتح القناة لمراجعة الرسالة وإرسالها
             بنفسك.
+          </Text>
+          <Text className="mt-2 text-right text-[10px] text-[#8A98A5]">
+            Delivery Tartous — مركز مساعدة التطبيق
           </Text>
         </View>
       </ScrollView>
