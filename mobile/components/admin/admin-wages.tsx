@@ -11,10 +11,19 @@ import {
   Text,
   View,
 } from "react-native";
+import Svg, {
+  Circle,
+  Line,
+  Path,
+  Polyline,
+  Text as SvgText,
+} from "react-native-svg";
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 
@@ -30,6 +39,7 @@ import {
 import {
   useNativeAdminWagePeriods,
   useNativeCaptainWageDetails,
+  useNativeCompanyProfitHistory,
   useNativeOfficeExpensePeriods,
 } from "@/features/admin/use-admin-finance";
 
@@ -42,6 +52,11 @@ const FILTER_OPTIONS = [
 ] as const;
 
 type WageDashboardFilter = (typeof FILTER_OPTIONS)[number]["id"];
+
+type ProductivityPoint = {
+  periodStart: string;
+  value: number;
+};
 
 const money = (value: number) =>
   `${new Intl.NumberFormat("en-US", {
@@ -157,6 +172,13 @@ function dateLabel(value: string) {
   }).format(new Date(value));
 }
 
+function formatPercentChange(value: number): string {
+  const prefix = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${prefix}${new Intl.NumberFormat("ar-SY", {
+    maximumFractionDigits: 1,
+  }).format(Math.abs(value))}%`;
+}
+
 export function AdminWages() {
   const { profile } = useDeliveryAuth();
   const router = useRouter();
@@ -175,6 +197,7 @@ export function AdminWages() {
   const expensePeriod: NativeFinancePeriod =
     dashboardFilter === "custom" ? "daily" : dashboardFilter;
   const officeExpenses = useNativeOfficeExpensePeriods(expensePeriod);
+  const companyProfitHistory = useNativeCompanyProfitHistory(expensePeriod);
   const dataOpacity = useSharedValue(1);
   const profitScale = useSharedValue(1.1);
   const profitTranslateY = useSharedValue(-14);
@@ -244,6 +267,41 @@ export function AdminWages() {
         (dashboardFilter === "custom" ? customDateKey : selectedKey),
     )?.expense_total ?? 0;
   const netCompanyTotal = totals.company - Number(selectedExpenseTotal);
+  const productivitySnapshot = useMemo(() => {
+    const expensesByPeriod = new Map(
+      (officeExpenses.data ?? []).map((row) => [
+        row.period_start,
+        Number(row.expense_total),
+      ]),
+    );
+    const timeline = (companyProfitHistory.data ?? [])
+      .map((row) => ({
+        net: Number(row.company_total) - (expensesByPeriod.get(row.period_start) ?? 0),
+        periodStart: row.period_start,
+        productivity: Math.max(0, Number(row.order_count)),
+      }))
+      .filter((row) => row.periodStart && Number.isFinite(row.productivity))
+      .sort((left, right) => left.periodStart.localeCompare(right.periodStart));
+    const selectedIndex = timeline.findIndex(
+      (row) => row.periodStart === selectedKey,
+    );
+    const currentIndex = selectedIndex >= 0 ? selectedIndex : timeline.length - 1;
+    const current = currentIndex >= 0 ? timeline[currentIndex] : null;
+    const previous = currentIndex > 0 ? timeline[currentIndex - 1] : null;
+    const comparison =
+      current && previous && previous.net !== 0
+        ? ((current.net - previous.net) / Math.abs(previous.net)) * 100
+        : null;
+    return {
+      comparison,
+      points: timeline
+        .slice(Math.max(0, currentIndex - 4), currentIndex + 1)
+        .map((row) => ({
+          periodStart: row.periodStart,
+          value: row.productivity,
+        })),
+    };
+  }, [companyProfitHistory.data, officeExpenses.data, selectedKey]);
   const isPeriodPending =
     (dashboardFilter === "custom"
       ? customDateRows.isPending
@@ -395,6 +453,7 @@ export function AdminWages() {
             }
             onRefresh={() => {
               void officeExpenses.refetch();
+              void companyProfitHistory.refetch();
               if (dashboardFilter === "custom") {
                 void customDateRows.refetch();
               } else {
@@ -415,10 +474,56 @@ export function AdminWages() {
               color="#16A9E2"
             />
           </View>
-          <Text style={styles.profitTitle}>{profitTitle}</Text>
-          <Text style={styles.profitAmount}>
-            {isPeriodPending ? "—" : money(netCompanyTotal)}
-          </Text>
+          <View style={styles.profitMainRow}>
+            <View style={styles.profitCopy}>
+              <Text style={styles.profitTitle}>{profitTitle}</Text>
+              <Text style={styles.profitAmount}>
+                {isPeriodPending ? "—" : money(netCompanyTotal)}
+              </Text>
+              {productivitySnapshot.comparison === null ? (
+                <Text style={styles.profitComparisonHint}>
+                  ستظهر المقارنة عند توفر فترة سابقة
+                </Text>
+              ) : (
+                <View
+                  style={[
+                    styles.profitComparison,
+                    productivitySnapshot.comparison >= 0
+                      ? styles.profitComparisonPositive
+                      : styles.profitComparisonNegative,
+                  ]}
+                >
+                  <MaterialIcons
+                    name={
+                      productivitySnapshot.comparison >= 0
+                        ? "trending-up"
+                        : "trending-down"
+                    }
+                    size={13}
+                    color={
+                      productivitySnapshot.comparison >= 0
+                        ? "#07875D"
+                        : "#B54708"
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.profitComparisonText,
+                      productivitySnapshot.comparison >= 0
+                        ? styles.profitComparisonTextPositive
+                        : styles.profitComparisonTextNegative,
+                    ]}
+                  >
+                    {formatPercentChange(productivitySnapshot.comparison)}
+                  </Text>
+                  <Text style={styles.profitComparisonCaption}>
+                    مقارنة بالفترة السابقة
+                  </Text>
+                </View>
+              )}
+            </View>
+            <ProductivityChart points={productivitySnapshot.points} />
+          </View>
           <View style={styles.profitFooter}>
             <Text style={styles.profitPeriod}>{selectedLabel}</Text>
             <Text style={styles.profitOrders}>
@@ -674,6 +779,139 @@ export function AdminWages() {
         onClose={() => setSelectedCaptainId(null)}
       />
     </ScreenContainer>
+  );
+}
+
+function ProductivityChart({ points }: { points: readonly ProductivityPoint[] }) {
+  const pulseScale = useSharedValue(0.78);
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: 0.22,
+    transform: [{ scale: pulseScale.value }],
+  }));
+  const chart = useMemo(() => {
+    const chartWidth = 120;
+    const chartHeight = 62;
+    const left = 8;
+    const top = 5;
+    const bottom = top + chartHeight;
+    const maxValue = Math.max(1, ...points.map((point) => point.value));
+    const coordinates = points.map((point, index) => {
+      const x =
+        points.length > 1
+          ? left + (index / (points.length - 1)) * chartWidth
+          : left + chartWidth;
+      const y = bottom - (point.value / maxValue) * chartHeight;
+      return { x, y };
+    });
+    const polyline = coordinates.map((point) => `${point.x},${point.y}`).join(" ");
+    const areaPath = coordinates.length
+      ? `M ${coordinates[0]!.x} ${bottom} L ${coordinates
+          .map((point) => `${point.x} ${point.y}`)
+          .join(" L ")} L ${coordinates.at(-1)!.x} ${bottom} Z`
+      : "";
+    return {
+      areaPath,
+      bottom,
+      chartHeight,
+      coordinates,
+      maxValue,
+      polyline,
+    };
+  }, [points]);
+
+  useEffect(() => {
+    if (chart.coordinates.length < 2) return;
+    pulseScale.set(
+      withRepeat(
+        withSequence(
+          withTiming(1.18, { duration: 780, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.78, { duration: 780, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+  }, [chart.coordinates.length, pulseScale]);
+
+  if (chart.coordinates.length < 2) {
+    return (
+      <View style={styles.productivityChartEmpty}>
+        <Text style={styles.productivityChartLabel}>الإنتاجية</Text>
+        <Text style={styles.productivityChartEmptyText}>
+          تتوفر بعد تسجيل فترتين
+        </Text>
+      </View>
+    );
+  }
+
+  const endPoint = chart.coordinates.at(-1)!;
+  return (
+    <View style={styles.productivityChart}>
+      <Text style={styles.productivityChartLabel}>الإنتاجية</Text>
+      <View style={styles.productivityChartSurface}>
+        <Svg height={72} viewBox="0 0 140 72" width={140}>
+          <Line
+            stroke="#BFDCEB"
+            strokeWidth={1}
+            x1={8}
+            x2={8}
+            y1={4}
+            y2={chart.bottom}
+          />
+          <Line
+            stroke="#D5E8F2"
+            strokeWidth={1}
+            x1={8}
+            x2={132}
+            y1={chart.bottom}
+            y2={chart.bottom}
+          />
+          <Line
+            stroke="#E4F0F6"
+            strokeDasharray="3 3"
+            strokeWidth={1}
+            x1={8}
+            x2={132}
+            y1={chart.bottom - chart.chartHeight / 2}
+            y2={chart.bottom - chart.chartHeight / 2}
+          />
+          <SvgText fill="#7893A4" fontSize={7} x={0} y={9}>
+            {chart.maxValue}
+          </SvgText>
+          <SvgText fill="#7893A4" fontSize={7} x={3} y={chart.bottom}>
+            0
+          </SvgText>
+          <Path d={chart.areaPath} fill="#0878D1" opacity={0.1} />
+          <Polyline
+            fill="none"
+            points={chart.polyline}
+            stroke="#0878D1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2.5}
+          />
+          {chart.coordinates.map((point, index) => (
+            <Circle
+              cx={point.x}
+              cy={point.y}
+              fill="#FFFFFF"
+              key={`${points[index]!.periodStart}-${point.x}`}
+              r={index === chart.coordinates.length - 1 ? 4.2 : 2.5}
+              stroke="#0878D1"
+              strokeWidth={index === chart.coordinates.length - 1 ? 2.1 : 1.5}
+            />
+          ))}
+        </Svg>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.productivityChartPulse,
+            { left: endPoint.x - 7, top: endPoint.y - 7 },
+            pulseStyle,
+          ]}
+        />
+      </View>
+    </View>
   );
 }
 
@@ -1522,6 +1760,13 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     justifyContent: "space-between",
   },
+  profitMainRow: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 8,
+    marginTop: 4,
+  },
+  profitCopy: { flex: 1, minWidth: 0 },
   profitKicker: {
     color: "#5F8196",
     fontFamily: "Cairo_700Bold",
@@ -1541,12 +1786,76 @@ const styles = StyleSheet.create({
   profitAmount: {
     color: "#0878D1",
     fontFamily: "Cairo_700Bold",
-    fontSize: 29,
+    fontSize: 25,
     letterSpacing: -0.5,
     marginTop: 2,
     textAlign: "right",
-    width: "100%",
     writingDirection: "ltr",
+  },
+  profitComparison: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderRadius: 9,
+    flexDirection: "row-reverse",
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  profitComparisonPositive: { backgroundColor: "#E6F8EE" },
+  profitComparisonNegative: { backgroundColor: "#FFF0E7" },
+  profitComparisonText: {
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "ltr",
+  },
+  profitComparisonTextPositive: { color: "#07875D" },
+  profitComparisonTextNegative: { color: "#B54708" },
+  profitComparisonCaption: {
+    color: "#66869A",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 8,
+    writingDirection: "rtl",
+  },
+  profitComparisonHint: {
+    color: "#7490A1",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 8,
+    marginTop: 5,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  productivityChart: { alignItems: "flex-start", width: 140 },
+  productivityChartEmpty: {
+    alignItems: "flex-end",
+    backgroundColor: "#F8FCFE",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    width: 140,
+  },
+  productivityChartLabel: {
+    color: "#54778C",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 8,
+    textAlign: "left",
+    writingDirection: "rtl",
+  },
+  productivityChartEmptyText: {
+    color: "#8AA0AE",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 7,
+    marginTop: 5,
+    textAlign: "left",
+    writingDirection: "rtl",
+  },
+  productivityChartSurface: { height: 72, marginTop: 1, width: 140 },
+  productivityChartPulse: {
+    backgroundColor: "#16CEFF",
+    borderRadius: 7,
+    height: 14,
+    position: "absolute",
+    width: 14,
   },
   profitFooter: {
     alignItems: "center",
