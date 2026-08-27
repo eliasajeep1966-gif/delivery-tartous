@@ -11,6 +11,8 @@ export type CaptainOrder = {
   customer_name: string;
   customer_phone: string;
   pickup_address: string;
+  pickup_contact_name?: string | null;
+  pickup_contact_phone?: string | null;
   delivery_address: string;
   fee: number;
   status: CaptainOrderStatus;
@@ -24,6 +26,28 @@ export type CaptainOrdersPage = {
   orders: CaptainOrder[];
   total: number;
 };
+
+type CaptainOrderStopsPageRow = CaptainOrder & {
+  order_stops: Array<
+    Pick<
+      CaptainOrderStop,
+      "address" | "contact_name" | "contact_phone" | "sequence" | "stop_type"
+    >
+  > | null;
+};
+
+function withPickupContact(order: CaptainOrderStopsPageRow): CaptainOrder {
+  const pickup = (order.order_stops ?? [])
+    .filter((stop) => stop.stop_type === "pickup")
+    .sort((first, second) => first.sequence - second.sequence)[0];
+  const { order_stops: _orderStops, ...baseOrder } = order;
+
+  return {
+    ...baseOrder,
+    pickup_contact_name: pickup?.contact_name ?? null,
+    pickup_contact_phone: pickup?.contact_phone ?? null,
+  };
+}
 
 export type CaptainOrderStatusEvent = {
   order_id: string;
@@ -177,7 +201,10 @@ export const nativeCaptainContract = {
       const safeOffset = Math.max(Math.floor(offset), 0);
       const result = await client()
         .from("orders")
-        .select("*", { count: "exact" })
+        .select(
+          "*,order_stops(stop_type,sequence,contact_name,contact_phone,address)",
+          { count: "exact" },
+        )
         .eq("assigned_captain_id", captainId)
         .order("updated_at", { ascending: false })
         .order("id", { ascending: false })
@@ -185,7 +212,9 @@ export const nativeCaptainContract = {
 
       if (result.error) throw new Error(result.error.message);
       return {
-        orders: (result.data ?? []) as CaptainOrder[],
+        orders: ((result.data ?? []) as CaptainOrderStopsPageRow[]).map(
+          withPickupContact,
+        ),
         total: result.count ?? 0,
       };
     },

@@ -264,9 +264,25 @@ function CaptainOrderCard({
             <Text style={styles.wageRouteLabel}>المصدر</Text>
           </View>
           <Text numberOfLines={1} style={styles.wageRouteContactName}>
-            نقطة الاستلام
+            {order.pickup_contact_name ?? "نقطة الاستلام"}
           </Text>
-          <Text numberOfLines={3} style={styles.wageRouteAddress}>
+          {order.pickup_contact_phone ? (
+            <MotionPressable
+              accessibilityLabel={`الاتصال بمصدر الطلب ${order.pickup_contact_name ?? "نقطة الاستلام"}`}
+              onPress={() =>
+                void Linking.openURL(`tel:${order.pickup_contact_phone}`)
+              }
+              style={styles.wageRoutePhoneButton}
+            >
+              <MaterialIcons name="phone-in-talk" size={15} color="#0878D1" />
+              <Text style={styles.wageRouteCallText}>اتصال</Text>
+              <MaterialIcons name="call-made" size={14} color="#0878D1" />
+              <Text style={styles.wageRoutePhone}>
+                {order.pickup_contact_phone}
+              </Text>
+            </MotionPressable>
+          ) : null}
+          <Text numberOfLines={2} style={styles.wageRouteAddress}>
             {order.pickup_address}
           </Text>
         </View>
