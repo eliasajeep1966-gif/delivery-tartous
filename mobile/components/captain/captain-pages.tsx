@@ -480,10 +480,10 @@ export function CaptainWages() {
                         <MaterialIcons name="inventory-2" size={15} color="#0878D1" />
                         <Text style={styles.wageRouteLabel}>المصدر</Text>
                       </View>
-                      <Text numberOfLines={1} style={styles.wageRouteContactName}>
+                      <Text style={styles.wageRouteContactName}>
                         {row.pickup_contact_name}
                       </Text>
-                      <Text numberOfLines={1} style={styles.wageRouteAddress}>
+                      <Text style={styles.wageRouteAddress}>
                         {row.pickup_address}
                       </Text>
                     </View>
@@ -492,10 +492,10 @@ export function CaptainWages() {
                         <MaterialIcons name="location-on" size={15} color="#D35B38" />
                         <Text style={styles.wageRouteLabel}>الوجهة</Text>
                       </View>
-                      <Text numberOfLines={1} style={styles.wageRouteContactName}>
+                      <Text style={styles.wageRouteContactName}>
                         {row.delivery_contact_name}
                       </Text>
-                      <Text numberOfLines={1} style={styles.wageRouteAddress}>
+                      <Text style={styles.wageRouteAddress}>
                         {row.delivery_address}
                       </Text>
                     </View>
@@ -1403,7 +1403,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     flex: 1,
-    minHeight: 139,
     padding: 9,
   },
   wageRouteHead: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
