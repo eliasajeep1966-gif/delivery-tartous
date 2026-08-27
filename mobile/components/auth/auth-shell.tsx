@@ -1,4 +1,3 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -104,20 +103,16 @@ export function AuthShell({
             style={styles.loginScene}
           />
           <View pointerEvents="none" style={styles.sceneBranding}>
-            <View style={styles.chestLogo}>
-              <MaterialIcons name="two-wheeler" size={22} color="#F4FFFF" />
-            </View>
+            <Image
+              source={require("@/assets/images/icon.png")}
+              style={styles.chestLogo}
+            />
             <View style={styles.cargoSign}>
               <Text style={styles.cargoTitle}>دليفري طرطوس</Text>
-              <View style={styles.cargoLine}>
-                <MaterialIcons name="phone" size={11} color="#E9FFFF" />
-                <Text style={styles.cargoNumber}>0931 724449</Text>
-              </View>
-              <View style={styles.cargoLine}>
-                <MaterialIcons name="phone" size={11} color="#E9FFFF" />
-                <Text style={styles.cargoNumber}>0937 960394</Text>
-              </View>
-              <Text style={styles.cargoComplaint}>رقم الشكاوي</Text>
+              <View style={styles.cargoDivider} />
+              <Text style={styles.cargoNumber}>0931 724449</Text>
+              <Text style={styles.cargoNumber}>0937 960394</Text>
+              <Text style={styles.cargoComplaint}>رقم الشكاوى</Text>
               <Text style={styles.cargoNumber}>0994 440 915</Text>
             </View>
           </View>
@@ -264,32 +259,35 @@ const styles = StyleSheet.create({
     top: 0,
   },
   chestLogo: {
-    alignItems: "center",
-    justifyContent: "center",
-    left: "47.5%",
+    borderRadius: 6,
+    height: 25,
+    left: "46.5%",
     position: "absolute",
-    top: "34%",
+    top: "34.2%",
+    width: 25,
   },
   cargoSign: {
     alignItems: "flex-end",
+    paddingRight: 13,
     position: "absolute",
-    right: -9,
-    top: "34%",
-    width: 145,
+    right: -5,
+    top: "33.9%",
+    width: 151,
   },
   cargoTitle: {
     color: "#F4FFFF",
     fontFamily: "Cairo_700Bold",
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  cargoLine: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    gap: 3,
-    marginTop: 1,
+  cargoDivider: {
+    backgroundColor: "rgba(233,255,255,0.62)",
+    height: 1,
+    marginBottom: 4,
+    marginTop: 2,
+    width: 92,
   },
   cargoNumber: {
     color: "#E9FFFF",
@@ -299,10 +297,10 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   cargoComplaint: {
-    color: "#F4FFFF",
-    fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    lineHeight: 15,
+    color: "rgba(233,255,255,0.82)",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 9,
+    lineHeight: 14,
     marginTop: 2,
     textAlign: "right",
     writingDirection: "rtl",
@@ -334,7 +332,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   loginWordmark: {
-    color: "#008A96",
+    color: "#55B5EA",
     fontFamily: "Parisienne_400Regular",
     fontSize: 28,
     position: "absolute",
@@ -400,7 +398,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
-  loginTitle: { color: "#008A96", fontSize: 25, lineHeight: 35 },
+  loginTitle: { color: "#55B5EA", fontSize: 25, lineHeight: 35 },
   subtitle: {
     color: "#526E84",
     fontFamily: "Cairo_400Regular",
@@ -410,5 +408,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
-  loginSubtitle: { color: "#08717D", fontSize: 13, marginTop: 2 },
+  loginSubtitle: { color: "#4FADDF", fontSize: 13, marginTop: 2 },
 });

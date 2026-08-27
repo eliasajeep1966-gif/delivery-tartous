@@ -38,7 +38,7 @@ export function AuthTextField({
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.fieldFrame}>
-        <MaterialIcons pointerEvents="none" name={icon} size={20} color="#008A96" style={styles.fieldIcon} />
+        <MaterialIcons pointerEvents="none" name={icon} size={20} color="#5AB7EA" style={styles.fieldIcon} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -48,7 +48,7 @@ export function AuthTextField({
           secureTextEntry={secureTextEntry}
           editable={editable}
           placeholder={placeholder}
-          placeholderTextColor="#72A8AA"
+          placeholderTextColor="#83C4E8"
           textAlign="right"
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
@@ -70,7 +70,7 @@ export function AuthPasswordField({ visible, onToggleVisibility, ...props }: Aut
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>{props.label}</Text>
       <View style={styles.fieldFrame}>
-        <MaterialIcons pointerEvents="none" name="lock-outline" size={20} color="#008A96" style={styles.fieldIcon} />
+        <MaterialIcons pointerEvents="none" name="lock-outline" size={20} color="#5AB7EA" style={styles.fieldIcon} />
         <TextInput
           value={props.value}
           onChangeText={props.onChangeText}
@@ -79,7 +79,7 @@ export function AuthPasswordField({ visible, onToggleVisibility, ...props }: Aut
           secureTextEntry={!visible}
           editable={props.editable}
           placeholder={props.placeholder}
-          placeholderTextColor="#72A8AA"
+          placeholderTextColor="#83C4E8"
           textAlign="right"
           returnKeyType={props.returnKeyType ?? "next"}
           onSubmitEditing={props.onSubmitEditing}
@@ -96,7 +96,7 @@ export function AuthPasswordField({ visible, onToggleVisibility, ...props }: Aut
           accessibilityRole="button"
           accessibilityLabel={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
         >
-          <MaterialIcons name={visible ? "visibility-off" : "visibility"} size={21} color="#008A96" />
+          <MaterialIcons name={visible ? "visibility-off" : "visibility"} size={21} color="#5AB7EA" />
         </MotionPressable>
       </View>
     </View>
@@ -145,23 +145,23 @@ export function AuthInfoNote({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   fieldGroup: { marginTop: 16 },
-  label: { color: "#007C88", fontFamily: "Cairo_700Bold", fontSize: 12, textAlign: "right", writingDirection: "rtl" },
+  label: { color: "#59AFE2", fontFamily: "Cairo_700Bold", fontSize: 12, textAlign: "right", writingDirection: "rtl" },
   fieldFrame: { justifyContent: "center", marginTop: 6, position: "relative" },
-  field: { backgroundColor: "rgba(255,255,255,0.95)", borderColor: "#A7DCD9", borderRadius: 12, borderWidth: 1, color: "#007782", fontSize: 16, height: 56, paddingLeft: 48, paddingRight: 48, shadowColor: "#075C64", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2 },
+  field: { backgroundColor: "rgba(255,255,255,0.95)", borderColor: "#B3E2FA", borderRadius: 12, borderWidth: 1, color: "#459DCE", fontSize: 16, height: 56, paddingLeft: 48, paddingRight: 48, shadowColor: "#3E8FBE", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2 },
   ltrField: { writingDirection: "ltr" },
   rtlField: { writingDirection: "rtl" },
   fieldIcon: { position: "absolute", right: 12, zIndex: 1 },
   visibilityButton: { alignItems: "center", height: 44, justifyContent: "center", left: 8, position: "absolute", width: 44 },
-  primaryButton: { alignItems: "center", backgroundColor: "#008F96", borderRadius: 12, flexDirection: "row-reverse", gap: 8, height: 56, justifyContent: "center", marginTop: 24, shadowColor: "#00727A", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 4 },
-  primaryText: { color: "#F0FFFF", fontFamily: "Cairo_700Bold", fontSize: 18, writingDirection: "rtl" },
+  primaryButton: { alignItems: "center", backgroundColor: "#55B5EA", borderRadius: 12, flexDirection: "row-reverse", gap: 8, height: 56, justifyContent: "center", marginTop: 24, shadowColor: "#3E9FD7", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 4 },
+  primaryText: { color: "#F7FCFF", fontFamily: "Cairo_700Bold", fontSize: 18, writingDirection: "rtl" },
   buttonPressed: { opacity: 0.76, transform: [{ scale: 0.98 }] },
   iconPressed: { opacity: 0.6 },
   linkButton: { alignItems: "center", justifyContent: "center", marginTop: 12, minHeight: 42 },
   linkPressed: { opacity: 0.65 },
-  linkText: { color: "#00818A", fontFamily: "Cairo_700Bold", fontSize: 14, writingDirection: "rtl" },
+  linkText: { color: "#4FADDF", fontFamily: "Cairo_700Bold", fontSize: 14, writingDirection: "rtl" },
   errorBox: { backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderRadius: 12, borderWidth: 1, marginTop: 16, padding: 12 },
   errorTitle: { color: "#B42318", fontFamily: "Cairo_700Bold", fontSize: 13, textAlign: "right", writingDirection: "rtl" },
   errorMessage: { color: "#7A271A", fontFamily: "Cairo_400Regular", fontSize: 12, lineHeight: 19, marginTop: 3, textAlign: "right", writingDirection: "rtl" },
   statusBox: { backgroundColor: "#FFFBEB", borderColor: "#FDE68A", borderRadius: 12, borderWidth: 1, marginTop: 28, padding: 16 },
-  infoNote: { backgroundColor: "rgba(239,255,254,0.68)", borderRadius: 12, color: "#08717D", fontFamily: "Cairo_400Regular", fontSize: 10, lineHeight: 16, marginTop: 8, padding: 10, textAlign: "center", writingDirection: "rtl" },
+  infoNote: { backgroundColor: "rgba(241,250,255,0.72)", borderRadius: 12, color: "#4A9DCA", fontFamily: "Cairo_400Regular", fontSize: 10, lineHeight: 16, marginTop: 8, padding: 10, textAlign: "center", writingDirection: "rtl" },
 });

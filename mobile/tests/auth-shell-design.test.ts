@@ -25,10 +25,12 @@ describe("authentication visual shell", () => {
     expect(shellSource).toContain("styles.glassCard");
   });
 
-  it("uses the full-width cartoon delivery scene only for the branded auth screens", () => {
+  it("uses the full-width cartoon delivery scene with the app icon and a tidy cargo sign", () => {
     expect(shellSource).toContain(
       'require("@/assets/images/auth-login-scene.png")',
     );
+    expect(shellSource).toContain('require("@/assets/images/icon.png")');
+    expect(shellSource).toContain("styles.cargoDivider");
     expect(shellSource).toContain('resizeMode="cover"');
     expect(shellSource).toContain('fontFamily: "Parisienne_400Regular"');
     expect(loginSource).toContain('visual="delivery-login"');
@@ -49,10 +51,10 @@ describe("authentication visual shell", () => {
     );
   });
 
-  it("uses the turquoise authentication palette", () => {
-    expect(authUiSource).toContain('color: "#007C88"');
-    expect(authUiSource).toContain('backgroundColor: "#008F96"');
-    expect(shellSource).toContain('color: "#008A96"');
+  it("uses the baby-blue authentication palette", () => {
+    expect(authUiSource).toContain('color: "#59AFE2"');
+    expect(authUiSource).toContain('backgroundColor: "#55B5EA"');
+    expect(shellSource).toContain('color: "#55B5EA"');
   });
 
   it("preserves keyboard-aware compacting for the login and activation forms", () => {
