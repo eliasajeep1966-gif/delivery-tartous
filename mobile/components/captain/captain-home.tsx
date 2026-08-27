@@ -27,7 +27,10 @@ import {
   type CaptainOrderWithTiming,
   useNativeCaptainDashboard,
 } from "@/features/captain/use-native-captain-dashboard";
-import type { CaptainOrderStatus } from "@/lib/supabase/native-captain-contract";
+import type {
+  CaptainOrderStatus,
+  CaptainOrderStatusEvent,
+} from "@/lib/supabase/native-captain-contract";
 import { presentDeliveryTiming } from "@/lib/admin/delivery-duration";
 
 const DEEP_BLUE = "#063B78";
@@ -70,6 +73,14 @@ function date(value: string | null) {
         minute: "2-digit",
       }).format(new Date(value))
     : "غير متاح";
+}
+
+function time(value: string) {
+  return new Intl.DateTimeFormat("ar-SY", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Damascus",
+  }).format(new Date(value));
 }
 
 const orderSteps: { status: CaptainOrderStatus; label: string }[] = [
@@ -263,7 +274,10 @@ export function CaptainHome() {
                     entering={FadeInDown.duration(170)}
                     style={{ gap: 10 }}
                   >
-                    <OrderTimeline status={current.status} />
+                    <OrderTimeline
+                      status={current.status}
+                      events={dashboard.currentStatusEvents}
+                    />
                     {dashboard.actionError ? (
                       <Text style={styles.errorText}>
                         {dashboard.actionError}
@@ -382,14 +396,26 @@ export function CaptainHome() {
   );
 }
 
-function OrderTimeline({ status }: { status: CaptainOrderStatus }) {
+function OrderTimeline({
+  status,
+  events,
+}: {
+  status: CaptainOrderStatus;
+  events: readonly CaptainOrderStatusEvent[];
+}) {
   const currentIndex = orderSteps.findIndex((step) => step.status === status);
-  const stepColors = ["#3B82F6", "#0EA5E9", "#8B5CF6", "#16A34A"];
+  const stepColors = ["#7BEAFF", "#9BD7FF", "#C4B5FD", "#8CE7C4"];
+  const eventTimes = new Map<CaptainOrderStatus, string>();
+  for (const event of events) {
+    if (event.next_status in statusLabels) {
+      eventTimes.set(event.next_status as CaptainOrderStatus, event.changed_at);
+    }
+  }
 
   return (
     <View style={styles.timeline}>
       <View style={styles.sectionHeading}>
-        <Text style={styles.sectionTitle}>خطوات الطلب</Text>
+        <Text style={styles.currentTimelineTitle}>خطوات الطلب</Text>
         <Text style={styles.timelineHint}>تتحدث بعد كل تأكيد</Text>
       </View>
       <View style={styles.timelineSteps}>
@@ -397,27 +423,46 @@ function OrderTimeline({ status }: { status: CaptainOrderStatus }) {
           const done = currentIndex >= index;
           const current = currentIndex === index;
           const color = stepColors[index];
+          const changedAt = eventTimes.get(step.status);
           return (
-            <View key={step.status} style={styles.timelineStep}>
-              <View
-                style={[
-                  styles.timelineDot,
-                  { borderColor: color },
-                  done && { backgroundColor: color },
-                ]}
-              >
-                {done ? <MaterialIcons name="check" size={13} color="#FFFFFF" /> : null}
+            <View key={step.status} style={styles.timelineRow}>
+              <View style={styles.timelineMarker}>
+                <View
+                  style={[
+                    styles.timelineDot,
+                    { borderColor: done ? color : "rgba(255,255,255,0.45)" },
+                    done && { backgroundColor: color },
+                  ]}
+                >
+                  {done ? <MaterialIcons name="check" size={13} color="#073E6B" /> : null}
+                </View>
+                {index < orderSteps.length - 1 ? (
+                  <View
+                    style={[
+                      styles.timelineLine,
+                      currentIndex > index && { backgroundColor: color },
+                    ]}
+                  />
+                ) : null}
               </View>
-              <Text
-                style={[
-                  styles.timelineText,
-                  done && { color, fontFamily: "Cairo_700Bold" },
-                  current && styles.timelineTextCurrent,
-                ]}
-              >
-                {step.label}
-              </Text>
-
+              <View style={styles.timelineCopy}>
+                <View style={styles.timelineLabelRow}>
+                  <Text
+                    style={[
+                      styles.timelineText,
+                      done && styles.timelineTextDone,
+                      current && styles.timelineTextCurrent,
+                    ]}
+                  >
+                    {step.label}
+                  </Text>
+                  {done ? (
+                    <Text style={styles.timelineTime}>
+                      {changedAt ? `تم في ${time(changedAt)}` : "تم الآن"}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
             </View>
           );
         })}
@@ -702,62 +747,60 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  cardBody: { backgroundColor: "rgba(245,253,255,0.2)", gap: 11, padding: 13 },
+  cardBody: { gap: 14, padding: 14 },
   stopsGrid: { flexDirection: "row-reverse", gap: 8 },
-  timeline: {
-    backgroundColor: "rgba(255,255,255,0.88)",
-    borderColor: "rgba(202,239,250,0.82)",
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
-    padding: 10,
+  timeline: { gap: 7 },
+  currentTimelineTitle: {
+    color: "#FFFFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   timelineHint: {
-    color: "#7892A3",
+    color: "rgba(235,249,255,0.78)",
     fontFamily: "Cairo_400Regular",
     fontSize: 9,
     writingDirection: "rtl",
   },
-  timelineSteps: { gap: 7, marginTop: 1 },
-  timelineStep: {
-    alignItems: "center",
-    backgroundColor: "rgba(246,252,254,0.88)",
-    borderColor: "#DCECF4",
-    borderRadius: 10,
-    borderWidth: 1,
-    flexDirection: "row-reverse",
-    gap: 8,
-    minHeight: 31,
-    paddingHorizontal: 8,
-  },
+  timelineSteps: { gap: 0, marginTop: 2 },
+  timelineRow: { flexDirection: "row-reverse", minHeight: 43 },
+  timelineMarker: { alignItems: "center", width: 24 },
   timelineDot: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#C8DCE7",
+    backgroundColor: "transparent",
     borderRadius: 10,
     borderWidth: 2,
     height: 20,
     justifyContent: "center",
     width: 20,
   },
-  timelineDotDone: {
-    backgroundColor: BLUE,
-    borderColor: BLUE,
-  },
-  timelineText: {
-    color: "#7892A3",
+  timelineLine: {
+    backgroundColor: "rgba(255,255,255,0.34)",
     flex: 1,
-    fontFamily: "Cairo_400Regular",
-    fontSize: 10,
+    marginVertical: 2,
+    width: 2,
+  },
+  timelineCopy: { flex: 1, paddingBottom: 8, paddingRight: 7 },
+  timelineLabelRow: { alignItems: "center", flexDirection: "row-reverse", gap: 7 },
+  timelineText: {
+    color: "rgba(255,255,255,0.7)",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 11,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  timelineTextCurrent: {
-    color: BLUE,
+  timelineTextDone: { color: "#FFFFFF", fontFamily: "Cairo_700Bold" },
+  timelineTextCurrent: { color: "#FFFFFF" },
+  timelineTime: {
+    color: "rgba(235,249,255,0.82)",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    writingDirection: "rtl",
   },
   stopCard: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderColor: "rgba(202,239,250,0.9)",
+    backgroundColor: "rgba(255,255,255,0.13)",
+    borderColor: "rgba(222,248,255,0.5)",
     borderRadius: 14,
     borderWidth: 1,
     flex: 1,
@@ -765,13 +808,13 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   stopTitle: {
-    color: "#285C79",
+    color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
     fontSize: 11,
     writingDirection: "rtl",
   },
   detail: {
-    color: "#54778D",
+    color: "rgba(245,253,255,0.88)",
     fontFamily: "Cairo_400Regular",
     fontSize: 10,
     marginTop: 4,
@@ -779,16 +822,16 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   phone: {
-    color: "#1478BF",
+    color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
     fontSize: 10,
     marginTop: 4,
     textAlign: "left",
   },
   note: {
-    backgroundColor: "#FFFBEB",
+    backgroundColor: "rgba(255,255,255,0.14)",
     borderRadius: 7,
-    color: "#92400E",
+    color: "#FFFFFF",
     fontFamily: "Cairo_400Regular",
     fontSize: 10,
     marginTop: 6,

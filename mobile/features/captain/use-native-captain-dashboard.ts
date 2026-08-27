@@ -83,6 +83,7 @@ export function useNativeCaptainDashboard() {
   const [currentOrder, setCurrentOrder] = useState<CaptainOrder | null>(null);
   const [recentOrders, setRecentOrders] = useState<CaptainOrderWithTiming[]>([]);
   const [currentStops, setCurrentStops] = useState<CaptainOrderStop[]>([]);
+  const [currentStatusEvents, setCurrentStatusEvents] = useState<CaptainOrderStatusEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export function useNativeCaptainDashboard() {
         setCurrentOrder(null);
         setRecentOrders([]);
         setCurrentStops([]);
+        setCurrentStatusEvents([]);
         setLoading(false);
         setRefreshing(false);
         return;
@@ -122,9 +124,14 @@ export function useNativeCaptainDashboard() {
             .wagesPage("daily", { limit: 1, offset: 0, customDate: null })
             .catch(() => null),
         ]);
-        const recentOrdersWithTiming = await enrichCaptainOrdersWithDeliveryTiming(
-          nextDashboard.recent_orders,
-        );
+        const [recentOrdersWithTiming, nextCurrentStatusEvents] = await Promise.all([
+          enrichCaptainOrdersWithDeliveryTiming(nextDashboard.recent_orders),
+          nextDashboard.active_order
+            ? nativeCaptainContract.reads.orderStatusHistory([
+                nextDashboard.active_order.id,
+              ]).catch(() => [])
+            : Promise.resolve([]),
+        ]);
         if (!mounted.current || requestVersion !== reloadVersion.current)
           return;
         setMetrics(nextDashboard.metrics);
@@ -133,6 +140,7 @@ export function useNativeCaptainDashboard() {
         setCurrentOrder(nextDashboard.active_order);
         setRecentOrders(recentOrdersWithTiming);
         setCurrentStops(nextDashboard.active_stops);
+        setCurrentStatusEvents(nextCurrentStatusEvents);
       } catch (cause) {
         if (mounted.current && !silent)
           setError(
@@ -295,6 +303,7 @@ export function useNativeCaptainDashboard() {
       orderCount,
       currentOrder,
       currentStops,
+      currentStatusEvents,
       recentOrders,
       loading,
       refreshing,
@@ -310,6 +319,7 @@ export function useNativeCaptainDashboard() {
       actionError,
       availabilitySaving,
       currentStops,
+      currentStatusEvents,
       error,
       loading,
       currentOrder,
