@@ -171,7 +171,7 @@ export function CaptainHome() {
   const currentLedHeight = useSharedValue(0);
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
   const current = dashboard.currentOrder;
-  const showCurrentOrderLed = current?.status === "in_delivery";
+  const showCurrentOrderLed = Boolean(current);
   const action = current ? nextAction(current.status) : null;
 
   const handleCurrentCardLayout = (event: LayoutChangeEvent) => {
