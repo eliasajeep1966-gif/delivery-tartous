@@ -43,7 +43,7 @@ describe("Captain free-order compensation accounting", () => {
 
     expect(companyWages).toContain('["تعويض الكباتن", totals.compensation, BLUE]');
     expect(companyWages).not.toContain('["طلبات الفترة", totals.orders, BLUE]');
-    expect(companyWages).toContain('["الصافي", totals.company - expenseRows.reduce');
+    expect(companyWages).toContain('["الصافي", totals.company - officeExpenses, "#047857"]');
     expect(adminWages).toContain(
       '<Text style={styles.profitKicker}>الصافي</Text>',
     );
