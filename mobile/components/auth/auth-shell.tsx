@@ -104,9 +104,9 @@ export function AuthShell({
           />
           <Image
             accessibilityElementsHidden
-            source={require("@/assets/images/auth-captain-chest-logo.jpg")}
+            source={require("@/assets/images/delivery-tartous-full-logo-transparent.png")}
             resizeMode="contain"
-            style={styles.chestLogo}
+            style={styles.sideLogo}
           />
         </>
       ) : (
@@ -243,12 +243,12 @@ const styles = StyleSheet.create({
     top: 0,
     width: "100%",
   },
-  chestLogo: {
-    height: 48,
-    left: "43.5%",
+  sideLogo: {
+    height: 116,
+    left: 10,
     position: "absolute",
-    top: "29.5%",
-    width: 48,
+    top: "15%",
+    width: 96,
   },
   content: { alignItems: "center", flexGrow: 1, paddingHorizontal: 16 },
   layout: { alignSelf: "center", maxWidth: 410 },
