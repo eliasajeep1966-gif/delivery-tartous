@@ -1,7 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
@@ -224,20 +223,14 @@ export function CaptainHome() {
             </Animated.View>
             <Animated.View entering={FadeInDown.delay(70).duration(210)}>
               <LinearGradient
-                colors={["rgba(4,51,101,0.95)", "rgba(7,107,177,0.86)", "rgba(15,174,217,0.74)"]}
+                colors={["#063B78", "#0872CC", "#0CBDF2"]}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 0, y: 1 }}
                 style={styles.currentCard}
               >
-                <BlurView
-                  intensity={18}
-                  pointerEvents="none"
-                  style={StyleSheet.absoluteFill}
-                  tint="light"
-                />
                 <View style={styles.currentHeader}>
                 <View style={styles.currentHeaderIcon}>
-                  <MaterialIcons name="two-wheeler" size={22} color="#FFFFFF" />
+                  <MaterialIcons name="two-wheeler" size={25} color="#0C679D" />
                 </View>
                 <View style={styles.currentHeaderCopy}>
                   <Text style={styles.currentTitle}>الطلب الحالي</Text>
@@ -663,47 +656,49 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   currentCard: {
-    borderColor: "rgba(220,248,255,0.74)",
-    borderRadius: 24,
+    borderColor: "rgba(84,222,255,0.62)",
+    borderRadius: 20,
     borderWidth: 1,
     overflow: "hidden",
-    shadowColor: "#075B91",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
+    shadowColor: "#16CEFF",
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
   },
   currentHeader: {
     alignItems: "center",
-    borderBottomColor: "rgba(215,248,255,0.34)",
-    borderBottomWidth: 1,
     flexDirection: "row-reverse",
-    gap: 9,
+    gap: 13,
     minHeight: 76,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   currentHeaderIcon: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderColor: "rgba(255,255,255,0.3)",
-    borderRadius: 14,
+    backgroundColor: "#F5FDFF",
+    borderColor: "rgba(137,240,255,0.8)",
+    borderRadius: 17,
     borderWidth: 1,
-    height: 42,
+    height: 48,
     justifyContent: "center",
-    width: 42,
+    shadowColor: "#043D63",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
+    width: 48,
   },
   currentHeaderCopy: { flex: 1 },
   currentTitle: {
     color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
-    fontSize: 15,
+    fontSize: 18,
     textAlign: "right",
     writingDirection: "rtl",
   },
   currentSubtitle: {
-    color: "rgba(232,249,255,0.84)",
+    color: "rgba(235,249,255,0.86)",
     fontFamily: "Cairo_400Regular",
-    fontSize: 9,
+    fontSize: 11,
     textAlign: "right",
     writingDirection: "rtl",
   },

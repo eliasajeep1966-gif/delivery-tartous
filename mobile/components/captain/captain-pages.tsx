@@ -457,7 +457,12 @@ export function CaptainWages() {
                       <MotionPressable
                         accessibilityLabel={`الاتصال بمصدر الطلب ${row.pickup_contact_name}`}
                         onPress={() => void Linking.openURL(`tel:${row.pickup_contact_phone}`)}
+                        style={styles.wageRoutePhoneButton}
                       >
+                        <View style={styles.wageRouteCallHint}>
+                          <MaterialIcons name="call-made" size={12} color="#0878D1" />
+                          <Text style={styles.wageRouteCallHintText}>اتصال</Text>
+                        </View>
                         <Text style={styles.wageRoutePhone}>{row.pickup_contact_phone}</Text>
                       </MotionPressable>
                       <Text numberOfLines={1} style={styles.wageRouteAddress}>
@@ -475,7 +480,12 @@ export function CaptainWages() {
                       <MotionPressable
                         accessibilityLabel={`الاتصال بوجهة الطلب ${row.delivery_contact_name}`}
                         onPress={() => void Linking.openURL(`tel:${row.delivery_contact_phone}`)}
+                        style={styles.wageRoutePhoneButton}
                       >
+                        <View style={styles.wageRouteCallHint}>
+                          <MaterialIcons name="call-made" size={12} color="#0878D1" />
+                          <Text style={styles.wageRouteCallHintText}>اتصال</Text>
+                        </View>
                         <Text style={styles.wageRoutePhone}>{row.delivery_contact_phone}</Text>
                       </MotionPressable>
                       <Text numberOfLines={1} style={styles.wageRouteAddress}>
@@ -1463,7 +1473,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     flex: 1,
-    minHeight: 126,
+    minHeight: 139,
     padding: 9,
   },
   wageRouteHead: { alignItems: "center", flexDirection: "row-reverse", gap: 4 },
@@ -1476,22 +1486,30 @@ const styles = StyleSheet.create({
   wageRouteContactName: {
     color: "#194B6E",
     fontFamily: "Cairo_700Bold",
-    fontSize: 11,
+    fontSize: 13,
     marginTop: 7,
     textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageRoutePhoneButton: { alignSelf: "flex-end", marginTop: 3 },
+  wageRouteCallHint: { alignItems: "center", flexDirection: "row-reverse", gap: 2 },
+  wageRouteCallHintText: {
+    color: "#0878D1",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 8,
     writingDirection: "rtl",
   },
   wageRoutePhone: {
     color: "#0878D1",
     fontFamily: "Cairo_700Bold",
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: 12,
+    marginTop: -2,
     writingDirection: "ltr",
   },
   wageRouteAddress: {
     color: "#668597",
     fontFamily: "Cairo_400Regular",
-    fontSize: 9,
+    fontSize: 10,
     lineHeight: 16,
     marginTop: 4,
     textAlign: "right",
