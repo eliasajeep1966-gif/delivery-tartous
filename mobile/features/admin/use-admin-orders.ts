@@ -10,7 +10,7 @@ import {
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
-export type AdminOrdersFilter = "all" | AdminOrderStatus | "delivery_active";
+export type AdminOrdersFilter = "all" | AdminOrderStatus | "delivery_active" | "medicine";
 
 export type AdminOrderListItem = {
   id: string;
@@ -59,7 +59,7 @@ export function ordersKeysetFilter(cursor: Cursor | null): string | null {
 }
 
 function statusesForFilter(filter: AdminOrdersFilter): readonly AdminOrderStatus[] | null {
-  if (filter === "all") return null;
+  if (filter === "all" || filter === "medicine") return null;
   return filter === "delivery_active" ? deliveryStatuses : [filter];
 }
 
@@ -85,6 +85,7 @@ async function loadOrdersPage(filter: AdminOrdersFilter, cursor: Cursor | null):
   const client = getNativeSupabaseClient();
   const statuses = statusesForFilter(filter);
   let query = client.from("orders").select("*").order("created_at", { ascending: false }).order("id", { ascending: false }).limit(ADMIN_ORDERS_PAGE_SIZE + 1);
+  if (filter === "medicine") query = query.eq("order_kind", "medicine");
   if (statuses?.length === 1) query = query.eq("status", statuses[0]);
   if (statuses && statuses.length > 1) query = query.in("status", statuses);
   const keyset = ordersKeysetFilter(cursor);

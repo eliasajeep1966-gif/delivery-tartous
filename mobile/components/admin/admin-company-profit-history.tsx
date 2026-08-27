@@ -118,7 +118,7 @@ export function AdminCompanyProfitHistory() {
           color="#1C1B1B"
         />
         <Metric
-          label="حصة الشركة المحمّلة"
+          label="نتيجة الشركة المحمّلة"
           value={money(totals.company)}
           color={VIOLET}
         />
@@ -205,7 +205,7 @@ export function AdminCompanyProfitHistory() {
               color="#1C1B1B"
             />
             <RecordCell
-              label="حصة الشركة"
+              label="نتيجة الشركة"
               value={money(item.company_total)}
               color={VIOLET}
             />

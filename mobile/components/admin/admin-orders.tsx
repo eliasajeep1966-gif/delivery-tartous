@@ -55,13 +55,11 @@ function TextInput({ style, ...props }: ComponentProps<typeof NativeTextInput>) 
 
 const filters: { id: AdminOrdersFilter; label: string }[] = [
   { id: "all", label: "الكل" },
-  { id: "pending", label: "قيد الانتظار" },
-  { id: "assigned", label: "تم تعيين كابتن" },
   { id: "received", label: "تم الاستلام" },
-  { id: "in_delivery", label: "قيد التوصيل" },
   { id: "completed", label: "مكتمل" },
   { id: "cancelled", label: "ملغى" },
   { id: "false_order", label: "طلب كاذب" },
+  { id: "medicine", label: "طلبات دواء" },
 ];
 
 const statusAppearance: Record<
