@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -25,6 +25,7 @@ import {
   type NativePendingAccount,
   type NativeUser,
 } from "@/lib/supabase/native-admin-users-contract";
+import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 
 const roles: NativeAppRole[] = ["admin", "supervisor", "captain"];
 const roleLabels: Record<NativeAppRole | "all", string> = {
@@ -49,7 +50,27 @@ export function AdminUsers() {
   const [roleUser, setRoleUser] = useState<NativeUser | null>(null);
   const [confirmation, setConfirmation] = useState<UserManagementConfirmation | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const isAdmin = profile?.role === "admin";
+
+  useEffect(() => {
+    let active = true;
+    if (!profile?.id) return () => {
+      active = false;
+    };
+
+    void Promise.resolve(getNativeSupabaseClient().rpc("is_application_owner"))
+      .then(({ data, error }) => {
+        if (active) setIsOwner(!error && data === true);
+      })
+      .catch(() => {
+        if (active) setIsOwner(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [profile?.id]);
 
   const visible = useMemo(
     () =>
@@ -275,8 +296,10 @@ export function AdminUsers() {
               || (isAdmin && item.role === "supervisor")
             }
             canDelete={
-              item.role === "captain"
-              || (isAdmin && item.role === "supervisor")
+              item.id !== profile?.id
+              && (item.role === "captain"
+                || (isAdmin && item.role === "supervisor")
+                || (isOwner && item.role === "admin"))
             }
             disabled={users.isMutating}
             onToggle={() => toggle(item)}

@@ -148,14 +148,24 @@ export function AdminMore() {
           onPress={() => open("/(admin)/support", "المساعدة والدعم")}
         />
         {isOwner ? (
-          <MenuItem
-            title="مسح بيانات التطبيق"
-            description="حذف كامل البيانات عبر كلمة مرور المالك"
-            icon="delete-forever"
-            color="#BA1A1A"
-            bg="#FFF0F0"
-            onPress={() => open("/owner-data-reset", "مسح بيانات التطبيق")}
-          />
+          <>
+            <MenuItem
+              title="تعيين كلمة مرور مستخدم"
+              description="تعيين كلمة جديدة لحساب محدد فقط"
+              icon="key"
+              color="#0060B8"
+              bg="#EAF4FF"
+              onPress={() => open("/owner-password-reset", "تعيين كلمة مرور مستخدم")}
+            />
+            <MenuItem
+              title="مسح بيانات التطبيق"
+              description="حذف كامل البيانات عبر كلمة مرور المالك"
+              icon="delete-forever"
+              color="#BA1A1A"
+              bg="#FFF0F0"
+              onPress={() => open("/owner-data-reset", "مسح بيانات التطبيق")}
+            />
+          </>
         ) : null}
         <Text style={styles.sectionTitle}>الحساب</Text>
         <MenuItem

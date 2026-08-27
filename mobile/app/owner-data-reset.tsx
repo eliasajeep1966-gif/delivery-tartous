@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { KeyRound, ShieldAlert, Trash2, UserRound } from "lucide-react-native";
+import { KeyRound, ShieldAlert, Trash2 } from "lucide-react-native";
 
 import { ActionConfirmationDialog } from "@/components/ui/action-confirmation-dialog";
 import { ScreenContainer } from "@/components/screen-container";
@@ -16,10 +16,6 @@ import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { useAppToast } from "@/contexts/app-toast-context";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
-import {
-  nativeAdminUsersContract,
-  type NativeUser,
-} from "@/lib/supabase/native-admin-users-contract";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -40,10 +36,6 @@ function withTimeout<T>(request: PromiseLike<T>, message: string): Promise<T> {
   });
 }
 
-function userLabel(user: NativeUser): string {
-  return user.fullName?.trim() || user.email || "مستخدم بلا اسم";
-}
-
 export default function OwnerDataResetScreen() {
   const router = useRouter();
   const { profile, signOut } = useDeliveryAuth();
@@ -51,12 +43,6 @@ export default function OwnerDataResetScreen() {
   const [password, setPassword] = useState("");
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [users, setUsers] = useState<NativeUser[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [resettingPassword, setResettingPassword] = useState(false);
   const [resetConfirmationOpen, setResetConfirmationOpen] = useState(false);
 
   useEffect(() => {
@@ -67,8 +53,7 @@ export default function OwnerDataResetScreen() {
 
     void Promise.resolve(getNativeSupabaseClient().rpc("is_application_owner"))
       .then(({ data, error }) => {
-        if (!active) return;
-        setIsOwner(!error && data === true);
+        if (active) setIsOwner(!error && data === true);
       })
       .catch(() => {
         if (active) setIsOwner(false);
@@ -78,38 +63,6 @@ export default function OwnerDataResetScreen() {
       active = false;
     };
   }, [profile?.id]);
-
-  useEffect(() => {
-    let active = true;
-    if (!isOwner) return () => {
-      active = false;
-    };
-
-    void Promise.resolve()
-      .then(() => {
-        if (active) setUsersLoading(true);
-        return nativeAdminUsersContract.list();
-      })
-      .then(({ users: loadedUsers }) => {
-        if (active) setUsers(loadedUsers);
-      })
-      .catch(() => {
-        if (active) setUsers([]);
-      })
-      .finally(() => {
-        if (active) setUsersLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [isOwner]);
-
-  const manageableUsers = useMemo(
-    () => users.filter((user) => user.id !== profile?.id),
-    [profile?.id, users],
-  );
-  const selectedUser = manageableUsers.find((user) => user.id === selectedUserId) ?? null;
 
   const requestApplicationReset = () => {
     if (!password) {
@@ -147,60 +100,6 @@ export default function OwnerDataResetScreen() {
     }
   };
 
-  const resetSelectedUserPassword = async () => {
-    if (!selectedUser) {
-      showToast({
-        message: "اختر الحساب الذي تريد تعيين كلمة مرور جديدة له.",
-        tone: "error",
-      });
-      return;
-    }
-    if (newPassword.length < 12) {
-      showToast({
-        message: "يجب أن تكون كلمة المرور الجديدة 12 حرفاً على الأقل.",
-        tone: "error",
-      });
-      return;
-    }
-    if (newPassword !== passwordConfirmation) {
-      showToast({ message: "تأكيد كلمة المرور غير مطابق.", tone: "error" });
-      return;
-    }
-
-    setResettingPassword(true);
-    try {
-      const { data, error } = await withTimeout(
-        getNativeSupabaseClient().functions.invoke("owner-reset-user-password", {
-          body: {
-            userId: selectedUser.id,
-            password: newPassword,
-            passwordConfirmation,
-          },
-        }),
-        "انتهت مهلة تعيين كلمة المرور. تحقق من الاتصال ثم حاول مجدداً.",
-      );
-      if (error) throw error;
-      if (data && typeof data === "object" && "error" in data)
-        throw new Error(
-          typeof data.message === "string"
-            ? data.message
-            : "تعذر تعيين كلمة المرور للمستخدم.",
-        );
-
-      setNewPassword("");
-      setPasswordConfirmation("");
-      showToast({ message: `تم تعيين كلمة مرور جديدة لـ ${userLabel(selectedUser)}.` });
-    } catch (error) {
-      const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "تعذر تعيين كلمة المرور للمستخدم.";
-      showToast({ message, tone: "error", durationMs: 5000 });
-    } finally {
-      setResettingPassword(false);
-    }
-  };
-
   if (isOwner === null) {
     return (
       <ScreenContainer
@@ -233,102 +132,9 @@ export default function OwnerDataResetScreen() {
           icon: "arrow-forward",
           onPress: () => goBackOrReplace(router),
         }}
-        trailingAction={{ accessibilityLabel: "بيانات التطبيق", icon: "warning" }}
+        trailingAction={{ accessibilityLabel: "مسح بيانات التطبيق", icon: "warning" }}
       />
-      <ScrollView contentContainerClassName="gap-4 p-4 pb-8" keyboardShouldPersistTaps="handled">
-        <View className="rounded-3xl border border-[#E4EEF7] bg-white p-4">
-          <View className="flex-row items-start justify-between gap-3">
-            <View className="flex-1 items-end">
-              <Text className="text-right text-lg font-bold text-[#173B59]">
-                تعيين كلمة مرور مستخدم
-              </Text>
-              <Text className="mt-1 text-right text-xs leading-5 text-[#58616B]">
-                اختر مستخدماً واحداً ثم عيّن له كلمة مرور جديدة. باقي الحسابات لا تتأثر.
-              </Text>
-            </View>
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-[#EAF4FF]">
-              <UserRound size={23} color="#0060B8" />
-            </View>
-          </View>
-
-          <Text className="mt-4 text-right text-xs font-bold text-[#4F5D6B]">
-            اختر المستخدم
-          </Text>
-          {usersLoading ? (
-            <View className="mt-2 h-16 items-center justify-center rounded-2xl border border-[#D3E3F0] bg-[#F8FCFF]">
-              <ActivityIndicator color="#0060B8" />
-            </View>
-          ) : manageableUsers.length ? (
-            <View className="mt-2 gap-2">
-              {manageableUsers.map((user) => {
-                const selected = user.id === selectedUserId;
-                return (
-                  <Pressable
-                    key={user.id}
-                    onPress={() => setSelectedUserId(user.id)}
-                    className={`rounded-2xl border p-3 ${selected ? "border-[#0060B8] bg-[#EAF4FF]" : "border-[#D3E3F0] bg-[#F8FCFF]"}`}
-                  >
-                    <Text className="text-right text-sm font-bold text-[#173B59]">
-                      {userLabel(user)}
-                    </Text>
-                    <Text className="mt-0.5 text-right text-[11px] text-[#66727E]">
-                      {user.email ?? ""} · {user.role}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <Text className="mt-2 text-right text-xs text-[#66727E]">
-              لا يوجد حساب آخر يمكن تعيين كلمة مرور له.
-            </Text>
-          )}
-
-          <Text className="mt-4 text-right text-xs font-bold text-[#4F5D6B]">
-            كلمة المرور الجديدة
-          </Text>
-          <TextInput
-            value={newPassword}
-            onChangeText={setNewPassword}
-            placeholder="12 حرفاً على الأقل"
-            placeholderTextColor="#8A98A6"
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!resettingPassword}
-            className="mt-1.5 h-12 rounded-2xl border border-[#C9D9E7] bg-[#F8FCFF] px-3 text-left text-base text-[#1C1B1B]"
-          />
-          <TextInput
-            value={passwordConfirmation}
-            onChangeText={setPasswordConfirmation}
-            placeholder="تأكيد كلمة المرور الجديدة"
-            placeholderTextColor="#8A98A6"
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!resettingPassword}
-            returnKeyType="done"
-            onSubmitEditing={() => void resetSelectedUserPassword()}
-            className="mt-2 h-12 rounded-2xl border border-[#C9D9E7] bg-[#F8FCFF] px-3 text-left text-base text-[#1C1B1B]"
-          />
-
-          <Pressable
-            accessibilityLabel="تعيين كلمة مرور المستخدم"
-            disabled={resettingPassword || !manageableUsers.length}
-            onPress={() => void resetSelectedUserPassword()}
-            className={`mt-4 h-12 flex-row items-center justify-center gap-2 rounded-2xl ${resettingPassword || !manageableUsers.length ? "bg-[#94A9BD]" : "bg-[#0060B8] active:scale-95"}`}
-          >
-            {resettingPassword ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <KeyRound size={18} color="#FFFFFF" />
-            )}
-            <Text className="text-sm font-bold text-white">
-              {resettingPassword ? "جارٍ التعيين..." : "تعيين كلمة المرور"}
-            </Text>
-          </Pressable>
-        </View>
-
+      <ScrollView contentContainerClassName="p-4 pb-8" keyboardShouldPersistTaps="handled">
         <View className="rounded-3xl border border-[#F2B8B5] bg-[#FFF7F6] p-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1 items-end">
