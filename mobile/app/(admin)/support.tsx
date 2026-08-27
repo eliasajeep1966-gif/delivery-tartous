@@ -46,6 +46,18 @@ const questions = [
     "كيف أتأكد من حالة الطلب؟",
     "افتح الطلب من شاشة الطلبات. ستظهر الحالة الحالية والكابتن المعيّن وآخر تحديث مسجّل.",
   ],
+  [
+    "كيف أفعّل أو أوقف التوفر؟",
+    "من الرئيسية استخدم زر حالة التوفر. عند التفعيل يظهر حسابك متاحاً لاستقبال الطلبات، وعند الإيقاف لن تظهر ضمن قائمة الكباتن المتاحين.",
+  ],
+  [
+    "ما خطوات تنفيذ الطلب للكابتن؟",
+    "افتح الطلب المسند إليك، تواصل مع نقطة الاستلام، ثم حدّث الحالة إلى تم الاستلام، وبعدها قيد التوصيل، وأخيراً تم التوصيل بعد التسليم.",
+  ],
+  [
+    "ماذا أفعل إذا كان عنوان الطلب أو بياناته غير صحيحة؟",
+    "لا تبدأ التنفيذ قبل التواصل مع الإدارة. أرسل بلاغاً من هذه الصفحة واكتب رقم الطلب والبيانات التي تحتاج تصحيحاً.",
+  ],
 ] as const;
 const categories = [
   "مشكلة في طلب",
@@ -65,8 +77,10 @@ export default function AdminSupportScreen() {
   const [category, setCategory] = useState(categories[0]);
   const [orderNumber, setOrderNumber] = useState("");
   const [description, setDescription] = useState("");
-  const isBackOffice =
-    profile?.role === "admin" || profile?.role === "supervisor";
+  const canUseSupport =
+    profile?.role === "admin" ||
+    profile?.role === "supervisor" ||
+    profile?.role === "captain";
   const openUrl = async (url: string) => {
     try {
       await Linking.openURL(url);
@@ -87,7 +101,7 @@ export default function AdminSupportScreen() {
     );
     showToast({ message: "تم فتح البريد لمراجعة البلاغ وإرساله." });
   };
-  if (!isBackOffice)
+  if (!canUseSupport)
     return (
       <ScreenContainer
         className="items-center justify-center bg-[#F8FAFC] p-5"
@@ -115,9 +129,9 @@ export default function AdminSupportScreen() {
       >
         <View className="rounded-3xl bg-[#0060B8] p-5 shadow-[0_8px_30px_rgba(0,96,184,0.04)]">
           <Headphones size={28} color="#FFF" />
-          <Text className="mt-3 text-right text-[19px] font-bold text-white">
-            كيف يمكننا مساعدتك؟
-          </Text>
+            <Text className="mt-3 text-right text-[19px] font-bold text-white">
+            {profile?.role === "captain" ? "مساعدة الكابتن" : "كيف يمكننا مساعدتك؟"}
+            </Text>
           <Text className="mt-1 text-right text-xs leading-5 text-[#DCEAFF]">
             اختر قناة التواصل المناسبة أو أرسل بلاغاً مفصلاً.
           </Text>

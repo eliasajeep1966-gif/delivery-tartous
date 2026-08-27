@@ -140,7 +140,7 @@ export function CaptainHome() {
         trailingAction={{
           accessibilityLabel: "المساعدة",
           icon: "info-outline",
-          onPress: () => Alert.alert("المساعدة", "تواصل مع الإدارة عند الحاجة."),
+          onPress: () => router.push("/(admin)/support"),
         }}
       />
       <ScrollView
