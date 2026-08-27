@@ -172,9 +172,7 @@ export function CaptainHome() {
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
   const current = dashboard.currentOrder;
   const showCurrentOrderLed = Boolean(current);
-  const currentCardColors = current
-    ? (["#063B78", "#0872CC", "#0CBDF2"] as const)
-    : (["#07539B", "#0878D1", "#16CEFF"] as const);
+  const currentCardColors = ["#063B78", "#0872CC", "#0CBDF2"] as const;
   const action = current ? nextAction(current.status) : null;
 
   const handleCurrentCardLayout = (event: LayoutChangeEvent) => {
