@@ -117,7 +117,9 @@ export function CaptainHome() {
       action &&
       (await dashboard.transitionOrder(current.id, action.next))
     ) {
-      playSound("captainOrderSuccess");
+      if (action.next === "received" || action.next === "completed") {
+        playSound("captainOrderSuccess");
+      }
       showToast({ message: `أصبحت حالة الطلب: ${statusLabels[action.next]}` });
     }
   };
