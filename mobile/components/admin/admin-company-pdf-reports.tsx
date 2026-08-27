@@ -94,21 +94,23 @@ export function AdminCompanyPdfReports({
             endDate: range.endDate,
           });
         await createAndShareSimplePdfReport({
-          title: "كشف كابتن مختصر",
+          title: "كشف مالي للكابتن",
           subject: summary.captain_name,
           startDate: summary.period_start,
           endDate: summary.period_end,
           metrics: [
-            { label: "إجمالي الطلبات", value: orderCount(summary.order_count) },
-            { label: "إجمالي أجر الطلبات", value: money(summary.gross_total) },
+            { label: "عدد الطلبات النهائية", value: orderCount(summary.order_count) },
+            { label: "القيمة المرجعية للطلبات", value: money(summary.gross_total) },
+            { label: "أجر الكابتن للطلبات العادية", value: money(summary.captain_wage_total) },
+            { label: "تعويض الكابتن للطلبات المجانية", value: money(summary.captain_compensation_total) },
             {
-              label: "صافي الكابتن",
+              label: "إجمالي أجر الكابتن",
               value: money(summary.captain_total),
               highlighted: true,
             },
             {
-              label: "المبلغ المستحق للشركة (30٪)",
-              value: money(summary.company_total),
+              label: "نتيجة الشركة من طلبات الكابتن",
+              value: money(summary.company_result_total),
             },
           ],
           generatedBy: userName,
@@ -120,18 +122,43 @@ export function AdminCompanyPdfReports({
         range,
       );
       await createAndShareSimplePdfReport({
-        title: "تقرير الشركة المختصر",
+        title: "تقرير مالي للمكتب",
         startDate: summary.period_start,
         endDate: summary.period_end,
         metrics: [
-          { label: "إجمالي الطلبات", value: orderCount(summary.order_count) },
-          { label: "إجمالي أجر الطلبات", value: money(summary.gross_total) },
-          { label: "أجور الكباتن", value: money(summary.captain_net_total) },
+          { label: "عدد الطلبات النهائية", value: orderCount(summary.order_count) },
+          { label: "القيمة المرجعية للطلبات", value: money(summary.gross_total) },
+          { label: "أجور الكباتن للطلبات العادية", value: money(summary.captain_wage_total) },
+          { label: "تعويض الكباتن للطلبات المجانية", value: money(summary.captain_compensation_total) },
+          { label: "إجمالي أجر الكباتن", value: money(summary.captain_net_total) },
+          { label: "نتيجة الشركة قبل المصاريف", value: money(summary.company_total) },
           { label: "مصاريف المكتب", value: money(summary.expense_total) },
           {
             label: "صافي الشركة",
             value: money(summary.net_company_total),
             highlighted: true,
+          },
+        ],
+        breakdown: [
+          {
+            label: "أجور الكباتن للطلبات العادية",
+            value: summary.captain_wage_total,
+            color: "#1677C8",
+          },
+          {
+            label: "تعويض الكباتن للطلبات المجانية",
+            value: summary.captain_compensation_total,
+            color: "#8B5CF6",
+          },
+          {
+            label: "مصاريف المكتب",
+            value: summary.expense_total,
+            color: "#F59E0B",
+          },
+          {
+            label: "نتيجة الشركة قبل المصاريف",
+            value: summary.company_total,
+            color: summary.company_total >= 0 ? "#059669" : "#E05252",
           },
         ],
         generatedBy: userName,
@@ -172,8 +199,8 @@ export function AdminCompanyPdfReports({
               <MaterialIcons name="close" size={22} color="#315C73" />
             </Pressable>
             <View style={styles.headerText}>
-              <Text style={styles.headerTitle}>طباعة تقارير PDF</Text>
-              <Text style={styles.headerSubtitle}>تقارير مختصرة فقط</Text>
+              <Text style={styles.headerTitle}>طباعة التقارير المالية</Text>
+              <Text style={styles.headerSubtitle}>ملخص واضح للأجور والتعويضات والمصاريف</Text>
             </View>
             <View style={styles.headerIcon}>
               <MaterialIcons name="picture-as-pdf" size={22} color="#FFFFFF" />
@@ -184,14 +211,14 @@ export function AdminCompanyPdfReports({
             <View style={styles.modeRow}>
               <ReportChoice
                 active={mode === "captain"}
-                description="كابتن واحد: الطلبات، الصافي، ومبلغ الشركة"
+                description="كشف أجر الكابتن والتعويضات ونتيجة الشركة"
                 icon="person"
                 onPress={() => setMode("captain")}
                 title="تقرير كابتن"
               />
               <ReportChoice
                 active={mode === "company"}
-                description="طلبات الشركة، أجور الكباتن، المصاريف، والصافي"
+                description="أجور وتعويضات ومصاريف وصافي الشركة"
                 icon="business"
                 onPress={() => setMode("company")}
                 title="تقرير الشركة"
@@ -235,7 +262,7 @@ export function AdminCompanyPdfReports({
                 <>
                   <Text style={styles.sectionTitle}>ملخص الشركة</Text>
                   <Text style={styles.sectionDescription}>
-                    يطبع الأرقام الأساسية للشركة فقط دون تفصيل الطلبات.
+                    يطبع ملخصاً مالياً واضحاً مع دائرة توزيع لكل بند رئيسي.
                   </Text>
                 </>
               )}
@@ -284,8 +311,8 @@ export function AdminCompanyPdfReports({
               <Text style={styles.summaryTitle}>ما سيظهر في PDF</Text>
               <Text style={styles.summaryText}>
                 {mode === "captain"
-                  ? "اسم الكابتن، عدد الطلبات، إجمالي أجر الطلبات، صافي الكابتن، والمبلغ المستحق للشركة (30٪)."
-                  : "إجمالي الطلبات، إجمالي أجر الطلبات، أجور الكباتن، مصاريف المكتب، وصافي الشركة."}
+                  ? "اسم الكابتن، القيمة المرجعية، الأجر العادي، التعويضات، إجمالي الأجر، ونتيجة الشركة من طلباته."
+                  : "القيمة المرجعية، أجور الكباتن، التعويضات، نتيجة الشركة، المصاريف، الصافي، ودائرة توزيع ملونة."}
               </Text>
             </View>
           </ScrollView>
