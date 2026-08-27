@@ -2,24 +2,18 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { goBackOrReplace } from "@/lib/navigation/go-back-or-replace";
 import { useState } from "react";
 import {
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { FinancialDatePicker } from "@/components/ui/financial-date-picker";
-import { useAppToast } from "@/contexts/app-toast-context";
-import {
-  nativeAdminFinanceContract,
-  useNativeAdminCaptainWageDetailPage,
-} from "@/features/admin/use-admin-finance";
+import { useNativeAdminCaptainWageDetailPage } from "@/features/admin/use-admin-finance";
 
 const BLUE = "#0878D1";
 const DEEP_BLUE = "#063B78";
@@ -54,14 +48,11 @@ const damascusDateKey = (value: Date) => {
 
 export function AdminCaptainWageDetail() {
   const router = useRouter();
-  const { showToast } = useAppToast();
   const { captainId, captainName: captainNameParam } = useLocalSearchParams<{
     captainId: string;
     captainName?: string;
   }>();
   const details = useNativeAdminCaptainWageDetailPage(captainId ?? null);
-  const [amount, setAmount] = useState("");
-  const [saving, setSaving] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const captainName =
     typeof captainNameParam === "string" && captainNameParam.trim()
@@ -72,36 +63,6 @@ export function AdminCaptainWageDetail() {
     (details.page + 1) * PAGE_SIZE,
     details.total,
   );
-
-  const payout = async () => {
-    const value = Number(amount);
-    if (
-      !Number.isFinite(value) ||
-      value <= 0 ||
-      value > details.totals.unpaid
-    ) {
-      Alert.alert("بيانات الدفعة", "أدخل مبلغاً موجباً ضمن صافي أجر الكابتن.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await nativeAdminFinanceContract.actions.recordPartialPayout(
-        captainId ?? "",
-        value,
-      );
-      setAmount("");
-      await details.refetch();
-      showToast({ message: `تم تسجيل دفعة بقيمة ${money(value)}.` });
-    } catch (error) {
-      Alert.alert(
-        "تعذر التسجيل",
-        error instanceof Error ? error.message : "تعذر تسجيل الدفعة.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <ScreenContainer className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
@@ -272,32 +233,6 @@ export function AdminCaptainWageDetail() {
           </View>
         ) : null}
 
-        <View style={styles.payout}>
-          <Text style={styles.sectionTitle}>تسليم دفعة للكابتن</Text>
-          <View style={styles.payoutRow}>
-            <TextInput
-              keyboardType="decimal-pad"
-              onChangeText={setAmount}
-              placeholder="مبلغ الدفعة"
-              placeholderTextColor="#8A98A6"
-              style={styles.input}
-              textAlign="right"
-              value={amount}
-            />
-            <Pressable
-              disabled={saving || details.totals.unpaid <= 0}
-              onPress={() => void payout()}
-              style={[
-                styles.button,
-                (saving || details.totals.unpaid <= 0) && styles.disabled,
-              ]}
-            >
-              <Text style={styles.buttonText}>
-                {saving ? "جارٍ التسجيل..." : "تسليم الدفعة"}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
       </ScrollView>
 
       {isDatePickerOpen ? (
@@ -354,17 +289,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  button: {
-    alignItems: "center",
-    backgroundColor: BLUE,
-    borderColor: NEON,
-    borderRadius: 11,
-    borderWidth: 1,
-    height: 48,
-    justifyContent: "center",
-    paddingHorizontal: 12,
-  },
-  buttonText: { color: "#FFF", fontFamily: "Cairo_700Bold", fontSize: 11 },
   company: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, marginTop: 3 },
   content: { gap: 12, padding: 18, paddingBottom: 34 },
   dateControl: {
@@ -407,15 +331,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-  },
-  input: {
-    backgroundColor: "#FBFEFF",
-    borderColor: "#C9D9E7",
-    borderRadius: 11,
-    borderWidth: 1,
-    flex: 1,
-    height: 48,
-    paddingHorizontal: 10,
   },
   live: {
     backgroundColor: "#ECFDF5",
@@ -481,19 +396,6 @@ const styles = StyleSheet.create({
   },
   paginationButtonText: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 11 },
   paginationLabel: { color: "#58788D", fontFamily: "Cairo_600SemiBold", fontSize: 10 },
-  payout: {
-    backgroundColor: "#FFF",
-    borderColor: "#D3E3F0",
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-  },
-  payoutRow: {
-    alignItems: "center",
-    flexDirection: "row-reverse",
-    gap: 8,
-    marginTop: 10,
-  },
   period: {
     alignItems: "center",
     backgroundColor: "#FFFFFF",
