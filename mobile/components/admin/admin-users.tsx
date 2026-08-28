@@ -598,7 +598,6 @@ function CreatePendingModal({
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            // 🔥 الترقيع: عطينا مساحة سكرول إضافية من تحت عشان الكيبورد ما يغطي زر الإنشاء
             contentContainerStyle={{ paddingBottom: 24 }}
           >
 

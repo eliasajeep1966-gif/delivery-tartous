@@ -13,7 +13,7 @@ describe("screen live updates", () => {
     expect(shouldKeepScreenLiveUpdates(true, null)).toBe(true);
   });
 
-  it("uses the consolidated focused polling and subscription path for admin orders", () => {
+    it("uses the consolidated focused polling and subscription path for admin orders", () => {
     const hookSource = readFileSync(
       resolve(__dirname, "../features/admin/use-admin-orders.ts"),
       "utf8",
@@ -23,9 +23,10 @@ describe("screen live updates", () => {
       "utf8",
     );
 
-    expect(hookSource).toContain("refetchInterval: enabled ? 15_000 : false");
-    expect(hookSource).toContain("refetchIntervalInBackground: false");
+    expect(hookSource).not.toContain("refetchInterval: enabled ? 15_000 : false");
+    expect(hookSource).toContain("staleTime: 300_000");
     expect(screenSource).not.toContain("nativeAdminContract");
     expect(screenSource).not.toContain("setInterval(");
   });
+
 });

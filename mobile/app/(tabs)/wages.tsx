@@ -1,23 +1,30 @@
+import { View, Text } from "react-native";
+import { AdminWages } from "@/components/admin/admin-wages";
+// تأكد من اسم الملف واسم المكون المصدّر
+import { CaptainWages } from "@/components/captain/captain-pages"; 
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
-import {
-  TabContentSkeleton,
-  useDeferredTabContent,
-} from "@/hooks/use-deferred-tab-content";
 
 export default function WagesScreen() {
   const { profile } = useDeliveryAuth();
-  const isReady = useDeferredTabContent(Boolean(profile));
 
-  if (!profile) return null;
-  if (!isReady) return <TabContentSkeleton />;
+  const isCaptain = profile?.role === "captain";
 
-  if (profile.role === "captain") {
-    const { CaptainWages } =
-      require("@/components/captain/captain-pages") as typeof import("@/components/captain/captain-pages");
-    return <CaptainWages />;
+  // حماية في حال كان المكون غير معرف حتى لا ينهار التطبيق
+  if (isCaptain && typeof CaptainWages !== "function") {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>جاري تحميل صفحة أجور الكابتن...</Text>
+      </View>
+    );
   }
 
-  const { AdminWages } =
-    require("@/components/admin/admin-wages") as typeof import("@/components/admin/admin-wages");
-  return <AdminWages />;
+  if (!isCaptain && typeof AdminWages !== "function") {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>جاري تحميل صفحة أجور الإدارة...</Text>
+      </View>
+    );
+  }
+
+  return isCaptain ? <CaptainWages /> : <AdminWages />;
 }

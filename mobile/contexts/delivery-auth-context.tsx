@@ -6,7 +6,10 @@ import type {
 import { useQueryClient } from "@tanstack/react-query";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 
-import { registerCaptainPushNotifications } from "@/lib/notifications";
+import {
+  registerCaptainPushNotifications,
+  unregisterPushNotifications,
+} from "@/lib/notifications";
 import { useAppToast } from "@/contexts/app-toast-context";
 import {
   createContext,
@@ -450,17 +453,28 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
     [applyState, getClient, loadProfile],
   );
 
-  const signOut = useCallback(async () => {
+   const signOut = useCallback(async () => {
     const current = stateRef.current;
     if (current.operation === "signing-out") return;
 
     applyState({ ...current, operation: "signing-out" });
+
+    // 🔥 الترقيع الأول: الاعتماد على الـ Session ID لضمان مسح التوكن دائماً
+    const userId = current.session?.user?.id;
+    if (userId) {
+      try {
+        console.log("🚀 [Red Team] Nuking push tokens for user:", userId);
+        await unregisterPushNotifications(userId);
+      } catch (error) {
+        console.warn("❌ [Red Team] Push token cleanup failed.", error);
+      }
+    }
+
     clearQueryCache();
     try {
-      // Keep the captain's device Push Token across logout and app restarts.
-      // It is refreshed by registerCaptainPushNotifications on the next login
-      // and should only be removed when the account is permanently deleted.
-      await getClient().auth.signOut({ scope: "local" });
+      // 🔥 الترقيع الثاني: تدمير الجلسة من السيرفر بشكل كامل (Global SignOut)
+      await getClient().auth.signOut(); 
+      
       applyState({
         status: "unauthenticated",
         session: null,
@@ -469,6 +483,7 @@ export function DeliveryAuthProvider({ children }: PropsWithChildren) {
         operation: "idle",
       });
     } catch {
+      // Fallback: إذا فشل الاتصال بالسيرفر، بنمسحها محلياً كحل أخير
       try {
         await getClient().auth.signOut({ scope: "local" });
       } finally {

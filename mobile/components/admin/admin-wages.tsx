@@ -26,7 +26,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-
 import { ScreenContainer } from "@/components/screen-container";
 import { DeliveryAppHeader } from "@/components/ui/delivery-app-header";
 import { MotionPressable } from "@/components/ui/motion-pressable";
@@ -256,17 +255,18 @@ export function AdminWages() {
     void officeExpenses.refetch();
     void companyProfitHistory.refetch();
     void dailyProductivityHistory.refetch();
-    if (dashboardFilter === "custom") void customDateRows.refetch();
+       if (dashboardFilter === "custom") void customDateRows.refetch();
   }, [
-    companyProfitHistory.refetch,
-    customDateRows.refetch,
-    dailyProductivityHistory.refetch,
+    companyProfitHistory,
+    customDateRows,
+    dailyProductivityHistory,
     dashboardFilter,
-    details.refetch,
-    officeExpenses.refetch,
+    details,
+    officeExpenses,
     selectedCaptainId,
-    wagePeriods.refetch,
+    wagePeriods,
   ]);
+
   useRefreshOnScreenResume(isLiveUpdatesActive, refreshOnResume);
 
   const periodRows = useMemo(() => wagePeriods.data ?? [], [wagePeriods.data]);

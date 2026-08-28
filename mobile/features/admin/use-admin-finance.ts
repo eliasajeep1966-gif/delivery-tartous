@@ -231,13 +231,15 @@ export function useNativeAdminWagePeriods(
   const changePeriod = useCallback((next: NativeFinancePeriod) => {
     setPeriod(next);
   }, []);
-  const loadMore = useCallback(() => {
+   const loadMore = useCallback(() => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
       void query.fetchNextPage();
     }
-  }, [query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
+  }, [query]); 
+
   useEffect(() => {
     if (!enabled) return;
+
     const unsubscribe = nativeAdminContract.realtime.subscribe(() => {
       void queryClient.invalidateQueries({ queryKey: ["admin-wage-periods"] });
       void queryClient.invalidateQueries({ queryKey: ["admin-wage-details"] });
@@ -326,8 +328,7 @@ export function useNativeFullCompanyProfitHistory() {
     if (result.data?.pages[activePage + 1]?.length) {
       setPage((current) => current + 1);
     }
-  }, [activePage, customDate, pages.length, query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
-
+  }, [activePage, customDate, pages.length, query]);
   return {
     ...query,
     data,
@@ -507,9 +508,10 @@ type NativeOfficeExpenseDayRpcRow = {
   expense_date: string;
   expense_total: number | string;
   expense_count: number | string;
-  expenses: Array<Omit<NativeOfficeExpense, "expense_date">>;
+  expenses: Omit<NativeOfficeExpense, "expense_date">[];
   has_more: boolean;
 };
+
 
 export type NativeCompanyExpensePeriodRow = {
   period_start: string;
@@ -739,10 +741,14 @@ export function useNativeOfficeExpenses(input: {
   const [pageIndex, setPageIndex] = useState(0);
   const beforeDay = cursorHistory[pageIndex] ?? null;
 
-  useEffect(() => {
+  // 🔥 الترقيع الأول: دمرنا الـ useEffect واستخدمنا طريقة الـ Render Phase Update
+  const [prevDates, setPrevDates] = useState(`${input.startDate}|${input.endDate}`);
+  const currentDates = `${input.startDate}|${input.endDate}`;
+  if (prevDates !== currentDates) {
+    setPrevDates(currentDates);
     setCursorHistory([null]);
     setPageIndex(0);
-  }, [input.endDate, input.startDate]);
+  }
 
   const query = useQuery({
     queryKey: [
@@ -759,7 +765,7 @@ export function useNativeOfficeExpenses(input: {
     retry: 1,
   });
 
-  const days = query.data ?? [];
+  const days = useMemo(() => query.data ?? [], [query.data]);
   const hasNextPage = Boolean(days.at(-1)?.hasMore);
   const hasPreviousPage = pageIndex > 0;
 
@@ -786,25 +792,25 @@ export function useNativeOfficeExpenses(input: {
     ]);
   };
 
-  const createExpense = async (input: {
+  const createExpense = async (expenseInput: {
     title: string;
     amount: number;
     expenseDate: string;
     notes?: string;
   }) => {
-    const result = await nativeOfficeExpensesContract.actions.create(input);
+    const result = await nativeOfficeExpensesContract.actions.create(expenseInput);
     await refreshFinancialViews();
     return result;
   };
 
-  const updateExpense = async (input: {
+  const updateExpense = async (expenseInput: {
     id: string;
     title: string;
     amount: number;
     expenseDate: string;
     notes?: string;
   }) => {
-    const result = await nativeOfficeExpensesContract.actions.update(input);
+    const result = await nativeOfficeExpensesContract.actions.update(expenseInput);
     await refreshFinancialViews();
     return result;
   };
@@ -828,3 +834,4 @@ export function useNativeOfficeExpenses(input: {
     deleteExpense,
   };
 }
+

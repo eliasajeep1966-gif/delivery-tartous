@@ -1,13 +1,39 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet, Alert, BackHandler } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import { useColors } from "@/hooks/use-colors";
+
+
+import { useEffect } from 'react';
+import JailMonkey from 'jail-monkey';
+
+export function useSecurityShield() {
+  useEffect(() => {
+    const checkDeviceSecurity = () => {
+      try {
+        if (JailMonkey.isJailBroken()) {
+          Alert.alert(
+            "we're sorry",
+"please try again code:101001",
+            [{ text: "خروج", onPress: () => BackHandler.exitApp() }]
+          );
+        }
+      } catch (error) {
+        console.warn("Security check failed", error);
+      }
+    };
+
+    checkDeviceSecurity();
+
+  }, []);
+}
+
 
 function DeliveryTabBackdrop() {
   return (
@@ -20,14 +46,12 @@ function DeliveryTabBackdrop() {
 }
 
 export default function TabLayout() {
+  useSecurityShield();
   const colors = useColors();
   const { profile } = useDeliveryAuth();
   const insets = useSafeAreaInsets();
   const role = profile?.role;
-
-  // Never render the admin tab layout as a fallback while the session profile is still loading.
   if (!profile) return null;
-
   const isCaptain = role === "captain";
   const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
   const tabBarHeight = 64 + bottomPadding;

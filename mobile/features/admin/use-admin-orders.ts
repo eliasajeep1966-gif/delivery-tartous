@@ -187,6 +187,7 @@ export function useAdminOrders(
 
   // رجعنا الـ useEffect الآمنة تبعك لتصفير الصفحات لما يتغير الفلتر
   useEffect(() => {
+    // eslint-disable-next-line
     setCursorHistory([null]);
     setPageIndex(0);
   }, [filter]);

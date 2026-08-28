@@ -7,17 +7,6 @@ import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 // module out of startup evaluation and load it only in a supported native build.
 type NotificationsModule = typeof import("expo-notifications");
 
-type CaptainOrderCancellationNotification = Readonly<{
-  orderId: string | null;
-  orderNumber: string | null;
-}>;
-
-type PushResponse = Readonly<{
-  sent: number;
-  failed?: number;
-  error?: string;
-}>;
-
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 let notificationsModule: NotificationsModule | null = null;
@@ -37,11 +26,10 @@ function setupNotifications(): NotificationsModule | null {
   if (!Notifications || notificationSetupComplete) return Notifications;
 
   Notifications.setNotificationHandler({
-    handleNotification: async (notification) => ({
+    handleNotification: async () => ({
       shouldShowBanner: true,
       shouldShowList: true,
-      shouldPlaySound:
-        notification.request.content.data?.type !== "order_cancelled",
+      shouldPlaySound: true,
       shouldSetBadge: true,
     }),
   });
@@ -49,51 +37,26 @@ function setupNotifications(): NotificationsModule | null {
   return Notifications;
 }
 
-async function configureCaptainNotificationChannels(
-  Notifications: NotificationsModule,
-): Promise<void> {
-  if (Platform.OS !== "android") return;
-
-  await Promise.all([
-    Notifications.setNotificationChannelAsync("new_order_alerts", {
-      name: "طلبات جديدة",
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      sound: "new_order.mp3",
-    }),
-    Notifications.setNotificationChannelAsync("cancelled_order_alerts", {
-      name: "طلبات ملغاة",
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 350, 130, 350],
-      sound: "order_cancelled.mp3",
-    }),
-  ]);
-}
-
-function readCancellationNotification(
-  notification: import("expo-notifications").Notification,
-): CaptainOrderCancellationNotification | null {
-  const data = notification.request.content.data;
-  if (data?.type !== "order_cancelled") return null;
-
-  return {
-    orderId: typeof data.orderId === "string" ? data.orderId : null,
-    orderNumber:
-      typeof data.orderNumber === "string" || typeof data.orderNumber === "number"
-        ? String(data.orderNumber)
-        : null,
-  };
-}
-
 export async function registerCaptainPushNotifications(
   userId: string,
 ): Promise<string | null> {
   const Notifications = setupNotifications();
   if (!Notifications) return null;
-
   try {
-    await configureCaptainNotificationChannels(Notifications);
-
+if (Platform.OS === "android") {
+  await Notifications.setNotificationChannelAsync("orders-v2", {
+    name: "Orders",
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    sound: "new_order.mp3",
+  });
+  await Notifications.setNotificationChannelAsync("cancelled_order_alerts", {
+    name: "Cancelled Orders",
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 500, 250, 500],
+    sound: "order_cancelled.mp3",
+  });
+}
     const permissions = await Notifications.getPermissionsAsync();
     let status = permissions.status;
     if (status !== "granted") {
@@ -128,27 +91,9 @@ export async function registerCaptainPushNotifications(
     if (result.error) throw new Error(result.error.message);
     return token;
   } catch (error) {
-    console.error("Push notification registration failed.", error);
-    throw error instanceof Error
-      ? error
-      : new Error("فشل تسجيل إشعارات الطلبات.");
+    console.warn("Push notification registration is unavailable.", error);
+    return null;
   }
-}
-
-export function subscribeToCaptainOrderCancellation(
-  onCancellation: (event: CaptainOrderCancellationNotification) => void,
-): () => void {
-  const Notifications = setupNotifications();
-  if (!Notifications) return () => undefined;
-
-  const subscription = Notifications.addNotificationReceivedListener(
-    (notification) => {
-      const event = readCancellationNotification(notification);
-      if (event) onCancellation(event);
-    },
-  );
-
-  return () => subscription.remove();
 }
 
 export async function unregisterPushNotifications(
@@ -166,35 +111,35 @@ export async function unregisterPushNotifications(
   }
 }
 
-export async function notifyCaptainOfOrder(orderId: string): Promise<number> {
-  const { data, error } = await getNativeSupabaseClient().functions.invoke(
-    "send-order-push",
-    { body: { orderId } },
-  );
-  if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(String(data.error));
-  return Number(data?.sent ?? 0);
+export async function notifyCaptainOfOrder(
+  orderId: string,
+): Promise<void | null> {
+  try {
+    const { error } = await getNativeSupabaseClient().functions.invoke(
+      "send-order-push",
+      { body: { orderId } },
+    );
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    console.warn("Push notification delivery is unavailable.", error);
+    return null;
+  }
 }
 
+// ضيف الدالة الجديدة هون 👇
 export async function notifyCaptainOfOrderCancellation(
   orderId: string,
-): Promise<PushResponse> {
-  const { data, error } = await getNativeSupabaseClient().functions.invoke(
-    "send_order_cancellation_push",
-    { body: { orderId } },
-  );
-  if (error) {
-    throw new Error("تعذر إرسال إشعار إلغاء الطلب للكابتن.");
+): Promise<{ sent: number; failed?: number }> {
+  try {
+    const { data, error } = await getNativeSupabaseClient().functions.invoke(
+      "send_order_cancellation_push", 
+      { body: { orderId } },
+    );
+    
+    if (error) throw new Error(error.message);
+    return data || { sent: 0 };
+  } catch (error) {
+    console.warn("Cancellation push notification delivery failed.", error);
+    throw error;
   }
-  if (!data || typeof data !== "object") {
-    throw new Error("استجابة إشعار إلغاء الطلب غير صالحة.");
-  }
-
-  const response = data as PushResponse;
-  if (response.error) throw new Error(response.error);
-  if (!Number.isFinite(response.sent) || response.sent < 0) {
-    throw new Error("استجابة إشعار إلغاء الطلب غير صالحة.");
-  }
-
-  return response;
 }
