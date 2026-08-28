@@ -44,6 +44,7 @@ const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
+  owner: "eliasbackup",
   version: "1.0.0",
   orientation: "portrait",
   icon: appIcon,
@@ -51,13 +52,15 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   runtimeVersion: { policy: "appVersion" },
   updates: {
-    url: "https://u.expo.dev/50bd336a-0524-45a8-a8e5-337b02b1828d",
+        url: "https://u.expo.dev/ff524c1e-e737-40ae-93e4-c12b5de6911d",
+
   },
   extra: {
     supabaseUrl,
     supabasePublishableKey,
     eas: {
-      projectId: "50bd336a-0524-45a8-a8e5-337b02b1828d",
+      projectId: "ff524c1e-e737-40ae-93e4-c12b5de6911d",
+
     },
   },
 
@@ -67,6 +70,7 @@ const config: ExpoConfig = {
     "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
+      
   },
   android: {
     adaptiveIcon: {

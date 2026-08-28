@@ -46,7 +46,7 @@ function DeliveryTabBackdrop() {
 }
 
 export default function TabLayout() {
-  useSecurityShield();
+  // useSecurityShield();
   const colors = useColors();
   const { profile } = useDeliveryAuth();
   const insets = useSafeAreaInsets();
