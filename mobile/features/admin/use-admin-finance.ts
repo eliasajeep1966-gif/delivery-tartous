@@ -222,9 +222,9 @@ export function useNativeAdminWagePeriods(
         : undefined;
     },
     enabled,
-    staleTime: 20_000,
-    refetchInterval: enabled ? 15_000 : false,
-    refetchIntervalInBackground: false,
+    staleTime: 300_000,
+    
+    
     retry: 1,
   });
 
@@ -263,7 +263,7 @@ export function useNativeCompanyProfitHistory(
     queryFn: () =>
       nativeAdminFinanceContract.reads.companyProfitPeriodHistory({ period }),
     enabled,
-    staleTime: 20_000,
+    staleTime: 300_000,
     retry: 1,
   });
 }
@@ -289,7 +289,7 @@ export function useNativeFullCompanyProfitHistory() {
       }
       return lastPage.at(-1)?.period_start;
     },
-    staleTime: 20_000,
+    staleTime: 300_000,
     retry: 1,
   });
 
@@ -359,7 +359,7 @@ export function useNativeCaptainWageDetails(
     queryFn: () =>
       nativeAdminFinanceContract.reads.captainWageDetails(captainId ?? ""),
     enabled: Boolean(captainId) && enabled,
-    staleTime: 20_000,
+    staleTime: 300_000,
     retry: 1,
   });
 }
@@ -413,7 +413,7 @@ export function useNativeAdminCaptainWageDetailPage(
         period,
       }),
     enabled: Boolean(captainId) && enabled,
-    staleTime: 20_000,
+    staleTime: 300_000,
     retry: 1,
   });
 
@@ -716,7 +716,7 @@ export function useNativeOfficeExpensePeriods(
     queryKey: ["admin-office-expense-periods", period],
     queryFn: () => nativeOfficeExpensesContract.reads.periods(period),
     enabled,
-    staleTime: 20_000,
+    staleTime: 300_000,
     retry: 1,
   });
   useEffect(() => {
@@ -755,7 +755,7 @@ export function useNativeOfficeExpenses(input: {
       ...input,
       beforeDay,
     }),
-    staleTime: 20_000,
+    staleTime: 300_000,
     retry: 1,
   });
 

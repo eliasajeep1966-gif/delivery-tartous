@@ -191,7 +191,7 @@ export function useAdminHome(enabled = true) {
     queryKey: ["admin-home"],
     queryFn: loadAdminHome,
     enabled,
-    staleTime: 30_000,
+    staleTime: 300_000,
     retry: 1,
   });
 }

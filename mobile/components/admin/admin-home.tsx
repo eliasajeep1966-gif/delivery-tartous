@@ -49,7 +49,7 @@ import {
   nativeAdminContract,
 } from "@/lib/supabase/native-admin-contract";
 import { presentDeliveryTiming, type DeliveryTiming } from "@/lib/admin/delivery-duration";
-import { notifyCaptainOfOrder } from "@/lib/notifications";
+import { notifyCaptainOfOrder, notifyCaptainOfOrderCancellation } from "@/lib/notifications";
 import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 
@@ -386,27 +386,33 @@ export function AdminHome() {
   };
 
   const cancelOrderFromActivity = async () => {
-    if (!cancellingActivity?.orderId) return;
-    setIsCancelling(true);
-    try {
-      const { error } = await getNativeSupabaseClient().rpc("cancel_order", {
-        p_order_id: cancellingActivity.orderId,
-        p_cancellation_reason: "أُلغي من أحدث النشاطات قبل بدء التوصيل.",
-      });
-      if (error) throw new Error(error.message);
-      showToast({ message: "تم إلغاء الطلب بنجاح." });
-      setCancellingActivity(null);
-      await refetch();
-    } catch (error) {
-      showToast({
-        message: error instanceof Error ? error.message : "تعذر إلغاء الطلب.",
-        tone: "error",
-        durationMs: 5000,
-      });
-    } finally {
-      setIsCancelling(false);
-    }
-  };
+  if (!cancellingActivity?.orderId) return;
+  setIsCancelling(true);
+  try {
+    const { error } = await getNativeSupabaseClient().rpc("cancel_order", {
+      p_order_id: cancellingActivity.orderId,
+      p_cancellation_reason: "أُلغي من أحدث النشاطات قبل بدء التوصيل.",
+    });
+    if (error) throw new Error(error.message);
+    
+    showToast({ message: "تم إلغاء الطلب بنجاح." });
+    setCancellingActivity(null);
+    await refetch();
+
+    // إضافة استدعاء الإشعار هون (Fire and forget)
+    void notifyCaptainOfOrderCancellation(cancellingActivity.orderId).catch(console.warn);
+
+  } catch (error) {
+    showToast({
+      message: error instanceof Error ? error.message : "تعذر إلغاء الطلب.",
+      tone: "error",
+      durationMs: 5000,
+    });
+  } finally {
+    setIsCancelling(false);
+  }
+};
+ 
 
   const availableCount = snapshot?.availableCaptains.length ?? 0;
 

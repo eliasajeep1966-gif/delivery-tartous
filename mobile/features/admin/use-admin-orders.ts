@@ -172,6 +172,7 @@ export function useAdminOrders(
   useEffect(() => {
     orderChangeCallback.current = onOrderChange;
   }, [onOrderChange]);
+  
   const [cursorHistory, setCursorHistory] = useState<(Cursor | null)[]>([null]);
   const [pageIndex, setPageIndex] = useState(0);
   const currentCursor = cursorHistory[pageIndex] ?? null;
@@ -184,18 +185,19 @@ export function useAdminOrders(
     },
   });
 
+  // رجعنا الـ useEffect الآمنة تبعك لتصفير الصفحات لما يتغير الفلتر
   useEffect(() => {
     setCursorHistory([null]);
     setPageIndex(0);
   }, [filter]);
 
   const page = useQuery({
+    // هاد هو الـ Query Key اللي بيعزل الكاش
     queryKey: ["admin-orders", filter, currentCursor?.createdAt ?? null, currentCursor?.id ?? null],
     queryFn: () => loadOrdersPage(filter, currentCursor),
     enabled,
-    staleTime: 20_000,
-    refetchInterval: enabled ? 15_000 : false,
-    refetchIntervalInBackground: false,
+    // 🔥 الترقيع: كاش 5 دقايق، وبدون أي بولينغ!
+    staleTime: 300_000,
     retry: 1,
   });
 

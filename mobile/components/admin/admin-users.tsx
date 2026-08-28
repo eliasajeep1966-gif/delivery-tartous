@@ -589,15 +589,19 @@ function CreatePendingModal({
       visible={visible}
       onRequestClose={close}
     >
-      <KeyboardAvoidingView
+           <KeyboardAvoidingView
         style={styles.modalBackdrop}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // 🔥 الترقيع: أجبرنا الأندرويد يستخدم height أو padding ليدفش المربع غصباً عنه
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.createModal}>
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            // 🔥 الترقيع: عطينا مساحة سكرول إضافية من تحت عشان الكيبورد ما يغطي زر الإنشاء
+            contentContainerStyle={{ paddingBottom: 24 }}
           >
+
             <View style={styles.modalHeadingRow}>
               <Pressable disabled={busy} onPress={close} style={styles.modalCloseIcon}>
                 <MaterialIcons name="close" size={21} color="#66727E" />

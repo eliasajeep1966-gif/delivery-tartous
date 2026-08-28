@@ -137,6 +137,9 @@ importers:
       express:
         specifier: ^4.22.1
         version: 4.22.1
+      jail-monkey:
+        specifier: ^3.0.0
+        version: 3.0.0
       jose:
         specifier: 6.1.0
         version: 6.1.0
@@ -170,6 +173,9 @@ importers:
       react-native-screens:
         specifier: ~4.26.2
         version: 4.26.2(react-native@0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      react-native-ssl-public-key-pinning:
+        specifier: ^1.2.6
+        version: 1.2.6(react-native@0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       react-native-svg:
         specifier: 15.15.4
         version: 15.15.4(react-native@0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -4251,6 +4257,9 @@ packages:
     resolution: {integrity: sha512-H0dkQoCa3b2VEeKQBOxFph+JAbcrQdE7KC0UkqwpLmv2EC4P41QXP+rqo9wYodACiG5/WM5s9oDApTU8utwj9g==}
     engines: {node: '>= 0.4'}
 
+  jail-monkey@3.0.0:
+    resolution: {integrity: sha512-EB382zJRHzElFPEucuafU3cxPJn5U8QgaQHzY09J8ly1eElG4EvNBEWu+0okS7Ro5Jvc8B/7lB+6mNCKjWjDGg==}
+
   jest-get-type@29.6.3:
     resolution: {integrity: sha512-zrteXnqYxfQh7l5FHyL38jL39di8H8rHoecLH3JNxH3BwOrBsNeabdap5e0I23lD4HHI8W5VFBZqG4Eaq5LNcw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -5159,6 +5168,12 @@ packages:
 
   react-native-screens@4.26.2:
     resolution: {integrity: sha512-2XnWsZToKj76trGtEZzx5ELD/qOICFEprEeUntImmitQFVUkea27fiWdUSITArI356Y1qynpXZINW+Unbhky/A==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
+  react-native-ssl-public-key-pinning@1.2.6:
+    resolution: {integrity: sha512-WrWCRgXSet/lw8VVgrnTM5RXI+YWmSxE4+PmWcxFOUq7Kea+arkYASvDD1Dajw6yFGEw4GYuvIRdp6s7KxO60Q==}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -7867,7 +7882,9 @@ snapshots:
       metro-runtime: 0.84.5
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -10435,6 +10452,8 @@ snapshots:
       has-symbols: 1.1.0
       set-function-name: 2.0.2
 
+  jail-monkey@3.0.0: {}
+
   jest-get-type@29.6.3: {}
 
   jest-util@29.7.0:
@@ -11361,6 +11380,11 @@ snapshots:
       react-freeze: 1.0.4(react@19.2.3)
       react-native: 0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3)
       warn-once: 0.1.1
+
+  react-native-ssl-public-key-pinning@1.2.6(react-native@0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-native: 0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3)
 
   react-native-svg@15.15.4(react-native@0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.2(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:
