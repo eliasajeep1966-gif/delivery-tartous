@@ -79,8 +79,14 @@ export default function OwnerDataResetScreen() {
     setResetConfirmationOpen(false);
     setSubmitting(true);
     try {
+      const client = getNativeSupabaseClient();
+      const { data: sessionData } = await client.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("انتهت جلسة الدخول. سجّل خروجاً ثم ادخل بحساب المالك من جديد.");
+      }
+
       const { error } = await withTimeout(
-        getNativeSupabaseClient().rpc("reset_application_data", {
+        client.rpc("reset_application_data", {
           p_current_password: password,
         }),
         "انتهت مهلة مسح البيانات. تحقق من الاتصال ثم حاول مجدداً.",
@@ -91,11 +97,25 @@ export default function OwnerDataResetScreen() {
       showToast({ message: "تم مسح بيانات التطبيق." });
       await signOut();
     } catch (error) {
-      const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "تعذر مسح بيانات التطبيق.";
-      showToast({ message, tone: "error", durationMs: 5000 });
+      const candidate = error as {
+        message?: unknown;
+        details?: unknown;
+        hint?: unknown;
+        code?: unknown;
+      };
+      const parts = [candidate.message, candidate.details, candidate.hint]
+        .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+        .map((part) => part.trim());
+      const message = parts.length
+        ? parts.join(" — ")
+        : "تعذر مسح بيانات التطبيق.";
+      console.error("reset_application_data failed", {
+        message: candidate.message,
+        details: candidate.details,
+        hint: candidate.hint,
+        code: candidate.code,
+      });
+      showToast({ message, tone: "error", durationMs: 7000 });
     } finally {
       setSubmitting(false);
     }
