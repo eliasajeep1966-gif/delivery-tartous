@@ -7,6 +7,11 @@ import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 // module out of startup evaluation and load it only in a supported native build.
 type NotificationsModule = typeof import("expo-notifications");
 
+type CaptainOrderCancellationNotification = Readonly<{
+  orderId: string | null;
+  orderNumber: string | null;
+}>;
+
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 let notificationsModule: NotificationsModule | null = null;
@@ -35,6 +40,21 @@ function setupNotifications(): NotificationsModule | null {
   });
   notificationSetupComplete = true;
   return Notifications;
+}
+
+function readCancellationNotification(
+  notification: import("expo-notifications").Notification,
+): CaptainOrderCancellationNotification | null {
+  const data = notification.request.content.data;
+  if (data?.type !== "order_cancelled") return null;
+
+  return {
+    orderId: typeof data.orderId === "string" ? data.orderId : null,
+    orderNumber:
+      typeof data.orderNumber === "string" || typeof data.orderNumber === "number"
+        ? String(data.orderNumber)
+        : null,
+  };
 }
 
 export async function registerCaptainPushNotifications(
@@ -142,4 +162,19 @@ export async function notifyCaptainOfOrderCancellation(
     console.warn("Cancellation push notification delivery failed.", error);
     throw error;
   }
+}
+export function subscribeToCaptainOrderCancellation(
+  onCancellation: (event: CaptainOrderCancellationNotification) => void,
+): () => void {
+  const Notifications = setupNotifications();
+  if (!Notifications) return () => undefined;
+
+  const subscription = Notifications.addNotificationReceivedListener(
+    (notification) => {
+      const event = readCancellationNotification(notification);
+      if (event) onCancellation(event);
+    },
+  );
+
+  return () => subscription.remove();
 }
