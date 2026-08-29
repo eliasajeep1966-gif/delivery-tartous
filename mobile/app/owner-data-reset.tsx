@@ -76,6 +76,7 @@ export default function OwnerDataResetScreen() {
   };
 
   const resetApplication = async () => {
+    setResetConfirmationOpen(false);
     setSubmitting(true);
     try {
       const { error } = await withTimeout(
