@@ -622,6 +622,29 @@ export function AdminWages() {
         </MotionPressable>
 
         <MotionPressable
+          accessibilityLabel="فتح واجهة الصندوق"
+          onPress={() => router.push("/treasury" as never)}
+          style={({ pressed }) => [
+            styles.treasuryCard,
+            pressed && styles.companyCardPressed,
+          ]}
+        >
+          <View style={styles.treasuryIcon}>
+            <MaterialIcons name="account-balance-wallet" size={21} color="#07875D" />
+          </View>
+          <View style={styles.companyTextBlock}>
+            <Text style={styles.treasuryTitle}>الصندوق</Text>
+            <Text style={styles.companySubtitle}>
+              رصيد الشركة، أرباح الأجور، الإيداعات، والسحوبات
+            </Text>
+          </View>
+          <View style={styles.treasuryAction}>
+            <Text style={styles.treasuryActionText}>فتح</Text>
+            <MaterialIcons name="arrow-back" size={16} color="#07875D" />
+          </View>
+        </MotionPressable>
+
+        <MotionPressable
           accessibilityLabel="فتح واجهة مصاريف المكتب"
           onPress={() => router.push("/office-expenses" as never)}
           style={({ pressed }) => [
@@ -1651,6 +1674,47 @@ const styles = StyleSheet.create({
     shadowRadius: 9,
   },
   companyCardPressed: { opacity: 0.9, transform: [{ scale: 0.97 }] },
+  treasuryCard: {
+    alignItems: "center",
+    backgroundColor: "#F1FBF7",
+    borderColor: "#BFE7D3",
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: "row-reverse",
+    minHeight: 66,
+    paddingHorizontal: 13,
+  },
+  treasuryIcon: {
+    alignItems: "center",
+    backgroundColor: "#DDF5E9",
+    borderRadius: 12,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  treasuryTitle: {
+    color: "#08704E",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  treasuryAction: {
+    alignItems: "center",
+    backgroundColor: "#DDF5E9",
+    borderRadius: 11,
+    flexDirection: "row-reverse",
+    gap: 4,
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: 9,
+  },
+  treasuryActionText: {
+    color: "#08704E",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
   expenseCard: {
     alignItems: "center",
     backgroundColor: "#FFF8F1",
