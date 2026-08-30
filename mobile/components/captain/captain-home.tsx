@@ -245,6 +245,10 @@ function ParallelCaptainOrderCard({
           </View>
           <StatusBadge status={order.status} prominent />
         </View>
+        <View style={styles.feeBar}>
+          <Text style={styles.feeLabel}>أجرة الطلب</Text>
+          <Text style={styles.feeValue}>{money(order.fee)}</Text>
+        </View>
         <View style={styles.cardBody}>
           <View style={styles.stopsGrid}>
             <StopCard title="المصدر" icon="inventory-2" stop={pickup} fallback={order.pickup_address} onCall={(phone) => void Linking.openURL(`tel:${phone}`)} />
@@ -535,6 +539,12 @@ export function CaptainHome() {
                 </View>
                 {current ? <StatusBadge status={current.status} prominent /> : null}
               </View>
+              {current ? (
+                <View style={styles.feeBar}>
+                  <Text style={styles.feeLabel}>أجرة الطلب</Text>
+                  <Text style={styles.feeValue}>{money(current.fee)}</Text>
+                </View>
+              ) : null}
               {current ? (
                 <View style={styles.cardBody}>
                   <View style={styles.stopsGrid}>
@@ -1092,6 +1102,30 @@ const styles = StyleSheet.create({
     fontFamily: "Cairo_400Regular",
     fontSize: 11,
     textAlign: "right",
+    writingDirection: "rtl",
+  },
+  feeBar: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderBottomColor: "rgba(222,248,255,0.42)",
+    borderBottomWidth: 1,
+    borderTopColor: "rgba(222,248,255,0.42)",
+    borderTopWidth: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  feeLabel: {
+    color: "rgba(235,249,255,0.88)",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
+  feeValue: {
+    color: "#FFFFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 15,
     writingDirection: "rtl",
   },
   cardBody: { gap: 14, padding: 14 },

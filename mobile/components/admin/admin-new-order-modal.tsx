@@ -489,18 +489,16 @@ function LocationSection({
               style={styles.input}
               textAlign="right"
             />
-            {type === "pickup" ? (
-              <TextInput
-                editable={!disabled}
-                value={location.note}
-                onChangeText={(value) => update(location.id, "note", value)}
-                placeholder="ملاحظات المصدر (اختياري)"
-                placeholderTextColor="#89939E"
-                multiline
-                style={[styles.input, styles.noteInput]}
-                textAlign="right"
-              />
-            ) : null}
+            <TextInput
+              editable={!disabled}
+              value={location.note}
+              onChangeText={(value) => update(location.id, "note", value)}
+              placeholder={type === "pickup" ? "ملاحظات المصدر (اختياري)" : "ملاحظات وجهة التسليم (اختياري)"}
+              placeholderTextColor="#89939E"
+              multiline
+              style={[styles.input, styles.noteInput]}
+              textAlign="right"
+            />
           </View>
           <View pointerEvents="none" style={[styles.scrollLane, compact && styles.scrollLaneCompact]}>
             <View style={styles.scrollLaneHint} />
