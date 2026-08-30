@@ -43,9 +43,9 @@ function dateLabel(value: string) {
 }
 
 function transactionLabel(type: NativeTreasuryTransactionType) {
-  if (type === "company_profit_in") return "ربح الشركة من الأجور";
-  if (type === "capital_in") return "إيداع نقدي";
-  return "سحب نقدي";
+  if (type === "company_profit_in") return "وارد نقدي · ربح الأجور";
+  if (type === "capital_in") return "وارد نقدي · إيداع";
+  return "صادر نقدي · سحب";
 }
 
 function transactionIcon(type: NativeTreasuryTransactionType) {
@@ -143,21 +143,21 @@ export function AdminTreasury() {
           ) : (
             <Text style={styles.balanceValue}>{money(overview?.current_balance ?? 0)}</Text>
           )}
-          <Text style={styles.balanceHint}>أرباح الشركة + الإيداعات − المسحوبات</Text>
+          <Text style={styles.balanceHint}>الرصيد النهائي المتراكم: أرباح الشركة + الوارد النقدي − الصادر النقدي</Text>
         </View>
 
         {errorText ? <Message text={errorText} tone="error" /> : null}
 
         <View style={styles.metricsRow}>
           <Metric
-            label="الوارد النقدي"
-            value={money((overview?.company_profit_total ?? 0) + (overview?.capital_in_total ?? 0))}
+            label="صافي ربح الشركة اليوم"
+            value={money(overview?.company_profit_today ?? 0)}
             color={GREEN}
           />
           <Metric
-            label="الصادر النقدي"
-            value={money(overview?.withdrawal_total ?? 0)}
-            color={RED}
+            label="حركة الصندوق"
+            value={money(overview?.cash_flow_total ?? 0)}
+            color={(overview?.cash_flow_total ?? 0) >= 0 ? BLUE : RED}
           />
         </View>
 
