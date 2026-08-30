@@ -3,18 +3,8 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  FadeInDown,
-  FadeOut,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 import {
-  LayoutChangeEvent,
   Linking,
   Modal,
   Platform,
@@ -39,60 +29,15 @@ import {
   useNativeCaptainDashboard,
 } from "@/features/captain/use-native-captain-dashboard";
 import type {
+  CaptainActiveOrder,
   CaptainOrderStatus,
   CaptainOrderStatusEvent,
 } from "@/lib/supabase/native-captain-contract";
 import { presentDeliveryTiming } from "@/lib/admin/delivery-duration";
+import { subscribeToCaptainOrderAssignment } from "@/lib/notifications";
 
-const DEEP_BLUE = "#063B78";
 const BLUE = "#0878D1";
 const NEON = "#16CEFF";
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
-
-type LedPoint = { x: number; y: number; perimeter: number };
-
-function getRoundedRectLedPoint(distance: number, width: number, height: number): LedPoint {
-  "worklet";
-  const inset = 1;
-  const innerWidth = Math.max(width - inset * 2, 1);
-  const innerHeight = Math.max(height - inset * 2, 1);
-  const radius = Math.min(19, innerWidth / 2, innerHeight / 2);
-  const horizontal = Math.max(innerWidth - radius * 2, 0);
-  const vertical = Math.max(innerHeight - radius * 2, 0);
-  const corner = (Math.PI * radius) / 2;
-  const perimeter = horizontal * 2 + vertical * 2 + corner * 4;
-  let travel = distance % perimeter;
-  const left = inset;
-  const right = inset + innerWidth;
-  const top = inset;
-  const bottom = inset + innerHeight;
-
-  if (travel <= horizontal) return { x: left + radius + travel, y: top, perimeter };
-  travel -= horizontal;
-  if (travel <= corner) {
-    const theta = -Math.PI / 2 + (travel / corner) * (Math.PI / 2);
-    return { x: right - radius + radius * Math.cos(theta), y: top + radius + radius * Math.sin(theta), perimeter };
-  }
-  travel -= corner;
-  if (travel <= vertical) return { x: right, y: top + radius + travel, perimeter };
-  travel -= vertical;
-  if (travel <= corner) {
-    const theta = (travel / corner) * (Math.PI / 2);
-    return { x: right - radius + radius * Math.cos(theta), y: bottom - radius + radius * Math.sin(theta), perimeter };
-  }
-  travel -= corner;
-  if (travel <= horizontal) return { x: right - radius - travel, y: bottom, perimeter };
-  travel -= horizontal;
-  if (travel <= corner) {
-    const theta = Math.PI / 2 + (travel / corner) * (Math.PI / 2);
-    return { x: left + radius + radius * Math.cos(theta), y: bottom - radius + radius * Math.sin(theta), perimeter };
-  }
-  travel -= corner;
-  if (travel <= vertical) return { x: left, y: bottom - radius - travel, perimeter };
-  travel -= vertical;
-  const theta = Math.PI + (travel / corner) * (Math.PI / 2);
-  return { x: left + radius + radius * Math.cos(theta), y: top + radius + radius * Math.sin(theta), perimeter };
-}
 const statusLabels: Record<CaptainOrderStatus, string> = {
   pending: "قيد الانتظار",
   assigned: "تم إسناد الطلب",
@@ -164,108 +109,56 @@ export function CaptainHome() {
   const { playSound } = useAppSound();
   const isLiveUpdatesActive = useScreenLiveUpdates();
   const dashboard = useNativeCaptainDashboard(isLiveUpdatesActive);
-  const [falseOrderOpen, setFalseOrderOpen] = useState(false);
+  const announceNewOrder = dashboard.announceNewOrder;
+  const [falseOrderId, setFalseOrderId] = useState<string | null>(null);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
-  const currentLedProgress = useSharedValue(0);
-  const currentLedWidth = useSharedValue(0);
-  const currentLedHeight = useSharedValue(0);
   const name = profile?.full_name?.trim() || profile?.email || "الكابتن";
-  const current = dashboard.currentOrder;
-  const showCurrentOrderLed = Boolean(current);
+  const activeOrders = dashboard.activeOrders;
   const currentCardColors = ["#063B78", "#0872CC", "#0CBDF2"] as const;
-  const action = current ? nextAction(current.status) : null;
-
-  const handleCurrentCardLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    currentLedWidth.value = width;
-    currentLedHeight.value = height;
-  };
-
-  useEffect(() => {
-    if (!showCurrentOrderLed) {
-      cancelAnimation(currentLedProgress);
-      currentLedProgress.value = 0;
-      return;
-    }
-    currentLedProgress.value = withRepeat(
-      withTiming(1, { duration: 4200, easing: Easing.linear }),
-      -1,
-      false,
-    );
-    return () => cancelAnimation(currentLedProgress);
-  }, [currentLedProgress, showCurrentOrderLed]);
-
-  const currentLedDotStyle = useAnimatedStyle(() => {
-    if (!currentLedWidth.value || !currentLedHeight.value) return { opacity: 0 };
-    const start = getRoundedRectLedPoint(0, currentLedWidth.value, currentLedHeight.value);
-    const point = getRoundedRectLedPoint(
-      currentLedProgress.value * start.perimeter,
-      currentLedWidth.value,
-      currentLedHeight.value,
-    );
-    return { opacity: 1, left: point.x - 4, top: point.y - 4 };
-  });
-
-  const currentLedGlowStyle = useAnimatedStyle(() => {
-    if (!currentLedWidth.value || !currentLedHeight.value) return { opacity: 0 };
-    const start = getRoundedRectLedPoint(0, currentLedWidth.value, currentLedHeight.value);
-    const point = getRoundedRectLedPoint(
-      currentLedProgress.value * start.perimeter,
-      currentLedWidth.value,
-      currentLedHeight.value,
-    );
-    return { opacity: 0.72, left: point.x - 10, top: point.y - 10 };
-  });
-
-  const currentLedTailStyle = useAnimatedStyle(() => {
-    if (!currentLedWidth.value || !currentLedHeight.value) return { opacity: 0 };
-    const start = getRoundedRectLedPoint(0, currentLedWidth.value, currentLedHeight.value);
-    const currentDistance = currentLedProgress.value * start.perimeter;
-    const point = getRoundedRectLedPoint(currentDistance, currentLedWidth.value, currentLedHeight.value);
-    const previous = getRoundedRectLedPoint(
-      (currentDistance - 26 + start.perimeter) % start.perimeter,
-      currentLedWidth.value,
-      currentLedHeight.value,
-    );
-    const dx = point.x - previous.x;
-    const dy = point.y - previous.y;
-    const length = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-    return {
-      opacity: 0.96,
-      left: (point.x + previous.x) / 2 - length / 2,
-      top: (point.y + previous.y) / 2 - 1.5,
-      width: length,
-      transform: [{ rotate: `${angle}deg` }],
-    };
-  });
-  const pickup = dashboard.currentStops.find(
-    (stop) => stop.stop_type === "pickup",
+  const newestQueuedOrderId =
+    dashboard.newOrderQueue[dashboard.newOrderQueue.length - 1] ?? null;
+  const presentedNewOrderId = dashboard.newOrderQueue[0] ?? null;
+  const presentedNewOrder = activeOrders.find(
+    (order) => order.id === presentedNewOrderId,
   );
-  const delivery = [...dashboard.currentStops]
-    .reverse()
-    .find((stop) => stop.stop_type === "delivery");
+  const falseOrder = activeOrders.find((order) => order.id === falseOrderId) ?? null;
+
   const available = dashboard.metrics?.availability === "available";
 
   const call = (phone: string) => {
     void Linking.openURL(`tel:${phone}`);
   };
-  const advance = async () => {
-    if (
-      current &&
-      action &&
-      (await dashboard.transitionOrder(current.id, action.next))
-    ) {
-      if (action.next === "received" || action.next === "completed") {
+  const advanceOrder = async (order: { id: string; status: CaptainOrderStatus }) => {
+    const next = nextAction(order.status);
+    if (next && (await dashboard.transitionOrder(order.id, next.next))) {
+      if (next.next === "received" || next.next === "completed") {
         playSound("captainOrderSuccess");
       }
-      showToast({ message: `أصبحت حالة الطلب: ${statusLabels[action.next]}` });
+      showToast({ message: `أصبحت حالة الطلب: ${statusLabels[next.next]}` });
     }
   };
   const markFalse = async () => {
-    if (current && (await dashboard.transitionOrder(current.id, "false_order")))
-      setFalseOrderOpen(false);
+    if (
+      falseOrder &&
+      (await dashboard.transitionOrder(falseOrder.id, "false_order"))
+    )
+      setFalseOrderId(null);
   };
+
+  useEffect(() => {
+    return subscribeToCaptainOrderAssignment((assignment) => {
+      if (assignment.orderId) announceNewOrder(assignment.orderId);
+    });
+  }, [announceNewOrder]);
+
+  useEffect(() => {
+    if (!newestQueuedOrderId) return;
+    if (Platform.OS !== "web") {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    playSound("newOrder");
+    showToast({ message: "لديك طلب جديد. راجع تفاصيله الآن." });
+  }, [newestQueuedOrderId, playSound, showToast]);
 
   return (
     <ScreenContainer
@@ -352,142 +245,30 @@ export function CaptainHome() {
                 thumbColor="#FFFFFF"
               />
             </Animated.View>
-            <Animated.View
-              entering={FadeInDown.delay(70).duration(210)}
-              style={styles.currentCardShell}
-            >
-              {!current ? (
-                <View
-                  pointerEvents="none"
-                  style={styles.emptyCurrentOuterGlow}
-                />
-              ) : null}
-              <LinearGradient
-                colors={currentCardColors}
-                start={{ x: 1, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                onLayout={handleCurrentCardLayout}
-                style={styles.currentCard}
-              >
-                {!current ? (
-                  <LinearGradient
-                    colors={[
-                      "rgba(221,253,255,0.58)",
-                      "rgba(105,235,255,0.32)",
-                      "rgba(9,127,205,0.08)",
-                    ]}
-                    end={{ x: 0.08, y: 1 }}
-                    pointerEvents="none"
-                    start={{ x: 0.96, y: 0 }}
-                    style={styles.emptyCurrentBacklight}
-                  />
-                ) : null}
-                {showCurrentOrderLed ? (
-                  <>
-                    <AnimatedLinearGradient
-                      colors={["rgba(126,238,255,0)", "rgba(188,250,255,0.96)"]}
-                      end={{ x: 1, y: 0.5 }}
-                      pointerEvents="none"
-                      start={{ x: 0, y: 0.5 }}
-                      style={[styles.currentLedTail, currentLedTailStyle]}
-                    />
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[styles.currentLedGlow, currentLedGlowStyle]}
-                    />
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[styles.currentLedDot, currentLedDotStyle]}
-                    />
-                  </>
-                ) : null}
-                <View style={styles.currentHeader}>
-                <View style={styles.currentHeaderIcon}>
-                  <MaterialIcons name="two-wheeler" size={25} color="#0C679D" />
-                </View>
-                <View style={styles.currentHeaderCopy}>
-                  <Text style={styles.currentTitle}>الطلب الحالي</Text>
-                  <Text style={styles.currentSubtitle}>
-                    {current ? `الطلب #${current.order_number}` : "لا يوجد طلب نشط الآن"}
-                  </Text>
-                </View>
-                {current ? <StatusBadge status={current.status} prominent /> : null}
+            <View style={styles.activeOrdersSection}>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.sectionTitle}>الطلبات النشطة</Text>
+                <Text style={styles.link}>{activeOrders.length} طلبات</Text>
               </View>
-              {current ? (
-                <View style={styles.cardBody}>
-                  <View style={styles.stopsGrid}>
-                    <StopCard
-                      title="المصدر"
-                      icon="inventory-2"
-                      stop={pickup}
-                      fallback={current.pickup_address}
-                      onCall={call}
-                    />
-                    <StopCard
-                      title="الوجهة"
-                      icon="location-on"
-                      stop={delivery}
-                      fallback={current.delivery_address}
-                      onCall={call}
-                    />
-                  </View>
-                  <Animated.View
-                    key={current.status}
-                    entering={FadeInDown.duration(170)}
-                    style={{ gap: 10 }}
-                  >
-                    <OrderTimeline
-                      status={current.status}
-                      events={dashboard.currentStatusEvents}
-                    />
-                    {dashboard.actionError ? (
-                      <Text style={styles.errorText}>
-                        {dashboard.actionError}
-                      </Text>
-                    ) : null}
-                    {action ? (
-                      <MotionPressable
-                        disabled={dashboard.orderSaving}
-                        haptic="medium"
-                        pressedScale={0.96}
-                        onPress={() => void advance()}
-                        style={styles.primaryButton}
-                      >
-                        <Text style={styles.primaryText}>
-                          {dashboard.orderSaving
-                            ? "جارٍ التحديث..."
-                            : action.label}
-                        </Text>
-                      </MotionPressable>
-                    ) : null}
-                    {current.status === "in_delivery" ? (
-                      <MotionPressable
-                        accessibilityLabel="تسجيل الطلب كطلب كاذب"
-                        disabled={dashboard.orderSaving}
-                        haptic="medium"
-                        pressedScale={0.97}
-                        onPress={() => setFalseOrderOpen(true)}
-                        style={styles.falseOrderButton}
-                      >
-                        <View style={styles.falseOrderIcon}>
-                          <MaterialIcons name="warning-amber" size={22} color="#FFFFFF" />
-                        </View>
-                        <View style={styles.falseOrderCopy}>
-                          <Text style={styles.falseOrderTitle}>تسجيل طلب كاذب</Text>
-                          <Text style={styles.falseOrderHint}>أوقف الطلب عند تعذّر تسليمه</Text>
-                        </View>
-                        <MaterialIcons name="chevron-left" size={26} color="#FEE2E2" />
-                      </MotionPressable>
-                    ) : null}
-                  </Animated.View>
-                </View>
+              {activeOrders.length ? (
+                activeOrders.map((order, index) => (
+                  <ActiveOrderCard
+                    key={order.id}
+                    order={order}
+                    events={dashboard.activeStatusEvents[order.id] ?? []}
+                    isSaving={dashboard.isOrderSaving(order.id)}
+                    isNew={order.id === presentedNewOrderId}
+                    cardColors={currentCardColors}
+                    onAdvance={() => void advanceOrder(order)}
+                    onCall={call}
+                    onMarkFalse={() => setFalseOrderId(order.id)}
+                    enteringDelay={70 + index * 40}
+                  />
+                ))
               ) : (
-                <Text style={styles.emptyText}>
-                  ستظهر تفاصيل الطلب هنا عند إسناده إليك.
-                </Text>
+                <EmptyActiveOrders />
               )}
-              </LinearGradient>
-            </Animated.View>
+            </View>
             <Animated.View entering={FadeInDown.delay(110).duration(210)}>
               <Text style={styles.sectionTitle}>ملخص اليوم</Text>
               <View style={styles.metrics}>
@@ -521,9 +302,69 @@ export function CaptainHome() {
       </ScrollView>
       <Modal
         transparent
-        visible={falseOrderOpen}
+        visible={Boolean(presentedNewOrderId)}
         animationType="none"
-        onRequestClose={() => setFalseOrderOpen(false)}
+        onRequestClose={() => {
+          if (presentedNewOrderId) dashboard.dismissNewOrder(presentedNewOrderId);
+        }}
+      >
+        <View style={styles.newOrderBackdrop}>
+          <ScrollView
+            contentContainerStyle={styles.newOrderOverlayContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.View
+              entering={FadeInDown.duration(250)}
+              exiting={FadeOut.duration(140)}
+              style={styles.newOrderOverlay}
+            >
+              <View style={styles.newOrderOverlayHeader}>
+                <View style={styles.newOrderOverlayIcon}>
+                  <MaterialIcons name="notifications-active" size={24} color="#FFFFFF" />
+                </View>
+                <View style={styles.currentHeaderCopy}>
+                  <Text style={styles.newOrderOverlayTitle}>طلب جديد</Text>
+                  <Text style={styles.newOrderOverlayHint}>
+                    {dashboard.newOrderQueue.length > 1
+                      ? `تبقّى ${dashboard.newOrderQueue.length - 1} طلبات جديدة بعد هذا الطلب`
+                      : "تم إسناد طلب جديد إليك"}
+                  </Text>
+                </View>
+              </View>
+              {presentedNewOrder ? (
+                <ActiveOrderCard
+                  order={presentedNewOrder}
+                  events={dashboard.activeStatusEvents[presentedNewOrder.id] ?? []}
+                  isSaving={dashboard.isOrderSaving(presentedNewOrder.id)}
+                  isNew
+                  cardColors={currentCardColors}
+                  onAdvance={() => void advanceOrder(presentedNewOrder)}
+                  onCall={call}
+                  onMarkFalse={() => setFalseOrderId(presentedNewOrder.id)}
+                  enteringDelay={0}
+                />
+              ) : (
+                <StateCard text="جارٍ تجهيز تفاصيل الطلب الجديد..." />
+              )}
+              <MotionPressable
+                haptic="light"
+                onPress={() => {
+                  if (presentedNewOrderId)
+                    dashboard.dismissNewOrder(presentedNewOrderId);
+                }}
+                style={styles.reviewLaterButton}
+              >
+                <Text style={styles.reviewLaterText}>متابعة الطلبات</Text>
+              </MotionPressable>
+            </Animated.View>
+          </ScrollView>
+        </View>
+      </Modal>
+      <Modal
+        transparent
+        visible={Boolean(falseOrderId)}
+        animationType="none"
+        onRequestClose={() => setFalseOrderId(null)}
       >
         <View style={styles.modalBackdrop}>
           <Animated.View
@@ -533,6 +374,9 @@ export function CaptainHome() {
           >
             <MaterialIcons name="warning" size={32} color="#C62828" />
             <Text style={styles.modalTitle}>تسجيل الطلب كطلب كاذب</Text>
+            {falseOrder ? (
+              <Text style={styles.modalOrderHint}>الطلب #{falseOrder.order_number}</Text>
+            ) : null}
             {dashboard.actionError ? (
               <Text style={styles.modalError}>{dashboard.actionError}</Text>
             ) : null}
@@ -542,18 +386,18 @@ export function CaptainHome() {
             </Text>
             <View style={styles.modalActions}>
               <MotionPressable
-                onPress={() => setFalseOrderOpen(false)}
+                onPress={() => setFalseOrderId(null)}
                 style={styles.cancelButton}
               >
                 <Text style={styles.cancelText}>إلغاء</Text>
               </MotionPressable>
               <MotionPressable
-                disabled={dashboard.orderSaving}
+                disabled={!falseOrder || dashboard.isOrderSaving(falseOrder.id)}
                 onPress={() => void markFalse()}
                 style={styles.dangerButton}
               >
                 <Text style={styles.dangerText}>
-                  {dashboard.orderSaving
+                  {falseOrder && dashboard.isOrderSaving(falseOrder.id)
                     ? "جارٍ الحفظ..."
                     : "تأكيد الطلب الكاذب"}
                 </Text>
@@ -569,6 +413,137 @@ export function CaptainHome() {
         onConfirm={() => void signOut()}
       />
     </ScreenContainer>
+  );
+}
+
+function ActiveOrderCard({
+  order,
+  events,
+  isSaving,
+  isNew,
+  cardColors,
+  onAdvance,
+  onCall,
+  onMarkFalse,
+  enteringDelay,
+}: {
+  order: CaptainActiveOrder;
+  events: readonly CaptainOrderStatusEvent[];
+  isSaving: boolean;
+  isNew: boolean;
+  cardColors: readonly [string, string, string];
+  onAdvance: () => void;
+  onCall: (phone: string) => void;
+  onMarkFalse: () => void;
+  enteringDelay: number;
+}) {
+  const action = nextAction(order.status);
+  const pickup = order.stops.find((stop) => stop.stop_type === "pickup");
+  const delivery = [...order.stops]
+    .reverse()
+    .find((stop) => stop.stop_type === "delivery");
+
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(enteringDelay).duration(210)}
+      style={[styles.currentCardShell, isNew && styles.currentCardNew]}
+    >
+      <LinearGradient
+        colors={cardColors}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.currentCard}
+      >
+        <View style={styles.currentHeader}>
+          <View style={styles.currentHeaderIcon}>
+            <MaterialIcons name="two-wheeler" size={25} color="#0C679D" />
+          </View>
+          <View style={styles.currentHeaderCopy}>
+            <View style={styles.orderTitleRow}>
+              <Text style={styles.currentTitle}>
+                {isNew ? "طلب جديد" : "طلب نشط"}
+              </Text>
+              {isNew ? (
+                <View style={styles.newOrderBadge}>
+                  <Text style={styles.newOrderBadgeText}>جديد</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.currentSubtitle}>الطلب #{order.order_number}</Text>
+          </View>
+          <StatusBadge status={order.status} prominent />
+        </View>
+        <View style={styles.cardBody}>
+          <View style={styles.stopsGrid}>
+            <StopCard
+              title="المصدر"
+              icon="inventory-2"
+              stop={pickup}
+              fallback={order.pickup_address}
+              onCall={onCall}
+            />
+            <StopCard
+              title="الوجهة"
+              icon="location-on"
+              stop={delivery}
+              fallback={order.delivery_address}
+              onCall={onCall}
+            />
+          </View>
+          <Animated.View
+            key={order.status}
+            entering={FadeInDown.duration(170)}
+            style={{ gap: 10 }}
+          >
+            <OrderTimeline status={order.status} events={events} />
+            {action ? (
+              <MotionPressable
+                disabled={isSaving}
+                haptic="medium"
+                pressedScale={0.96}
+                onPress={onAdvance}
+                style={styles.primaryButton}
+              >
+                <Text style={styles.primaryText}>
+                  {isSaving ? "جارٍ التحديث..." : action.label}
+                </Text>
+              </MotionPressable>
+            ) : null}
+            {order.status === "in_delivery" ? (
+              <MotionPressable
+                accessibilityLabel={`تسجيل الطلب #${order.order_number} كطلب كاذب`}
+                disabled={isSaving}
+                haptic="medium"
+                pressedScale={0.97}
+                onPress={onMarkFalse}
+                style={styles.falseOrderButton}
+              >
+                <View style={styles.falseOrderIcon}>
+                  <MaterialIcons name="warning-amber" size={22} color="#FFFFFF" />
+                </View>
+                <View style={styles.falseOrderCopy}>
+                  <Text style={styles.falseOrderTitle}>تسجيل طلب كاذب</Text>
+                  <Text style={styles.falseOrderHint}>أوقف الطلب عند تعذّر تسليمه</Text>
+                </View>
+                <MaterialIcons name="chevron-left" size={26} color="#FEE2E2" />
+              </MotionPressable>
+            ) : null}
+          </Animated.View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+function EmptyActiveOrders() {
+  return (
+    <View style={styles.emptyOrdersCard}>
+      <MaterialIcons name="delivery-dining" size={31} color="#8FB2C7" />
+      <Text style={styles.emptyOrdersTitle}>لا توجد طلبات نشطة الآن</Text>
+      <Text style={styles.emptyOrdersHint}>
+        ستظهر كل الطلبات المسندة إليك هنا بشكل مستقل.
+      </Text>
+    </View>
   );
 }
 
@@ -896,31 +871,39 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 16,
   },
+  activeOrdersSection: { gap: 10 },
   currentCardShell: { position: "relative" },
-  emptyCurrentOuterGlow: {
-    backgroundColor: "rgba(22,206,255,0.24)",
-    borderRadius: 25,
-    bottom: 4,
-    left: 7,
-    position: "absolute",
-    right: 7,
-    shadowColor: "#16CEFF",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.72,
-    shadowRadius: 20,
-    top: 9,
+  currentCardNew: {
+    shadowColor: "#FACC15",
+    shadowOpacity: 0.48,
+    shadowRadius: 18,
   },
-  emptyCurrentBacklight: {
-    bottom: 0,
-    left: 0,
-    opacity: 0.96,
-    position: "absolute",
-    right: 0,
-    top: 0,
+  emptyOrdersCard: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.93)",
+    borderColor: "#BCEBFA",
+    borderRadius: 20,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    gap: 4,
+    justifyContent: "center",
+    minHeight: 156,
+    padding: 18,
   },
-  currentLedTail: { borderRadius: 3, height: 3, position: "absolute" },
-  currentLedGlow: { backgroundColor: "rgba(70,224,255,0.45)", borderRadius: 10, height: 20, position: "absolute", shadowColor: "#A5F4FF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 10, width: 20 },
-  currentLedDot: { backgroundColor: "#F2FEFF", borderColor: "#8AF1FF", borderRadius: 4, borderWidth: 1, height: 8, position: "absolute", shadowColor: "#E7FDFF", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 7, width: 8 },
+  emptyOrdersTitle: {
+    color: "#18547E",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  emptyOrdersHint: {
+    color: "#6C899E",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 11,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
   currentHeader: {
     alignItems: "center",
     flexDirection: "row-reverse",
@@ -944,6 +927,20 @@ const styles = StyleSheet.create({
     width: 48,
   },
   currentHeaderCopy: { flex: 1 },
+  newOrderBadge: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FDE68A",
+    borderRadius: 9,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  newOrderBadgeText: {
+    color: "#92400E",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
   currentTitle: {
     color: "#FFFFFF",
     fontFamily: "Cairo_700Bold",
@@ -1307,6 +1304,72 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
   },
+  newOrderBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(3,33,59,0.68)",
+  },
+  newOrderOverlayContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: 16,
+  },
+  newOrderOverlay: {
+    backgroundColor: "#F0FAFF",
+    borderColor: "rgba(126,238,255,0.88)",
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 12,
+    overflow: "hidden",
+    padding: 12,
+    shadowColor: "#001F3E",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+  },
+  newOrderOverlayHeader: {
+    alignItems: "center",
+    flexDirection: "row-reverse",
+    gap: 10,
+    paddingHorizontal: 4,
+  },
+  newOrderOverlayIcon: {
+    alignItems: "center",
+    backgroundColor: "#0878D1",
+    borderRadius: 15,
+    height: 45,
+    justifyContent: "center",
+    width: 45,
+  },
+  newOrderOverlayTitle: {
+    color: "#155B8D",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 18,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  newOrderOverlayHint: {
+    color: "#5E7E93",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 10,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  reviewLaterButton: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#B9DDEB",
+    borderRadius: 13,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  reviewLaterText: {
+    color: "#086FC4",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
+    writingDirection: "rtl",
+  },
   modalBackdrop: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",
@@ -1322,6 +1385,13 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 18,
     width: "100%",
+  },
+  modalOrderHint: {
+    color: "#8A4B00",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 12,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   modalTitle: {
     color: "#991B1B",
