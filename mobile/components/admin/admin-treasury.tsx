@@ -19,6 +19,7 @@ import { MotionPressable } from "@/components/ui/motion-pressable";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   useNativeTreasury,
+  type NativeTreasuryFilter,
   type NativeTreasuryTransactionType,
 } from "@/features/admin/use-admin-finance";
 import { useAppToast } from "@/contexts/app-toast-context";
@@ -58,7 +59,8 @@ export function AdminTreasury() {
   const router = useRouter();
   const { profile } = useDeliveryAuth();
   const { showToast } = useAppToast();
-  const treasury = useNativeTreasury();
+  const [transactionFilter, setTransactionFilter] = useState<NativeTreasuryFilter>("all");
+  const treasury = useNativeTreasury(transactionFilter);
   const [editorType, setEditorType] = useState<"deposit" | "withdrawal" | null>(null);
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -188,8 +190,22 @@ export function AdminTreasury() {
             <Text style={styles.sectionHint}>{overview?.transaction_count ?? 0} حركة مسجلة بشكل دائم</Text>
           </View>
           <MaterialIcons name="receipt-long" size={22} color={BLUE} />
+                </View>
+        <View style={styles.filterRow}>
+          {([
+            ["all", "الكل"],
+            ["wages", "حركة الأجور"],
+            ["cash", "حركة الصندوق"],
+          ] as const).map(([value, label]) => (
+            <MotionPressable
+              key={value}
+              onPress={() => setTransactionFilter(value)}
+              style={[styles.filterButton, transactionFilter === value && styles.activeFilterButton]}
+            >
+              <Text style={[styles.filterText, transactionFilter === value && styles.activeFilterText]}>{label}</Text>
+            </MotionPressable>
+          ))}
         </View>
-
         {treasury.transactions.length === 0 && !treasury.isPending ? (
           <Message text="لا توجد حركات مسجلة في الصندوق حتى الآن." />
         ) : null}
@@ -324,6 +340,11 @@ const styles = StyleSheet.create({
   sectionHeading: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 10, marginTop: 3 },
   sectionTitle: { color: "#163B53", fontSize: 17, fontWeight: "800", textAlign: "right" },
   sectionHint: { color: "#7892A1", fontSize: 12, marginTop: 3, textAlign: "right" },
+  filterRow: { flexDirection: "row-reverse", gap: 8, marginBottom: 12 },
+  filterButton: { alignItems: "center", backgroundColor: "#F3F7FA", borderColor: "#DDE8EE", borderRadius: 12, borderWidth: 1, flex: 1, minHeight: 44, justifyContent: "center", paddingHorizontal: 8 },
+  activeFilterButton: { backgroundColor: "#E4F1FB", borderColor: BLUE },
+  filterText: { color: "#617887", fontSize: 13, fontWeight: "700", textAlign: "center" },
+  activeFilterText: { color: BLUE },
   transactionCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#E2ECF2", borderRadius: 15, borderWidth: 1, flexDirection: "row-reverse", gap: 10, marginBottom: 9, padding: 12 },
   transactionIcon: { alignItems: "center", borderRadius: 11, height: 42, justifyContent: "center", width: 42 },
   transactionCopy: { flex: 1 },
