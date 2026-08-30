@@ -210,6 +210,9 @@ begin
 end;
 $$;
 
+drop function if exists public.get_company_report_range_summary(date, date);
+drop function if exists private.get_company_report_range_summary(text, integer, date);
+
 create or replace function public.get_company_report_range_summary(
   p_start_date date default null,
   p_end_date date default null
