@@ -7,11 +7,6 @@ import { getNativeSupabaseClient } from "@/lib/supabase/native-supabase";
 // module out of startup evaluation and load it only in a supported native build.
 type NotificationsModule = typeof import("expo-notifications");
 
-type CaptainOrderAssignmentNotification = Readonly<{
-  orderId: string | null;
-  orderNumber: string | null;
-}>;
-
 type CaptainOrderCancellationNotification = Readonly<{
   orderId: string | null;
   orderNumber: string | null;
@@ -47,21 +42,6 @@ function setupNotifications(): NotificationsModule | null {
   return Notifications;
 }
 
-function readAssignmentNotification(
-  notification: import("expo-notifications").Notification,
-): CaptainOrderAssignmentNotification | null {
-  const data = notification.request.content.data;
-  if (data?.type !== "assigned_order") return null;
-
-  return {
-    orderId: typeof data.orderId === "string" ? data.orderId : null,
-    orderNumber:
-      typeof data.orderNumber === "string" || typeof data.orderNumber === "number"
-        ? String(data.orderNumber)
-        : null,
-  };
-}
-
 function readCancellationNotification(
   notification: import("expo-notifications").Notification,
 ): CaptainOrderCancellationNotification | null {
@@ -84,8 +64,8 @@ export async function registerCaptainPushNotifications(
   if (!Notifications) return null;
   try {
 if (Platform.OS === "android") {
-  await Notifications.setNotificationChannelAsync("new_order_alerts", {
-    name: "New Orders",
+  await Notifications.setNotificationChannelAsync("orders-v2", {
+    name: "Orders",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     sound: "new_order.mp3",
@@ -183,22 +163,6 @@ export async function notifyCaptainOfOrderCancellation(
     throw error;
   }
 }
-export function subscribeToCaptainOrderAssignment(
-  onAssignment: (event: CaptainOrderAssignmentNotification) => void,
-): () => void {
-  const Notifications = setupNotifications();
-  if (!Notifications) return () => undefined;
-
-  const subscription = Notifications.addNotificationReceivedListener(
-    (notification) => {
-      const event = readAssignmentNotification(notification);
-      if (event) onAssignment(event);
-    },
-  );
-
-  return () => subscription.remove();
-}
-
 export function subscribeToCaptainOrderCancellation(
   onCancellation: (event: CaptainOrderCancellationNotification) => void,
 ): () => void {

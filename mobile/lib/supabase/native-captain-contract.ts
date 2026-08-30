@@ -28,12 +28,12 @@ export type CaptainOrdersPage = {
 };
 
 type CaptainOrderStopsPageRow = CaptainOrder & {
-  order_stops:
-    | Pick<
-        CaptainOrderStop,
-        "address" | "contact_name" | "contact_phone" | "sequence" | "stop_type"
-      >[]
-    | null;
+  order_stops: Array<
+    Pick<
+      CaptainOrderStop,
+      "address" | "contact_name" | "contact_phone" | "sequence" | "stop_type"
+    >
+  > | null;
 };
 
 function withPickupContact(order: CaptainOrderStopsPageRow): CaptainOrder {
@@ -79,10 +79,9 @@ export type CaptainActiveOrder = CaptainOrder & {
 export type CaptainDashboard = {
   metrics: CaptainHomeMetrics;
   order_count: number;
-  active_orders: CaptainActiveOrder[];
-  // Legacy fields are retained during the mobile rollout for compatibility.
   active_order: CaptainOrder | null;
   active_stops: CaptainOrderStop[];
+  active_orders?: CaptainActiveOrder[];
   recent_orders: CaptainOrder[];
 };
 
@@ -149,6 +148,12 @@ function unwrap<T>(result: Result<T>, fallback: string): T {
   if (result.error) throw new Error(result.error.message);
   if (result.data === null) throw new Error(fallback);
   return result.data;
+}
+
+function first<T>(result: Result<T[]>, fallback: string): T {
+  const rows = unwrap(result, fallback);
+  if (!rows[0]) throw new Error(fallback);
+  return rows[0];
 }
 
 export const nativeCaptainContract = {

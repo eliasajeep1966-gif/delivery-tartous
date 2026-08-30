@@ -14,9 +14,9 @@ describe("False-order compensation guard", () => {
   it("shows the false-order action only while the captain is in delivery", async () => {
     const source = await readFile(captainHomePath, "utf8");
 
-    expect(source).toContain('order.status === "in_delivery" ? (');
+    expect(source).toContain('{current.status === "in_delivery" ? (');
     expect(source).not.toContain(
-      'order.status === "received" ||\n                order.status === "in_delivery"',
+      'current.status === "received" ||\n                    current.status === "in_delivery"',
     );
   });
 

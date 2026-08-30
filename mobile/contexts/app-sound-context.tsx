@@ -7,7 +7,6 @@ const CAPTAIN_ORDER_SUCCESS_SOUND = require("@/assets/sounds/captain_order_succe
 const ADMIN_ORDER_SUCCESS_SOUND = require("@/assets/sounds/admin_order_success.mp3");
 
 type AppSoundName =
-  | "newOrder"
   | "orderCancelled"
   | "captainOrderSuccess"
   | "adminOrderSuccess";
@@ -19,7 +18,6 @@ type AppSoundContextValue = Readonly<{
 const AppSoundContext = createContext<AppSoundContextValue | null>(null);
 
 export function AppSoundProvider({ children }: PropsWithChildren) {
-  const newOrder = useAudioPlayer(NEW_ORDER_SOUND);
   const orderCancelled = useAudioPlayer(ORDER_CANCELLED_SOUND);
   const captainOrderSuccess = useAudioPlayer(CAPTAIN_ORDER_SUCCESS_SOUND);
   const adminOrderSuccess = useAudioPlayer(ADMIN_ORDER_SUCCESS_SOUND);
@@ -27,17 +25,15 @@ export function AppSoundProvider({ children }: PropsWithChildren) {
   const playSound = useCallback(
     (name: AppSoundName) => {
       const player =
-        name === "newOrder"
-          ? newOrder
-          : name === "orderCancelled"
-            ? orderCancelled
-            : name === "captainOrderSuccess"
-              ? captainOrderSuccess
-              : adminOrderSuccess;
+        name === "orderCancelled"
+          ? orderCancelled
+          : name === "captainOrderSuccess"
+            ? captainOrderSuccess
+            : adminOrderSuccess;
       player.seekTo(0);
       player.play();
     },
-    [adminOrderSuccess, captainOrderSuccess, newOrder, orderCancelled],
+    [adminOrderSuccess, captainOrderSuccess, orderCancelled],
   );
 
   return (

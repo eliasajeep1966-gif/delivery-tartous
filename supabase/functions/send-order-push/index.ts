@@ -66,11 +66,7 @@ Deno.serve(async (req: Request) => {
       sound: "new_order.mp3",
       title: "طلب جديد",
       body: `تم إسناد الطلب #${order.order_number} إليك`,
-      data: {
-        orderId: order.id,
-        orderNumber: order.order_number,
-        type: "assigned_order",
-      },
+      data: { orderId: order.id, type: "assigned_order" },
       priority: "high",
       channelId: "new_order_alerts",
     }));

@@ -1,5 +1,5 @@
--- Keep a captain eligible for new assignments while their availability is explicitly set to available.
--- An active delivery is no longer treated as an implicit unavailable state.
+-- A captain remains assignable while explicitly available, even with active orders.
+-- The existing two-argument and public wrappers call this overload.
 create or replace function private.assign_order_captain(
   p_order_id uuid,
   p_captain_id uuid,
@@ -88,9 +88,7 @@ begin
 end;
 $$;
 
--- Return every active order to the captain home so the client can render and
--- operate each delivery independently. The legacy active_order fields remain
--- for compatibility with any already-deployed client during the rollout.
+-- Keep the original dashboard fields and add a parallel-safe active_orders payload.
 create or replace function private.get_my_captain_dashboard()
 returns jsonb
 language plpgsql
@@ -114,21 +112,8 @@ begin
     select o.*
     from public.orders o
     where o.assigned_captain_id = v_captain_id
-      and o.status in (
-        'assigned'::public.order_status,
-        'received'::public.order_status,
-        'in_delivery'::public.order_status
-      )
+      and o.status in ('assigned'::public.order_status, 'received'::public.order_status, 'in_delivery'::public.order_status)
     order by o.updated_at desc, o.created_at desc, o.id desc
-  ), primary_active_order as (
-    select *
-    from active_orders
-    limit 1
-  ), primary_active_stops as (
-    select os.*
-    from public.order_stops os
-    join primary_active_order ao on ao.id = os.order_id
-    order by os.stop_type asc, os.sequence asc
   ), recent_orders as (
     select o.*
     from public.orders o
@@ -150,52 +135,46 @@ begin
   )
   select jsonb_build_object(
     'metrics', jsonb_build_object(
-      'availability', coalesce(
-        (
-          select cs.availability::text
-          from public.captain_status cs
-          where cs.captain_id = v_captain_id
-        ),
-        'offline'
-      ),
+      'availability', coalesce((
+        select cs.availability::text
+        from public.captain_status cs
+        where cs.captain_id = v_captain_id
+      ), 'offline'),
       'completed_count', today_completed.completed_count,
       'completed_gross', today_completed.completed_gross
     ),
     'order_count', all_orders.order_count,
-    'active_orders', coalesce(
-      (
-        select jsonb_agg(
-          to_jsonb(ao) || jsonb_build_object(
-            'stops', coalesce(
-              (
-                select jsonb_agg(to_jsonb(os) order by os.stop_type asc, os.sequence asc)
-                from public.order_stops os
-                where os.order_id = ao.id
-              ),
-              '[]'::jsonb
-            )
-          )
-          order by ao.updated_at desc, ao.created_at desc, ao.id desc
+    'active_order', (
+      select to_jsonb(ao)
+      from active_orders ao
+      order by ao.updated_at desc, ao.created_at desc, ao.id desc
+      limit 1
+    ),
+    'active_stops', coalesce((
+      select jsonb_agg(to_jsonb(os) order by os.stop_type asc, os.sequence asc)
+      from public.order_stops os
+      where os.order_id = (
+        select ao.id from active_orders ao
+        order by ao.updated_at desc, ao.created_at desc, ao.id desc limit 1
+      )
+    ), '[]'::jsonb),
+    'active_orders', coalesce((
+      select jsonb_agg(
+        to_jsonb(ao) || jsonb_build_object(
+          'stops', coalesce((
+            select jsonb_agg(to_jsonb(os) order by os.stop_type asc, os.sequence asc)
+            from public.order_stops os
+            where os.order_id = ao.id
+          ), '[]'::jsonb)
         )
-        from active_orders ao
-      ),
-      '[]'::jsonb
-    ),
-    'active_order', (select to_jsonb(ao) from primary_active_order ao),
-    'active_stops', coalesce(
-      (
-        select jsonb_agg(to_jsonb(stops) order by stops.stop_type asc, stops.sequence asc)
-        from primary_active_stops stops
-      ),
-      '[]'::jsonb
-    ),
-    'recent_orders', coalesce(
-      (
-        select jsonb_agg(to_jsonb(recent) order by recent.created_at desc, recent.id desc)
-        from recent_orders recent
-      ),
-      '[]'::jsonb
-    )
+        order by ao.updated_at desc, ao.created_at desc, ao.id desc
+      )
+      from active_orders ao
+    ), '[]'::jsonb),
+    'recent_orders', coalesce((
+      select jsonb_agg(to_jsonb(ro) order by ro.created_at desc, ro.id desc)
+      from recent_orders ro
+    ), '[]'::jsonb)
   )
   into v_result
   from all_orders, today_completed;
@@ -212,8 +191,3 @@ set search_path = ''
 as $$
   select private.get_my_captain_dashboard()
 $$;
-
-revoke all on function private.get_my_captain_dashboard() from public, anon;
-grant execute on function private.get_my_captain_dashboard() to authenticated;
-revoke all on function public.get_my_captain_dashboard() from public, anon;
-grant execute on function public.get_my_captain_dashboard() to authenticated;
