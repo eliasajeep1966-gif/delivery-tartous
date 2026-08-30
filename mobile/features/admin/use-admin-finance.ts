@@ -1007,6 +1007,7 @@ export function useNativeOfficeExpenses(input: {
       queryClient.invalidateQueries({ queryKey: ["admin-wage-periods"] }),
       queryClient.invalidateQueries({ queryKey: ["admin-company-profit-history"] }),
       queryClient.invalidateQueries({ queryKey: ["admin-company-profit-full-history"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-treasury"] }),
     ]);
   };
 
