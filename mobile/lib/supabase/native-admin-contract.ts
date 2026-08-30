@@ -128,9 +128,10 @@ export const nativeAdminContract = {
     },
     subscribe(onChange: () => void): () => void {
       const client = getNativeSupabaseClient();
+      const uniqueId = Math.random().toString(36).substring(7);
       let active = true;
       const channel = client
-        .channel(`backoffice-finance:${Date.now()}`)
+        .channel(`backoffice-finance:${Date.now()}-${uniqueId}`)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "financial_ledger" },
