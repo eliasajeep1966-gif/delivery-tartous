@@ -2,6 +2,16 @@
 -- Company profit entries are created automatically when a completed order is
 -- added to financial_ledger. Manual deposits and withdrawals use RPCs only.
 
+insert into public.permissions (code, description)
+values ('manage_treasury', 'Record company treasury deposits and withdrawals')
+on conflict (code) do nothing;
+
+insert into public.role_permissions (role, permission_code, is_allowed)
+values ('admin'::public.app_role, 'manage_treasury', true)
+on conflict (role, permission_code) do update
+set is_allowed = excluded.is_allowed,
+    updated_at = now();
+
 create type public.treasury_transaction_type as enum (
   'company_profit_in',
   'capital_in',
@@ -291,8 +301,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if private.current_user_role() is distinct from 'admin'::public.app_role
-     and not private.is_owner((select auth.uid())) then
+  if not private.has_permission('manage_treasury') then
     raise exception 'Only an admin can change the treasury' using errcode = '42501';
   end if;
 end;

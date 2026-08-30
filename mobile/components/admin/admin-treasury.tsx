@@ -149,9 +149,16 @@ export function AdminTreasury() {
         {errorText ? <Message text={errorText} tone="error" /> : null}
 
         <View style={styles.metricsRow}>
-          <Metric label="أرباح الأجور" value={money(overview?.company_profit_total ?? 0)} color={GREEN} />
-          <Metric label="الإيداعات" value={money(overview?.capital_in_total ?? 0)} color={BLUE} />
-          <Metric label="المسحوبات" value={money(overview?.withdrawal_total ?? 0)} color={RED} />
+          <Metric
+            label="الوارد النقدي"
+            value={money((overview?.company_profit_total ?? 0) + (overview?.capital_in_total ?? 0))}
+            color={GREEN}
+          />
+          <Metric
+            label="الصادر النقدي"
+            value={money(overview?.withdrawal_total ?? 0)}
+            color={RED}
+          />
         </View>
 
         {isAdmin ? (
@@ -310,10 +317,10 @@ const styles = StyleSheet.create({
   metricValue: { fontSize: 13, fontWeight: "800", textAlign: "center" },
   metricLabel: { color: "#7892A1", fontSize: 11, marginTop: 4, textAlign: "center" },
   actionsRow: { flexDirection: "row-reverse", gap: 10, marginBottom: 18 },
-  actionButton: { alignItems: "center", borderRadius: 14, borderWidth: 1, flex: 1, flexDirection: "row-reverse", gap: 7, justifyContent: "center", paddingVertical: 13 },
+  actionButton: { alignItems: "center", borderRadius: 14, borderWidth: 1, flex: 1, flexDirection: "row-reverse", gap: 9, justifyContent: "center", minHeight: 56, minWidth: 0, paddingHorizontal: 10, paddingVertical: 14 },
   depositButton: { backgroundColor: "#EAF8F2", borderColor: "#BFE7D3" },
   withdrawButton: { backgroundColor: "#FFF1E8", borderColor: "#F1D0BA" },
-  actionText: { fontSize: 14, fontWeight: "800" },
+  actionText: { fontSize: 15, fontWeight: "800" },
   sectionHeading: { alignItems: "center", flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 10, marginTop: 3 },
   sectionTitle: { color: "#163B53", fontSize: 17, fontWeight: "800", textAlign: "right" },
   sectionHint: { color: "#7892A1", fontSize: 12, marginTop: 3, textAlign: "right" },
