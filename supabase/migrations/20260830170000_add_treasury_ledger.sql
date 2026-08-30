@@ -205,6 +205,8 @@ returns table (
   company_profit_total numeric,
   capital_in_total numeric,
   withdrawal_total numeric,
+  company_profit_today numeric,
+  cash_flow_total numeric,
   transaction_count bigint
 )
 language plpgsql
@@ -222,6 +224,21 @@ begin
     coalesce(sum(case when t.transaction_type = 'company_profit_in' then t.amount else 0 end), 0)::numeric,
     coalesce(sum(case when t.transaction_type = 'capital_in' then t.amount else 0 end), 0)::numeric,
     coalesce(sum(case when t.transaction_type = 'withdrawal_out' then t.amount else 0 end), 0)::numeric,
+    (
+      select coalesce(sum(fl.company_amount), 0)::numeric
+      from public.financial_ledger fl
+      join public.orders o on o.id = fl.order_id
+      where fl.source_status = 'completed'::public.order_status
+        and fl.company_amount > 0
+        and (coalesce(o.completed_at, o.false_order_at) at time zone 'Asia/Damascus')::date
+          = (now() at time zone 'Asia/Damascus')::date
+    ) - coalesce((
+      select sum(e.amount)::numeric
+      from public.office_expenses e
+      where e.expense_date = (now() at time zone 'Asia/Damascus')::date
+    ), 0),
+    coalesce(sum(case when t.transaction_type = 'capital_in' then t.amount else 0 end), 0)::numeric
+      - coalesce(sum(case when t.transaction_type = 'withdrawal_out' then t.amount else 0 end), 0)::numeric,
     count(t.id)::bigint
   from public.treasury_state s
   left join public.treasury_transactions t on true
@@ -376,6 +393,8 @@ $$;
 revoke all on function private.append_treasury_transaction(public.treasury_transaction_type, numeric, text, uuid, uuid) from public, anon;
 revoke all on function private.record_completed_order_profit() from public, anon;
 revoke all on function private.require_treasury_admin() from public, anon;
+grant execute on function private.append_treasury_transaction(public.treasury_transaction_type, numeric, text, uuid, uuid) to authenticated;
+grant execute on function private.require_treasury_admin() to authenticated;
 revoke all on function public.get_treasury_overview() from public, anon;
 revoke all on function public.get_treasury_transaction_page(integer, timestamptz, uuid) from public, anon;
 revoke all on function public.create_treasury_deposit(numeric, text) from public, anon;

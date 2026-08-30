@@ -567,6 +567,8 @@ export type NativeTreasuryOverview = {
   company_profit_total: number;
   capital_in_total: number;
   withdrawal_total: number;
+  company_profit_today: number;
+  cash_flow_total: number;
   transaction_count: number;
 };
 
@@ -588,6 +590,8 @@ type NativeTreasuryOverviewRpcRow = {
   company_profit_total: number | string;
   capital_in_total: number | string;
   withdrawal_total: number | string;
+  company_profit_today: number | string;
+  cash_flow_total: number | string;
   transaction_count: number | string;
 };
 
@@ -611,6 +615,8 @@ export const nativeTreasuryContract = {
         company_profit_total: finiteNumber(row.company_profit_total),
         capital_in_total: finiteNumber(row.capital_in_total),
         withdrawal_total: finiteNumber(row.withdrawal_total),
+        company_profit_today: finiteNumber(row.company_profit_today),
+        cash_flow_total: finiteNumber(row.cash_flow_total),
         transaction_count: finiteNumber(row.transaction_count),
       };
     },
