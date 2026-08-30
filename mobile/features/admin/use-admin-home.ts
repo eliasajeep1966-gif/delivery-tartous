@@ -140,14 +140,6 @@ async function loadAdminHome(): Promise<AdminHomeSnapshot> {
     : { data: [], error: null };
   if (statusesError) throw new Error(statusesError.message);
 
-  const { data: activeOrders, error: activeOrdersError } = captainIds.length
-    ? await client
-        .from("orders")
-        .select("assigned_captain_id")
-        .in("assigned_captain_id", captainIds)
-        .in("status", ["assigned", "received", "in_delivery"])
-    : { data: [], error: null };
-  if (activeOrdersError) throw new Error(activeOrdersError.message);
   const availability = new Map(
     (captainStatuses ?? []).flatMap((status) => (
       typeof status.captain_id === "string" && typeof status.availability === "string" ? [[status.captain_id, status.availability] as const] : []
