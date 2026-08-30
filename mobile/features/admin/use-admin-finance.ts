@@ -562,6 +562,8 @@ export type NativeTreasuryTransactionType =
   | "capital_in"
   | "withdrawal_out";
 
+export type NativeTreasuryFilter = "all" | "wages" | "cash";
+
 export type NativeTreasuryOverview = {
   current_balance: number;
   company_profit_total: number;
@@ -624,12 +626,14 @@ export const nativeTreasuryContract = {
       limit?: number;
       beforeCreatedAt?: string | null;
       beforeId?: string | null;
+      filter?: NativeTreasuryFilter;
     }): Promise<NativeTreasuryTransaction[]> {
       const rows = unwrap(
         (await getNativeSupabaseClient().rpc("get_treasury_transaction_page", {
           p_limit: Math.min(Math.max(Math.floor(input.limit ?? 20), 1), 50),
           p_before_created_at: input.beforeCreatedAt ?? null,
           p_before_id: input.beforeId ?? null,
+          p_filter: input.filter ?? "all",
         })) as RpcResult<NativeTreasuryTransactionRpcRow[]>,
         "تعذر تحميل حركات الصندوق.",
       );
@@ -819,12 +823,18 @@ export const nativeCompanyPdfReportContract = {
   },
 } as const;
 
-export function useNativeTreasury() {
+export function useNativeTreasury(filter: NativeTreasuryFilter = "all") {
   const queryClient = useQueryClient();
   const [cursorHistory, setCursorHistory] = useState<
     Array<{ createdAt: string; id: string } | null>
   >([null]);
   const [pageIndex, setPageIndex] = useState(0);
+  const [previousFilter, setPreviousFilter] = useState<NativeTreasuryFilter>(filter);
+  if (previousFilter !== filter) {
+    setPreviousFilter(filter);
+    setCursorHistory([null]);
+    setPageIndex(0);
+  }
   const cursor = cursorHistory[pageIndex] ?? null;
 
   const overviewQuery = useQuery({
@@ -834,12 +844,13 @@ export function useNativeTreasury() {
     retry: 1,
   });
   const transactionsQuery = useQuery({
-    queryKey: ["admin-treasury", "transactions", cursor?.createdAt ?? null, cursor?.id ?? null],
+    queryKey: ["admin-treasury", "transactions", filter, cursor?.createdAt ?? null, cursor?.id ?? null],
     queryFn: () =>
       nativeTreasuryContract.reads.transactionPage({
         limit: 20,
         beforeCreatedAt: cursor?.createdAt ?? null,
         beforeId: cursor?.id ?? null,
+        filter,
       }),
     staleTime: 20_000,
     retry: 1,
