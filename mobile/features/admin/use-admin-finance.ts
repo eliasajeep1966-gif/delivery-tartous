@@ -557,6 +557,110 @@ function optionalText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
+export type NativeTreasuryTransactionType =
+  | "company_profit_in"
+  | "capital_in"
+  | "withdrawal_out";
+
+export type NativeTreasuryOverview = {
+  current_balance: number;
+  company_profit_total: number;
+  capital_in_total: number;
+  withdrawal_total: number;
+  transaction_count: number;
+};
+
+export type NativeTreasuryTransaction = {
+  id: string;
+  admin_id: string | null;
+  admin_name: string | null;
+  transaction_type: NativeTreasuryTransactionType;
+  amount: number;
+  running_balance: number;
+  notes: string | null;
+  source_financial_ledger_id: string | null;
+  created_at: string;
+  has_more: boolean;
+};
+
+type NativeTreasuryOverviewRpcRow = {
+  current_balance: number | string;
+  company_profit_total: number | string;
+  capital_in_total: number | string;
+  withdrawal_total: number | string;
+  transaction_count: number | string;
+};
+
+type NativeTreasuryTransactionRpcRow = Omit<
+  NativeTreasuryTransaction,
+  "amount" | "running_balance"
+> & {
+  amount: number | string;
+  running_balance: number | string;
+};
+
+export const nativeTreasuryContract = {
+  reads: {
+    async overview(): Promise<NativeTreasuryOverview> {
+      const row = first(
+        (await getNativeSupabaseClient().rpc("get_treasury_overview")) as RpcResult<NativeTreasuryOverviewRpcRow[]>,
+        "تعذر تحميل رصيد الصندوق.",
+      );
+      return {
+        current_balance: finiteNumber(row.current_balance),
+        company_profit_total: finiteNumber(row.company_profit_total),
+        capital_in_total: finiteNumber(row.capital_in_total),
+        withdrawal_total: finiteNumber(row.withdrawal_total),
+        transaction_count: finiteNumber(row.transaction_count),
+      };
+    },
+    async transactionPage(input: {
+      limit?: number;
+      beforeCreatedAt?: string | null;
+      beforeId?: string | null;
+    }): Promise<NativeTreasuryTransaction[]> {
+      const rows = unwrap(
+        (await getNativeSupabaseClient().rpc("get_treasury_transaction_page", {
+          p_limit: Math.min(Math.max(Math.floor(input.limit ?? 20), 1), 50),
+          p_before_created_at: input.beforeCreatedAt ?? null,
+          p_before_id: input.beforeId ?? null,
+        })) as RpcResult<NativeTreasuryTransactionRpcRow[]>,
+        "تعذر تحميل حركات الصندوق.",
+      );
+      return rows.map((row) => ({
+        ...row,
+        amount: finiteNumber(row.amount),
+        running_balance: finiteNumber(row.running_balance),
+        admin_id: optionalText(row.admin_id),
+        admin_name: optionalText(row.admin_name),
+        notes: optionalText(row.notes),
+        source_financial_ledger_id: optionalText(row.source_financial_ledger_id),
+        has_more: Boolean(row.has_more),
+      }));
+    },
+  },
+  actions: {
+    async deposit(amount: number, notes?: string): Promise<NativeTreasuryTransaction> {
+      return first(
+        (await getNativeSupabaseClient().rpc("create_treasury_deposit", {
+          p_amount: normalizeAmount(amount),
+          p_notes: notes?.trim() || null,
+        })) as RpcResult<NativeTreasuryTransaction[]>,
+        "تعذر تسجيل الإيداع.",
+      );
+    },
+    async withdraw(amount: number, notes?: string): Promise<NativeTreasuryTransaction> {
+      return first(
+        (await getNativeSupabaseClient().rpc("create_treasury_withdrawal", {
+          p_amount: normalizeAmount(amount),
+          p_notes: notes?.trim() || null,
+        })) as RpcResult<NativeTreasuryTransaction[]>,
+        "تعذر تسجيل السحب.",
+      );
+    },
+  },
+} as const;
+
 export const nativeOfficeExpensesContract = {
   reads: {
     async periods(period: NativeFinancePeriod): Promise<NativeCompanyExpensePeriodRow[]> {
@@ -708,6 +812,103 @@ export const nativeCompanyPdfReportContract = {
     },
   },
 } as const;
+
+export function useNativeTreasury() {
+  const queryClient = useQueryClient();
+  const [cursorHistory, setCursorHistory] = useState<
+    Array<{ createdAt: string; id: string } | null>
+  >([null]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const cursor = cursorHistory[pageIndex] ?? null;
+
+  const overviewQuery = useQuery({
+    queryKey: ["admin-treasury", "overview"],
+    queryFn: () => nativeTreasuryContract.reads.overview(),
+    staleTime: 20_000,
+    retry: 1,
+  });
+  const transactionsQuery = useQuery({
+    queryKey: ["admin-treasury", "transactions", cursor?.createdAt ?? null, cursor?.id ?? null],
+    queryFn: () =>
+      nativeTreasuryContract.reads.transactionPage({
+        limit: 20,
+        beforeCreatedAt: cursor?.createdAt ?? null,
+        beforeId: cursor?.id ?? null,
+      }),
+    staleTime: 20_000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    const unsubscribe = nativeAdminContract.realtime.subscribe(() => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-treasury"] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
+  const transactions = useMemo(
+    () => transactionsQuery.data ?? [],
+    [transactionsQuery.data],
+  );
+  const hasNextPage = Boolean(transactions.at(-1)?.has_more);
+  const hasPreviousPage = pageIndex > 0;
+
+  const nextPage = useCallback(() => {
+    const last = transactions.at(-1);
+    if (!last || !hasNextPage || transactionsQuery.isFetching) return;
+    const nextIndex = pageIndex + 1;
+    setCursorHistory((current) => [
+      ...current.slice(0, nextIndex),
+      { createdAt: last.created_at, id: last.id },
+    ]);
+    setPageIndex(nextIndex);
+  }, [hasNextPage, pageIndex, transactions, transactionsQuery.isFetching]);
+
+  const previousPage = useCallback(() => {
+    if (!hasPreviousPage || transactionsQuery.isFetching) return;
+    setPageIndex((current) => Math.max(0, current - 1));
+  }, [hasPreviousPage, transactionsQuery.isFetching]);
+
+  const invalidateTreasury = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["admin-treasury"] });
+  }, [queryClient]);
+
+  const deposit = useCallback(
+    async (amount: number, notes?: string) => {
+      const result = await nativeTreasuryContract.actions.deposit(amount, notes);
+      await invalidateTreasury();
+      return result;
+    },
+    [invalidateTreasury],
+  );
+
+  const withdraw = useCallback(
+    async (amount: number, notes?: string) => {
+      const result = await nativeTreasuryContract.actions.withdraw(amount, notes);
+      await invalidateTreasury();
+      return result;
+    },
+    [invalidateTreasury],
+  );
+
+  return {
+    overview: overviewQuery.data ?? null,
+    transactions,
+    isPending: overviewQuery.isPending || transactionsQuery.isPending,
+    isFetching: overviewQuery.isFetching || transactionsQuery.isFetching,
+    error: overviewQuery.error ?? transactionsQuery.error,
+    pageNumber: pageIndex + 1,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage,
+    previousPage,
+    deposit,
+    withdraw,
+    refetch: async () => {
+      await Promise.all([overviewQuery.refetch(), transactionsQuery.refetch()]);
+    },
+  };
+}
 
 export function useNativeOfficeExpensePeriods(
   period: NativeFinancePeriod,
