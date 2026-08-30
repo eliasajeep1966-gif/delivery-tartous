@@ -630,7 +630,7 @@ export const nativeTreasuryContract = {
     }): Promise<NativeTreasuryTransaction[]> {
       const rows = unwrap(
         (await getNativeSupabaseClient().rpc("get_treasury_transaction_page", {
-          p_limit: Math.min(Math.max(Math.floor(input.limit ?? 20), 1), 50),
+          p_limit: Math.min(Math.max(Math.floor(input.limit ?? 10), 1), 10),
           p_before_created_at: input.beforeCreatedAt ?? null,
           p_before_id: input.beforeId ?? null,
           p_filter: input.filter ?? "all",
@@ -847,7 +847,7 @@ export function useNativeTreasury(filter: NativeTreasuryFilter = "all") {
     queryKey: ["admin-treasury", "transactions", filter, cursor?.createdAt ?? null, cursor?.id ?? null],
     queryFn: () =>
       nativeTreasuryContract.reads.transactionPage({
-        limit: 20,
+        limit: 10,
         beforeCreatedAt: cursor?.createdAt ?? null,
         beforeId: cursor?.id ?? null,
         filter,
