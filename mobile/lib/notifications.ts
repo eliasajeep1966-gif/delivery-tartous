@@ -64,7 +64,7 @@ export async function registerCaptainPushNotifications(
   if (!Notifications) return null;
   try {
 if (Platform.OS === "android") {
-  await Notifications.setNotificationChannelAsync("orders-v2", {
+  await Notifications.setNotificationChannelAsync("new_order_alerts", {
     name: "Orders",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
@@ -135,11 +135,16 @@ export async function notifyCaptainOfOrder(
   orderId: string,
 ): Promise<void | null> {
   try {
-    const { error } = await getNativeSupabaseClient().functions.invoke(
+    const { data, error } = await getNativeSupabaseClient().functions.invoke(
       "send-order-push",
       { body: { orderId } },
     );
     if (error) throw new Error(error.message);
+    if (data && typeof data === "object" && "error" in data) {
+      throw new Error(
+        typeof data.error === "string" ? data.error : "Push notification failed",
+      );
+    }
   } catch (error) {
     console.warn("Push notification delivery is unavailable.", error);
     return null;
@@ -157,6 +162,13 @@ export async function notifyCaptainOfOrderCancellation(
     );
     
     if (error) throw new Error(error.message);
+    if (data && typeof data === "object" && "error" in data) {
+      throw new Error(
+        typeof data.error === "string"
+          ? data.error
+          : "Cancellation push notification failed",
+      );
+    }
     return data || { sent: 0 };
   } catch (error) {
     console.warn("Cancellation push notification delivery failed.", error);
