@@ -148,12 +148,6 @@ async function loadAdminHome(): Promise<AdminHomeSnapshot> {
         .in("status", ["assigned", "received", "in_delivery"])
     : { data: [], error: null };
   if (activeOrdersError) throw new Error(activeOrdersError.message);
-  const busyCaptainIds = new Set(
-    (activeOrders ?? []).flatMap((order) =>
-      typeof order.assigned_captain_id === "string" ? [order.assigned_captain_id] : [],
-    ),
-  );
-
   const availability = new Map(
     (captainStatuses ?? []).flatMap((status) => (
       typeof status.captain_id === "string" && typeof status.availability === "string" ? [[status.captain_id, status.availability] as const] : []
@@ -161,7 +155,7 @@ async function loadAdminHome(): Promise<AdminHomeSnapshot> {
   );
 
   const availableCaptains = profiles.flatMap((profile) => {
-    if (busyCaptainIds.has(profile.id) || availability.get(profile.id) !== "available") return [];
+    if (availability.get(profile.id) !== "available") return [];
     const name = typeof profile.full_name === "string" && profile.full_name.trim()
       ? profile.full_name.trim()
       : typeof profile.email === "string"

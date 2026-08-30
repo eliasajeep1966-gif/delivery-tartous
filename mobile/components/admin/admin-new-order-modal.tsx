@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import { type Dispatch, type SetStateAction, useRef, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { type AdminHomeCaptain } from "@/features/admin/use-admin-home";
-import { type NativeAdminOrderStopInput } from "@/lib/supabase/native-admin-contract";
+import { type NativeAdminOrderStopInput, type NativeEditableOrder } from "@/lib/supabase/native-admin-contract";
 
 type LocationEntry = {
   id: string;
@@ -30,6 +30,7 @@ export type NativeNewOrderDraft = {
   stops: NativeAdminOrderStopInput[];
   fee: number;
   captainId: string;
+  editingOrderId?: string;
 };
 
 type Props = {
@@ -37,6 +38,7 @@ type Props = {
   captains: AdminHomeCaptain[];
   isSubmitting: boolean;
   errorMessage: string | null;
+  editingOrder?: NativeEditableOrder | null;
   onClose: () => void;
   onSubmit: (draft: NativeNewOrderDraft) => Promise<boolean>;
 };
@@ -54,6 +56,7 @@ export function AdminNewOrderModal({
   captains,
   isSubmitting,
   errorMessage,
+  editingOrder = null,
   onClose,
   onSubmit,
 }: Props) {
@@ -71,6 +74,33 @@ export function AdminNewOrderModal({
   const insets = useSafeAreaInsets();
   const { fontScale, width } = useWindowDimensions();
   const compactLayout = width <= 360 || fontScale >= 1.3;
+  const isEditing = Boolean(editingOrder);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (editingOrder) {
+      const nextPickups = editingOrder.stops.filter((stop) => stop.stopType === "pickup").map((stop, index) => ({
+        id: `edit-pickup-${index}`,
+        name: stop.contactName,
+        phone: stop.contactPhone,
+        address: stop.address,
+        note: stop.note ?? "",
+      }));
+      const nextDestinations = editingOrder.stops.filter((stop) => stop.stopType === "delivery").map((stop, index) => ({
+        id: `edit-delivery-${index}`,
+        name: stop.contactName,
+        phone: stop.contactPhone,
+        address: stop.address,
+        note: stop.note ?? "",
+      }));
+      setPickups(nextPickups.length ? nextPickups : [blankLocation("edit-pickup-0")]);
+      setDestinations(nextDestinations.length ? nextDestinations : [blankLocation("edit-delivery-0")]);
+      setFee(String(editingOrder.fee));
+      setCaptainId("");
+      setStep(1);
+      setValidationError(null);
+    }
+  }, [editingOrder, visible]);
 
   const reset = () => {
     setPickups([blankLocation(`pickup-${sequence.current++}`)]);
@@ -133,7 +163,7 @@ export function AdminNewOrderModal({
       setValidationError("أدخل أجرة الطلب كاملة كرقم موجب.");
       return;
     }
-    if (!captains.some((captain) => captain.id === captainId)) {
+    if (!isEditing && !captains.some((captain) => captain.id === captainId)) {
       setValidationError("اختر كابتناً مفعّلاً ومتاحاً قبل إرسال الطلب.");
       return;
     }
@@ -144,7 +174,7 @@ export function AdminNewOrderModal({
         ...normalizeLocations(destinations, "delivery", "وجهة التسليم"),
       ];
       setValidationError(null);
-      if (await onSubmit({ stops, fee: numericFee, captainId })) reset();
+      if (await onSubmit({ stops, fee: numericFee, captainId, editingOrderId: editingOrder?.id })) reset();
     } catch (error) {
       setValidationError(
         error instanceof Error
@@ -178,8 +208,8 @@ export function AdminNewOrderModal({
             <MaterialIcons name="close" size={20} color="#0878D1" />
           </Pressable>
           <View style={styles.headerText}>
-            <Text style={styles.headerEyebrow}>طلب جديد</Text>
-            <Text style={styles.title}>إنشاء رحلة توصيل</Text>
+            <Text style={styles.headerEyebrow}>{isEditing ? "تعديل الطلب" : "طلب جديد"}</Text>
+            <Text style={styles.title}>{isEditing ? `تعديل الطلب #${editingOrder?.orderNumber ?? ""}` : "إنشاء رحلة توصيل"}</Text>
             <Text style={styles.subtitle}>
               أدخل المحطات، حدّد الأجرة، ثم عيّن الكابتن.
             </Text>
@@ -251,7 +281,7 @@ export function AdminNewOrderModal({
                   </View>
                 </View>
 
-                <View style={styles.formCard}>
+                {!isEditing ? <View style={styles.formCard}>
                   <SectionTitle
                     icon="person"
                     color="#047857"
@@ -299,7 +329,7 @@ export function AdminNewOrderModal({
                   ) : (
                     <Text style={styles.empty}>لا يوجد كابتن متاح حالياً.</Text>
                   )}
-                </View>
+                </View> : null}
               </>
             ) : null}
           </ScrollView>
@@ -322,11 +352,11 @@ export function AdminNewOrderModal({
                 </Pressable>
               ) : null}
               <Pressable
-                disabled={isSubmitting || (step === 3 && captains.length === 0)}
+                disabled={isSubmitting || (step === 3 && !isEditing && captains.length === 0)}
                 onPress={() => (step === 3 ? void submit() : nextStep())}
                 style={[
                   styles.submit,
-                  (isSubmitting || (step === 3 && captains.length === 0)) &&
+                  (isSubmitting || (step === 3 && !isEditing && captains.length === 0)) &&
                     styles.disabled,
                 ]}
               >

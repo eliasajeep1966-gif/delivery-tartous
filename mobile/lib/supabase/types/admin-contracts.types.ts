@@ -13,6 +13,13 @@ export type NativeCreatedOrder = {
   status: string;
 };
 
+export type NativeEditableOrder = {
+  id: string;
+  orderNumber: number;
+  fee: number;
+  stops: NativeAdminOrderStopInput[];
+};
+
 export type NativeAppRole = "admin" | "supervisor" | "captain";
 
 export type NativeUser = {
