@@ -21,6 +21,20 @@ describe("Net company share after captain compensation", () => {
     expect(migration).toContain("then -page_rows.captain_amount");
   });
 
+  it("excludes reference amounts from company wage totals", async () => {
+    const summary = await readFile(
+      new URL(
+        "../../supabase/migrations/20260831230000_exclude_reference_amounts_from_company_wages.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(summary).toContain("captain_compensation_amount > 0 then 0 else pl.gross_fee");
+    expect(summary).toContain("then 0 else fl.gross_fee end");
+    expect(summary).toContain("captain_compensations");
+  });
+
   it("labels the captain detail metric as the company share", async () => {
     const view = await readFile(detailViewPath, "utf8");
 
