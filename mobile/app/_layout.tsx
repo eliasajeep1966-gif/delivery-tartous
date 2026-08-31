@@ -46,7 +46,10 @@ import {
   initManusRuntime,
   subscribeSafeAreaInsets,
 } from "@/lib/_core/manus-runtime";
-import { subscribeToCaptainOrderCancellation } from "@/lib/notifications";
+import {
+  subscribeToCaptainOrderAssignment,
+  subscribeToCaptainOrderCancellation,
+} from "@/lib/notifications";
 import { ThemeProvider } from "@/lib/theme-provider";
 
 I18nManager.allowRTL(true);
@@ -55,6 +58,26 @@ const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 
 export const unstable_settings = { anchor: "(tabs)" };
+
+function CaptainAssignmentAlert() {
+  const { profile } = useDeliveryAuth();
+  const { playSound } = useAppSound();
+
+  useEffect(() => {
+    if (profile?.role !== "captain") return;
+
+    return subscribeToCaptainOrderAssignment(() => {
+      playSound("newOrder");
+      if (Platform.OS !== "web") {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+          (error) => console.warn("Assignment haptic feedback failed.", error),
+        );
+      }
+    });
+  }, [playSound, profile?.role]);
+
+  return null;
+}
 
 function CaptainCancellationAlert() {
   const { profile } = useDeliveryAuth();
@@ -216,6 +239,7 @@ export default function RootLayout() {
         <AppToastProvider>
           <AppSoundProvider>
             <DeliveryAuthProvider>
+              <CaptainAssignmentAlert />
               <CaptainCancellationAlert />
               <AuthAwareNavigator />
             </DeliveryAuthProvider>
