@@ -81,6 +81,19 @@ const orderStatusLabels: Record<CaptainOrderStatus, string> = {
   reversed: "معكوس",
 };
 
+const captainWageCardTone = {
+  medicine: {
+    background: "rgba(245, 158, 11, 0.10)",
+    border: "rgba(245, 158, 11, 0.34)",
+    title: "طلب دواء",
+  },
+  falseOrder: {
+    background: "rgba(220, 38, 38, 0.10)",
+    border: "rgba(220, 38, 38, 0.34)",
+    title: "طلب كاذب",
+  },
+} as const;
+
 const orderStatusTone: Record<CaptainOrderStatus, { background: string; border: string; color: string }> = {
   pending: { background: "#FEF3C7", border: "#FCD34D", color: "#92400E" },
   assigned: { background: "#DBEAFE", border: "#93C5FD", color: "#1D4ED8" },
@@ -465,16 +478,39 @@ export function CaptainWages() {
                 <Animated.View
                   entering={FadeInDown.delay(70 + index * 30).duration(190)}
                   key={row.financial_ledger_id}
-                  style={styles.card}
+                  style={[
+                    styles.card,
+                    row.order_kind === "medicine"
+                      ? {
+                          backgroundColor: captainWageCardTone.medicine.background,
+                          borderColor: captainWageCardTone.medicine.border,
+                        }
+                      : row.source_status === "false_order"
+                        ? {
+                            backgroundColor: captainWageCardTone.falseOrder.background,
+                            borderColor: captainWageCardTone.falseOrder.border,
+                          }
+                        : null,
+                  ]}
                 >
                   <View style={styles.between}>
                     <View>
-                      <Text style={styles.wageOrderNumber}>الطلب #{row.order_number}</Text>
+                      <Text style={styles.wageOrderNumber}>
+                        {row.order_kind === "medicine"
+                          ? `${captainWageCardTone.medicine.title} #${row.order_number}`
+                          : row.source_status === "false_order"
+                            ? `${captainWageCardTone.falseOrder.title} #${row.order_number}`
+                            : `الطلب #${row.order_number}`}
+                      </Text>
                       <Text style={styles.wageRowDate}>{date(row.completed_at)}</Text>
                     </View>
                     <View style={styles.left}>
                       <Text style={styles.wageRowAmount}>{money(row.captain_amount)}</Text>
-                      <Text style={styles.wageRowHint}>أجرك من هذا الطلب</Text>
+                      <Text style={styles.wageRowHint}>
+                        {row.order_kind === "medicine" || row.source_status === "false_order"
+                          ? "تعويض"
+                          : "أجرك من هذا الطلب"}
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.wageRouteGrid}>
