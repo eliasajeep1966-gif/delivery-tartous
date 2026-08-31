@@ -89,6 +89,8 @@ begin
 end;
 $$;
 
+drop function if exists public.get_company_report_range_summary(date, date);
+
 create function public.get_company_report_range_summary(
   p_start_date date default null,
   p_end_date date default null
