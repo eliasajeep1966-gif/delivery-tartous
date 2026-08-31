@@ -175,3 +175,9 @@ begin
   cross join expense_totals et;
 end;
 $$;
+
+alter function public.get_company_report_range_summary(date, date) owner to postgres;
+revoke all on function public.get_company_report_range_summary(date, date)
+  from public, anon, authenticated;
+grant execute on function public.get_company_report_range_summary(date, date)
+  to authenticated;
