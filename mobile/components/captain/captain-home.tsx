@@ -179,8 +179,6 @@ function ParallelCaptainOrderCard({
   const ledWidth = useSharedValue(0);
   const ledHeight = useSharedValue(0);
   const action = nextAction(order.status);
-  const pickup = stops.find((stop) => stop.stop_type === "pickup");
-  const delivery = [...stops].reverse().find((stop) => stop.stop_type === "delivery");
   const ledDotStyle = useAnimatedStyle(() => {
     if (!ledWidth.value || !ledHeight.value) return { opacity: 0 };
     const start = getRoundedRectLedPoint(0, ledWidth.value, ledHeight.value);
@@ -250,10 +248,12 @@ function ParallelCaptainOrderCard({
           <Text style={styles.feeValue}>{money(order.fee)}</Text>
         </View>
         <View style={styles.cardBody}>
-          <View style={styles.stopsGrid}>
-            <StopCard title="المصدر" icon="inventory-2" stop={pickup} fallback={order.pickup_address} onCall={(phone) => void Linking.openURL(`tel:${phone}`)} />
-            <StopCard title="الوجهة" icon="location-on" stop={delivery} fallback={order.delivery_address} onCall={(phone) => void Linking.openURL(`tel:${phone}`)} />
-          </View>
+          <CaptainStopsList
+            stops={stops}
+            pickupFallback={order.pickup_address}
+            deliveryFallback={order.delivery_address}
+            onCall={(phone) => void Linking.openURL(`tel:${phone}`)}
+          />
           <Animated.View key={order.status} entering={FadeInDown.duration(170)} style={{ gap: 10 }}>
             <OrderTimeline status={order.status} events={events} />
             {action ? (
@@ -357,12 +357,6 @@ export function CaptainHome() {
       transform: [{ rotate: `${angle}deg` }],
     };
   });
-  const pickup = dashboard.currentStops.find(
-    (stop) => stop.stop_type === "pickup",
-  );
-  const delivery = [...dashboard.currentStops]
-    .reverse()
-    .find((stop) => stop.stop_type === "delivery");
   const available = dashboard.metrics?.availability === "available";
 
   const call = (phone: string) => {
@@ -547,22 +541,12 @@ export function CaptainHome() {
               ) : null}
               {current ? (
                 <View style={styles.cardBody}>
-                  <View style={styles.stopsGrid}>
-                    <StopCard
-                      title="المصدر"
-                      icon="inventory-2"
-                      stop={pickup}
-                      fallback={current.pickup_address}
-                      onCall={call}
-                    />
-                    <StopCard
-                      title="الوجهة"
-                      icon="location-on"
-                      stop={delivery}
-                      fallback={current.delivery_address}
-                      onCall={call}
-                    />
-                  </View>
+                  <CaptainStopsList
+                    stops={dashboard.currentStops}
+                    pickupFallback={current.pickup_address}
+                    deliveryFallback={current.delivery_address}
+                    onCall={call}
+                  />
                   <Animated.View
                     key={current.status}
                     entering={FadeInDown.duration(170)}
@@ -789,6 +773,87 @@ function OrderTimeline({
           );
         })}
       </View>
+    </View>
+  );
+}
+
+function CaptainStopsList({
+  stops,
+  pickupFallback,
+  deliveryFallback,
+  onCall,
+}: {
+  stops: readonly {
+    id: string;
+    stop_type: "pickup" | "delivery";
+    sequence: number;
+    contact_name: string;
+    contact_phone: string;
+    address: string;
+    note: string | null;
+  }[];
+  pickupFallback: string;
+  deliveryFallback: string;
+  onCall: (phone: string) => void;
+}) {
+  const orderedStops = [...stops].sort((first, second) => {
+    const typeOrder = { pickup: 0, delivery: 1 } as const;
+    return (
+      typeOrder[first.stop_type] - typeOrder[second.stop_type] ||
+      first.sequence - second.sequence
+    );
+  });
+  const pickupCount = orderedStops.filter(
+    (stop) => stop.stop_type === "pickup",
+  ).length;
+  const deliveryCount = orderedStops.filter(
+    (stop) => stop.stop_type === "delivery",
+  ).length;
+  const visibleStops = orderedStops.length
+    ? orderedStops
+    : [
+        {
+          id: "fallback-pickup",
+          stop_type: "pickup" as const,
+          sequence: 1,
+          contact_name: "",
+          contact_phone: "",
+          address: pickupFallback,
+          note: null,
+        },
+        {
+          id: "fallback-delivery",
+          stop_type: "delivery" as const,
+          sequence: 1,
+          contact_name: "",
+          contact_phone: "",
+          address: deliveryFallback,
+          note: null,
+        },
+      ];
+  const seenByType = { pickup: 0, delivery: 0 };
+
+  return (
+    <View style={styles.stopsList}>
+      {visibleStops.map((stop) => {
+        seenByType[stop.stop_type] += 1;
+        const typeIndex = seenByType[stop.stop_type];
+        const typeTotal =
+          stop.stop_type === "pickup" ? pickupCount : deliveryCount;
+        const title = stop.stop_type === "pickup" ? "المصدر" : "الوجهة";
+        return (
+          <StopCard
+            key={stop.id}
+            title={typeTotal > 1 ? `${title} ${typeIndex}` : title}
+            icon={stop.stop_type === "pickup" ? "inventory-2" : "location-on"}
+            stop={stop}
+            fallback={
+              stop.stop_type === "pickup" ? pickupFallback : deliveryFallback
+            }
+            onCall={onCall}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -1129,7 +1194,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   cardBody: { gap: 14, padding: 14 },
-  stopsGrid: { alignItems: "stretch", flexDirection: "row-reverse", gap: 8 },
+  stopsList: { gap: 8 },
   timeline: { gap: 7 },
   currentTimelineTitle: {
     color: "#FFFFFF",
