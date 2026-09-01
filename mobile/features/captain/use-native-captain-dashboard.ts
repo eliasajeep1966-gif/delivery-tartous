@@ -7,6 +7,7 @@ import { useRealtimeOrders } from "@/lib/supabase/useRealtimeOrders";
 import { useDeliveryAuth } from "@/contexts/delivery-auth-context";
 import {
   nativeCaptainContract,
+  type CaptainActiveOrder,
   type CaptainAvailability,
   type CaptainHomeMetrics,
   type CaptainOrder,
@@ -81,21 +82,25 @@ export function useNativeCaptainDashboard(enabled = true) {
   const [todayCaptainWage, setTodayCaptainWage] = useState<number | null>(null);
   const [orderCount, setOrderCount] = useState(0);
   const [currentOrder, setCurrentOrder] = useState<CaptainOrder | null>(null);
+  const [activeOrders, setActiveOrders] = useState<CaptainActiveOrder[]>([]);
+  const [newOrderQueue, setNewOrderQueue] = useState<string[]>([]);
   const [recentOrders, setRecentOrders] = useState<CaptainOrderWithTiming[]>([]);
   const [currentStops, setCurrentStops] = useState<CaptainOrderStop[]>([]);
   const [currentStatusEvents, setCurrentStatusEvents] = useState<CaptainOrderStatusEvent[]>([]);
+  const [activeStatusEvents, setActiveStatusEvents] = useState<Map<string, CaptainOrderStatusEvent[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [orderSaving, setOrderSaving] = useState(false);
+  const [savingOrderIds, setSavingOrderIds] = useState<string[]>([]);
+  const orderTransitionInFlight = useRef(new Set<string>());
   const mounted = useRef(true);
   const hasLoaded = useRef(false);
   const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const orderTransitionInFlight = useRef(false);
   const reloadVersion = useRef(0);
 
   const reload = useCallback(
@@ -106,6 +111,9 @@ export function useNativeCaptainDashboard(enabled = true) {
         setTodayCaptainWage(null);
         setOrderCount(0);
         setCurrentOrder(null);
+        setActiveOrders([]);
+        setActiveStatusEvents(new Map());
+        setNewOrderQueue([]);
         setRecentOrders([]);
         setCurrentStops([]);
         setCurrentStatusEvents([]);
@@ -125,23 +133,31 @@ export function useNativeCaptainDashboard(enabled = true) {
             .wagesPage("daily", { limit: 1, offset: 0, customDate: null })
             .catch(() => null),
         ]);
-        const [recentOrdersWithTiming, nextCurrentStatusEvents] = await Promise.all([
+        const nextActiveOrders = nextDashboard.active_orders?.length
+          ? nextDashboard.active_orders
+          : nextDashboard.active_order
+            ? [{ ...nextDashboard.active_order, stops: nextDashboard.active_stops }]
+            : [];
+        const [recentOrdersWithTiming, nextActiveStatusEvents] = await Promise.all([
           enrichCaptainOrdersWithDeliveryTiming(nextDashboard.recent_orders),
-          nextDashboard.active_order
-            ? nativeCaptainContract.reads.orderStatusHistory([
-                nextDashboard.active_order.id,
-              ]).catch(() => [])
-            : Promise.resolve([]),
+          Promise.all(
+            nextActiveOrders.map(async (order) => [
+              order.id,
+              await nativeCaptainContract.reads.orderStatusHistory([order.id]).catch(() => []),
+            ] as const),
+          ),
         ]);
         if (!mounted.current || requestVersion !== reloadVersion.current)
           return;
         setMetrics(nextDashboard.metrics);
         setTodayCaptainWage(wagePage?.totals.captain ?? null);
         setOrderCount(nextDashboard.order_count);
-        setCurrentOrder(nextDashboard.active_order);
+        setActiveOrders(nextActiveOrders);
+        setCurrentOrder(nextActiveOrders[0] ?? null);
         setRecentOrders(recentOrdersWithTiming);
-        setCurrentStops(nextDashboard.active_stops);
-        setCurrentStatusEvents(nextCurrentStatusEvents);
+        setCurrentStops(nextActiveOrders[0]?.stops ?? nextDashboard.active_stops);
+        setCurrentStatusEvents(nextActiveStatusEvents[0]?.[1] ?? []);
+        setActiveStatusEvents(new Map(nextActiveStatusEvents));
       } catch (cause) {
         if (mounted.current && !silent)
           setError(
@@ -262,9 +278,10 @@ export function useNativeCaptainDashboard(enabled = true) {
       orderId: string,
       nextStatus: "received" | "in_delivery" | "completed" | "false_order",
     ) => {
-      if (orderTransitionInFlight.current) return false;
-      orderTransitionInFlight.current = true;
+      if (orderTransitionInFlight.current.has(orderId)) return false;
+      orderTransitionInFlight.current.add(orderId);
       reloadVersion.current += 1;
+      setSavingOrderIds((current) => [...current, orderId]);
       setOrderSaving(true);
       setActionError(null);
       try {
@@ -272,6 +289,14 @@ export function useNativeCaptainDashboard(enabled = true) {
           orderId,
           nextStatus,
         );
+        setActiveOrders((current) => {
+          const next = activeStatuses.has(updated.status)
+            ? current.map((order) =>
+                order.id === updated.id ? { ...order, ...updated } : order,
+              )
+            : current.filter((order) => order.id !== updated.id);
+          return next;
+        });
         setCurrentOrder((current) =>
           current?.id === updated.id && !activeStatuses.has(updated.status)
             ? null
@@ -286,8 +311,14 @@ export function useNativeCaptainDashboard(enabled = true) {
               : order,
           ),
         );
-        if (nextStatus === "completed" || nextStatus === "false_order")
+        if (nextStatus === "completed" || nextStatus === "false_order") {
           setCurrentStops([]);
+          setActiveStatusEvents((current) => {
+            const next = new Map(current);
+            next.delete(updated.id);
+            return next;
+          });
+        }
         void reload(true);
         return true;
       } catch (cause) {
@@ -301,11 +332,23 @@ export function useNativeCaptainDashboard(enabled = true) {
         void reload(true);
         return false;
       } finally {
-        orderTransitionInFlight.current = false;
-        setOrderSaving(false);
+        orderTransitionInFlight.current.delete(orderId);
+        setSavingOrderIds((current) => current.filter((id) => id !== orderId));
+        setOrderSaving(orderTransitionInFlight.current.size > 0);
       }
     },
     [reload],
+  );
+
+  const announceNewOrder = useCallback((orderId: string) => {
+    setNewOrderQueue((current) => current.includes(orderId) ? current : [...current, orderId]);
+  }, []);
+  const dismissNewOrder = useCallback((orderId: string) => {
+    setNewOrderQueue((current) => current.filter((id) => id !== orderId));
+  }, []);
+  const isOrderSaving = useCallback(
+    (orderId: string) => savingOrderIds.includes(orderId),
+    [savingOrderIds],
   );
 
   return useMemo(
@@ -315,6 +358,11 @@ export function useNativeCaptainDashboard(enabled = true) {
       todayCaptainWage,
       orderCount,
       currentOrder,
+      activeOrders,
+      activeStatusEvents,
+      newOrderQueue,
+      announceNewOrder,
+      dismissNewOrder,
       currentStops,
       currentStatusEvents,
       recentOrders,
@@ -323,6 +371,7 @@ export function useNativeCaptainDashboard(enabled = true) {
       error,
       actionError,
       availabilitySaving,
+      isOrderSaving,
       orderSaving,
       reload,
       updateAvailability,
@@ -330,13 +379,19 @@ export function useNativeCaptainDashboard(enabled = true) {
     }),
     [
       actionError,
+      activeOrders,
+      activeStatusEvents,
+      announceNewOrder,
       availabilitySaving,
+      dismissNewOrder,
       currentStops,
       currentStatusEvents,
       error,
+      isOrderSaving,
       loading,
       currentOrder,
       metrics,
+      newOrderQueue,
       todayCaptainWage,
       orderCount,
       orderSaving,

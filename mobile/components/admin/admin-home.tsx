@@ -47,6 +47,7 @@ import {
   createNativeIdempotencyKey,
   NativeAdminRequestTimeoutError,
   nativeAdminContract,
+  type NativeEditableOrder,
 } from "@/lib/supabase/native-admin-contract";
 import { presentDeliveryTiming, type DeliveryTiming } from "@/lib/admin/delivery-duration";
 import { notifyCaptainOfOrder, notifyCaptainOfOrderCancellation } from "@/lib/notifications";
@@ -137,6 +138,8 @@ export function AdminHome() {
   const [cancellingActivity, setCancellingActivity] =
     useState<AdminHomeActivityWithTiming | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<NativeEditableOrder | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
   const realtimeRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleRealtimeRefresh = useCallback(() => {
@@ -338,6 +341,18 @@ export function AdminHome() {
     setIsCreating(true);
     setCreateError(null);
     try {
+      if (draft.editingOrderId) {
+        await nativeAdminContract.actions.updateOrderWithStops({
+          orderId: draft.editingOrderId,
+          stops: draft.stops,
+          fee: draft.fee,
+        });
+        setCreateOpen(false);
+        setEditingOrder(null);
+        showToast({ message: "تم تعديل الطلب بنجاح." });
+        await refetch();
+        return true;
+      }
       const created = await nativeAdminContract.actions.createOrderWithStops({
         stops: draft.stops,
         fee: draft.fee,
@@ -383,6 +398,25 @@ export function AdminHome() {
       return false;
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const editOrderFromActivity = async (activity: AdminHomeActivityWithTiming) => {
+    if (!activity.orderId) return;
+    setIsLoadingEdit(true);
+    setCreateError(null);
+    try {
+      const order = await nativeAdminContract.reads.editableOrder(activity.orderId);
+      setEditingOrder(order);
+      setCreateOpen(true);
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : "تعذر تحميل بيانات الطلب للتعديل.",
+        tone: "error",
+        durationMs: 5000,
+      });
+    } finally {
+      setIsLoadingEdit(false);
     }
   };
 
@@ -441,6 +475,7 @@ export function AdminHome() {
             item={item}
             onPress={openOrders}
             onRequestCancellation={setCancellingActivity}
+            onRequestEdit={(activity) => void editOrderFromActivity(activity)}
             index={index}
           />
         )}
@@ -768,11 +803,13 @@ function ActivityRow({
   item,
   onPress,
   onRequestCancellation,
+  onRequestEdit,
   index,
 }: {
   item: AdminHomeActivityWithTiming;
   onPress: () => void;
   onRequestCancellation: (activity: AdminHomeActivityWithTiming) => void;
+  onRequestEdit: (activity: AdminHomeActivityWithTiming) => void;
   index: number;
 }) {
   const meta = item.status ? statusStyle[item.status] : null;
@@ -819,6 +856,7 @@ function ActivityRow({
           </View>
           <ActivityDeliveryJourney timing={item.deliveryTiming} />
           {canCancelQuickly ? (
+            <View style={styles.activityActions}>
             <Pressable
               accessibilityLabel={`إلغاء ${item.title}`}
               onPress={(event) => {
@@ -833,6 +871,18 @@ function ActivityRow({
               <MaterialIcons name="cancel" size={15} color="#BA1A1A" />
               <Text style={styles.activityCancelActionText}>إلغاء الطلب</Text>
             </Pressable>
+            <Pressable
+              accessibilityLabel={`تعديل ${item.title}`}
+              onPress={(event) => {
+                event.stopPropagation();
+                onRequestEdit(item);
+              }}
+              style={({ pressed }) => [styles.activityEditAction, pressed && styles.activityPressed]}
+            >
+              <MaterialIcons name="edit" size={15} color="#0878D1" />
+              <Text style={styles.activityEditActionText}>تعديل الطلب</Text>
+            </Pressable>
+            </View>
           ) : null}
         </View>
         <MaterialIcons name="chevron-left" size={18} color="#8EAABB" />
@@ -1168,6 +1218,9 @@ const styles = StyleSheet.create({
   activityActorName: { color: "#4B7691", fontSize: 12, fontWeight: "700", writingDirection: "rtl" },
   activityCancelAction: { alignItems: "center", alignSelf: "flex-end", backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderRadius: 9, borderWidth: 1, flexDirection: "row-reverse", gap: 4, marginTop: 7, minHeight: 31, paddingHorizontal: 8 },
   activityCancelActionText: { color: "#BA1A1A", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
+  activityActions: { alignItems: "center", flexDirection: "row-reverse", gap: 6, justifyContent: "flex-end", marginTop: 7 },
+  activityEditAction: { alignItems: "center", backgroundColor: "#EFF6FF", borderColor: "#BFDBFE", borderRadius: 9, borderWidth: 1, flexDirection: "row-reverse", gap: 4, minHeight: 31, paddingHorizontal: 8 },
+  activityEditActionText: { color: "#0878D1", fontSize: 10, fontWeight: "800", writingDirection: "rtl" },
   cancelConfirmOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", backgroundColor: "rgba(20, 30, 38, 0.42)", justifyContent: "center", padding: 24 },
   cancelConfirmDialog: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#F4C5C7", borderRadius: 20, borderWidth: 1, maxWidth: 400, padding: 22, width: "100%" },
   cancelConfirmIcon: { alignItems: "center", backgroundColor: "#FEF2F2", borderRadius: 24, height: 48, justifyContent: "center", width: 48 },

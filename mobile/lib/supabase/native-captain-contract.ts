@@ -72,11 +72,16 @@ export type CaptainHomeMetrics = {
   completed_gross: number;
 };
 
+export type CaptainActiveOrder = CaptainOrder & {
+  stops: CaptainOrderStop[];
+};
+
 export type CaptainDashboard = {
   metrics: CaptainHomeMetrics;
   order_count: number;
   active_order: CaptainOrder | null;
   active_stops: CaptainOrderStop[];
+  active_orders?: CaptainActiveOrder[];
   recent_orders: CaptainOrder[];
 };
 
@@ -116,6 +121,7 @@ export type CaptainWageRow = {
   latest_payout_id: string | null;
   order_id: string;
   order_number: number;
+  order_kind: "standard" | "medicine";
   paid_amount: number;
   settlement_amount: number;
   source_status: CaptainOrderStatus;

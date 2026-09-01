@@ -39,9 +39,10 @@ export function AdminCompanyWages() {
   const totals = {
     gross: currentPeriod?.gross_total ?? 0,
     company: currentPeriod?.company_total ?? 0,
-    captain: currentPeriod?.captain_net_total ?? 0,
+    captainWages: currentPeriod?.captain_net_total ?? 0,
     compensation: currentPeriod?.settlement_total ?? 0,
   };
+  const captainTotal = totals.captainWages + totals.compensation;
   return (
     <ScreenContainer safeBottom className="bg-[#F0F7FF]" containerClassName="bg-[#EAF5FF]">
       <DeliveryAppHeader
@@ -126,10 +127,10 @@ export function AdminCompanyWages() {
           <View style={styles.metrics}>
             {[
               ["إجمالي الأجور", totals.gross, "#1C1B1B"],
-              ["نتيجة الشركة", totals.company, "#6D28D9"],
+              ["أجور الكباتن", totals.captainWages, "#6D28D9"],
               ["مصاريف المكتب", officeExpenses, "#B54708"],
               ["الصافي", totals.company - officeExpenses, "#047857"],
-              ["صافي الكباتن", totals.captain, "#047857"],
+              ["صافي الكباتن (أجور + تعويضات)", captainTotal, "#047857"],
               ["تعويض الكباتن", totals.compensation, BLUE],
             ].map(([label, value, color]) => (
               <View key={String(label)} style={styles.metric}>

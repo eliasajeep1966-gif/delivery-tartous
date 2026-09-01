@@ -25,7 +25,7 @@ type ExpoTicket = Readonly<{
 
 function jsonResponse(body: PushResponse) {
   return new Response(JSON.stringify(body), {
-    status: 200,
+    status: body.error ? 500 : 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
@@ -39,11 +39,14 @@ Deno.serve(async (req: Request) => {
     const auth = req.headers.get("Authorization");
     if (!auth) throw new Error("Unauthorized");
 
+    const accessToken = auth.replace(/^Bearer\s+/i, "").trim();
+    if (!accessToken) throw new Error("Unauthorized");
+
     const admin = createClient(supabaseUrl, serviceKey);
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: auth } },
     });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
+    const { data: userData, error: userError } = await admin.auth.getUser(accessToken);
     if (userError || !userData.user) throw new Error("Unauthorized");
 
     const { data: canSend, error: permissionError } = await userClient.rpc(

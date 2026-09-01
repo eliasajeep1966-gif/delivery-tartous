@@ -39,6 +39,7 @@ import {
   useNativeCaptainDashboard,
 } from "@/features/captain/use-native-captain-dashboard";
 import type {
+  CaptainActiveOrder,
   CaptainOrderStatus,
   CaptainOrderStatusEvent,
 } from "@/lib/supabase/native-captain-contract";
@@ -157,6 +158,123 @@ function nextAction(status: CaptainOrderStatus) {
   return null;
 }
 
+function ParallelCaptainOrderCard({
+  order,
+  events,
+  stops,
+  cardColors,
+  saving,
+  onAdvance,
+  onMarkFalse,
+}: {
+  order: CaptainActiveOrder;
+  events: readonly CaptainOrderStatusEvent[];
+  stops: CaptainActiveOrder["stops"];
+  cardColors: readonly [string, string, string];
+  saving: boolean;
+  onAdvance: () => void;
+  onMarkFalse: () => void;
+}) {
+  const ledProgress = useSharedValue(0);
+  const ledWidth = useSharedValue(0);
+  const ledHeight = useSharedValue(0);
+  const action = nextAction(order.status);
+  const pickup = stops.find((stop) => stop.stop_type === "pickup");
+  const delivery = [...stops].reverse().find((stop) => stop.stop_type === "delivery");
+  const ledDotStyle = useAnimatedStyle(() => {
+    if (!ledWidth.value || !ledHeight.value) return { opacity: 0 };
+    const start = getRoundedRectLedPoint(0, ledWidth.value, ledHeight.value);
+    const point = getRoundedRectLedPoint(ledProgress.value * start.perimeter, ledWidth.value, ledHeight.value);
+    return { opacity: 1, left: point.x - 4, top: point.y - 4 };
+  });
+  const ledGlowStyle = useAnimatedStyle(() => {
+    if (!ledWidth.value || !ledHeight.value) return { opacity: 0 };
+    const start = getRoundedRectLedPoint(0, ledWidth.value, ledHeight.value);
+    const point = getRoundedRectLedPoint(ledProgress.value * start.perimeter, ledWidth.value, ledHeight.value);
+    return { opacity: 0.72, left: point.x - 10, top: point.y - 10 };
+  });
+  const ledTailStyle = useAnimatedStyle(() => {
+    if (!ledWidth.value || !ledHeight.value) return { opacity: 0 };
+    const start = getRoundedRectLedPoint(0, ledWidth.value, ledHeight.value);
+    const distance = ledProgress.value * start.perimeter;
+    const point = getRoundedRectLedPoint(distance, ledWidth.value, ledHeight.value);
+    const previous = getRoundedRectLedPoint((distance - 26 + start.perimeter) % start.perimeter, ledWidth.value, ledHeight.value);
+    const dx = point.x - previous.x;
+    const dy = point.y - previous.y;
+    return {
+      opacity: 0.96,
+      left: (point.x + previous.x) / 2 - Math.max(Math.sqrt(dx * dx + dy * dy), 1) / 2,
+      top: (point.y + previous.y) / 2 - 1.5,
+      width: Math.max(Math.sqrt(dx * dx + dy * dy), 1),
+      transform: [{ rotate: `${(Math.atan2(dy, dx) * 180) / Math.PI}deg` }],
+    };
+  });
+  useEffect(() => {
+    ledProgress.value = withRepeat(withTiming(1, { duration: 4200, easing: Easing.linear }), -1, false);
+    return () => cancelAnimation(ledProgress);
+  }, [ledProgress]);
+
+  return (
+    <Animated.View entering={FadeInDown.duration(210)} style={styles.currentCardShell}>
+      <LinearGradient
+        colors={cardColors}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        onLayout={(event) => {
+          ledWidth.value = event.nativeEvent.layout.width;
+          ledHeight.value = event.nativeEvent.layout.height;
+        }}
+        style={styles.currentCard}
+      >
+        <AnimatedLinearGradient
+          colors={["rgba(126,238,255,0)", "rgba(188,250,255,0.96)"]}
+          end={{ x: 1, y: 0.5 }}
+          pointerEvents="none"
+          start={{ x: 0, y: 0.5 }}
+          style={[styles.currentLedTail, ledTailStyle]}
+        />
+        <Animated.View pointerEvents="none" style={[styles.currentLedGlow, ledGlowStyle]} />
+        <Animated.View pointerEvents="none" style={[styles.currentLedDot, ledDotStyle]} />
+        <View style={styles.currentHeader}>
+          <View style={styles.currentHeaderIcon}>
+            <MaterialIcons name="two-wheeler" size={25} color="#0C679D" />
+          </View>
+          <View style={styles.currentHeaderCopy}>
+            <Text style={styles.currentTitle}>الطلب الحالي</Text>
+            <Text style={styles.currentSubtitle}>الطلب #{order.order_number}</Text>
+          </View>
+          <StatusBadge status={order.status} prominent />
+        </View>
+        <View style={styles.feeBar}>
+          <Text style={styles.feeLabel}>أجرة الطلب</Text>
+          <Text style={styles.feeValue}>{money(order.fee)}</Text>
+        </View>
+        <View style={styles.cardBody}>
+          <View style={styles.stopsGrid}>
+            <StopCard title="المصدر" icon="inventory-2" stop={pickup} fallback={order.pickup_address} onCall={(phone) => void Linking.openURL(`tel:${phone}`)} />
+            <StopCard title="الوجهة" icon="location-on" stop={delivery} fallback={order.delivery_address} onCall={(phone) => void Linking.openURL(`tel:${phone}`)} />
+          </View>
+          <Animated.View key={order.status} entering={FadeInDown.duration(170)} style={{ gap: 10 }}>
+            <OrderTimeline status={order.status} events={events} />
+            {action ? (
+              <MotionPressable disabled={saving} haptic="medium" pressedScale={0.96} onPress={onAdvance} style={styles.primaryButton}>
+                <Text style={styles.primaryText}>{saving ? "جارٍ التحديث..." : action.label}</Text>
+              </MotionPressable>
+            ) : null}
+            {order.status === "in_delivery" ? (
+              <MotionPressable accessibilityLabel="تسجيل الطلب كطلب كاذب" disabled={saving} haptic="medium" pressedScale={0.97} onPress={onMarkFalse} style={styles.falseOrderButton}>
+                <View style={styles.falseOrderIcon}><MaterialIcons name="warning-amber" size={22} color="#FFFFFF" /></View>
+                <View style={styles.falseOrderCopy}><Text style={styles.falseOrderTitle}>تسجيل طلب كاذب</Text><Text style={styles.falseOrderHint}>أوقف الطلب عند تعذّر تسليمه</Text></View>
+                <MaterialIcons name="chevron-left" size={26} color="#FEE2E2" />
+              </MotionPressable>
+            ) : null}
+          </Animated.View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
 export function CaptainHome() {
   const router = useRouter();
   const { profile, signOut, operation } = useDeliveryAuth();
@@ -164,7 +282,7 @@ export function CaptainHome() {
   const { playSound } = useAppSound();
   const isLiveUpdatesActive = useScreenLiveUpdates();
   const dashboard = useNativeCaptainDashboard(isLiveUpdatesActive);
-  const [falseOrderOpen, setFalseOrderOpen] = useState(false);
+  const [falseOrderId, setFalseOrderId] = useState<string | null>(null);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const currentLedProgress = useSharedValue(0);
   const currentLedWidth = useSharedValue(0);
@@ -262,9 +380,17 @@ export function CaptainHome() {
       showToast({ message: `أصبحت حالة الطلب: ${statusLabels[action.next]}` });
     }
   };
+  const advanceOrder = async (order: CaptainActiveOrder) => {
+    const next = nextAction(order.status);
+    if (next && (await dashboard.transitionOrder(order.id, next.next))) {
+      if (next.next === "received" || next.next === "completed") playSound("captainOrderSuccess");
+      showToast({ message: `أصبحت حالة الطلب: ${statusLabels[next.next]}` });
+    }
+  };
   const markFalse = async () => {
-    if (current && (await dashboard.transitionOrder(current.id, "false_order")))
-      setFalseOrderOpen(false);
+    const target = dashboard.activeOrders.find((order) => order.id === falseOrderId);
+    if (target && (await dashboard.transitionOrder(target.id, "false_order")))
+      setFalseOrderId(null);
   };
 
   return (
@@ -414,6 +540,12 @@ export function CaptainHome() {
                 {current ? <StatusBadge status={current.status} prominent /> : null}
               </View>
               {current ? (
+                <View style={styles.feeBar}>
+                  <Text style={styles.feeLabel}>أجرة الطلب</Text>
+                  <Text style={styles.feeValue}>{money(current.fee)}</Text>
+                </View>
+              ) : null}
+              {current ? (
                 <View style={styles.cardBody}>
                   <View style={styles.stopsGrid}>
                     <StopCard
@@ -466,7 +598,7 @@ export function CaptainHome() {
                         disabled={dashboard.orderSaving}
                         haptic="medium"
                         pressedScale={0.97}
-                        onPress={() => setFalseOrderOpen(true)}
+                        onPress={() => setFalseOrderId(current.id)}
                         style={styles.falseOrderButton}
                       >
                         <View style={styles.falseOrderIcon}>
@@ -488,6 +620,20 @@ export function CaptainHome() {
               )}
               </LinearGradient>
             </Animated.View>
+            {dashboard.activeOrders
+              .filter((order) => order.id !== current?.id)
+              .map((order) => (
+                <ParallelCaptainOrderCard
+                  key={order.id}
+                  order={order}
+                  events={dashboard.activeStatusEvents.get(order.id) ?? []}
+                  stops={order.stops}
+                  cardColors={currentCardColors}
+                  saving={dashboard.isOrderSaving(order.id)}
+                  onAdvance={() => void advanceOrder(order)}
+                  onMarkFalse={() => setFalseOrderId(order.id)}
+                />
+              ))}
             <Animated.View entering={FadeInDown.delay(110).duration(210)}>
               <Text style={styles.sectionTitle}>ملخص اليوم</Text>
               <View style={styles.metrics}>
@@ -521,9 +667,9 @@ export function CaptainHome() {
       </ScrollView>
       <Modal
         transparent
-        visible={falseOrderOpen}
+        visible={Boolean(falseOrderId)}
         animationType="none"
-        onRequestClose={() => setFalseOrderOpen(false)}
+        onRequestClose={() => setFalseOrderId(null)}
       >
         <View style={styles.modalBackdrop}>
           <Animated.View
@@ -542,7 +688,7 @@ export function CaptainHome() {
             </Text>
             <View style={styles.modalActions}>
               <MotionPressable
-                onPress={() => setFalseOrderOpen(false)}
+                onPress={() => setFalseOrderId(null)}
                 style={styles.cancelButton}
               >
                 <Text style={styles.cancelText}>إلغاء</Text>
@@ -956,6 +1102,30 @@ const styles = StyleSheet.create({
     fontFamily: "Cairo_400Regular",
     fontSize: 11,
     textAlign: "right",
+    writingDirection: "rtl",
+  },
+  feeBar: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderBottomColor: "rgba(222,248,255,0.42)",
+    borderBottomWidth: 1,
+    borderTopColor: "rgba(222,248,255,0.42)",
+    borderTopWidth: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  feeLabel: {
+    color: "rgba(235,249,255,0.88)",
+    fontFamily: "Cairo_600SemiBold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
+  feeValue: {
+    color: "#FFFFFF",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 15,
     writingDirection: "rtl",
   },
   cardBody: { gap: 14, padding: 14 },

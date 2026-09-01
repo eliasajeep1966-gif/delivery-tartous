@@ -12,6 +12,11 @@ type CaptainOrderCancellationNotification = Readonly<{
   orderNumber: string | null;
 }>;
 
+type CaptainOrderAssignmentNotification = Readonly<{
+  orderId: string | null;
+  orderNumber: string | null;
+}>;
+
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 let notificationsModule: NotificationsModule | null = null;
@@ -42,6 +47,21 @@ function setupNotifications(): NotificationsModule | null {
   return Notifications;
 }
 
+function readAssignmentNotification(
+  notification: import("expo-notifications").Notification,
+): CaptainOrderAssignmentNotification | null {
+  const data = notification.request.content.data;
+  if (data?.type !== "assigned_order") return null;
+
+  return {
+    orderId: typeof data.orderId === "string" ? data.orderId : null,
+    orderNumber:
+      typeof data.orderNumber === "string" || typeof data.orderNumber === "number"
+        ? String(data.orderNumber)
+        : null,
+  };
+}
+
 function readCancellationNotification(
   notification: import("expo-notifications").Notification,
 ): CaptainOrderCancellationNotification | null {
@@ -64,7 +84,7 @@ export async function registerCaptainPushNotifications(
   if (!Notifications) return null;
   try {
 if (Platform.OS === "android") {
-  await Notifications.setNotificationChannelAsync("orders-v2", {
+  await Notifications.setNotificationChannelAsync("new_order_alerts", {
     name: "Orders",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
@@ -135,11 +155,16 @@ export async function notifyCaptainOfOrder(
   orderId: string,
 ): Promise<void | null> {
   try {
-    const { error } = await getNativeSupabaseClient().functions.invoke(
+    const { data, error } = await getNativeSupabaseClient().functions.invoke(
       "send-order-push",
       { body: { orderId } },
     );
     if (error) throw new Error(error.message);
+    if (data && typeof data === "object" && "error" in data) {
+      throw new Error(
+        typeof data.error === "string" ? data.error : "Push notification failed",
+      );
+    }
   } catch (error) {
     console.warn("Push notification delivery is unavailable.", error);
     return null;
@@ -157,12 +182,35 @@ export async function notifyCaptainOfOrderCancellation(
     );
     
     if (error) throw new Error(error.message);
+    if (data && typeof data === "object" && "error" in data) {
+      throw new Error(
+        typeof data.error === "string"
+          ? data.error
+          : "Cancellation push notification failed",
+      );
+    }
     return data || { sent: 0 };
   } catch (error) {
     console.warn("Cancellation push notification delivery failed.", error);
     throw error;
   }
 }
+export function subscribeToCaptainOrderAssignment(
+  onAssignment: (event: CaptainOrderAssignmentNotification) => void,
+): () => void {
+  const Notifications = setupNotifications();
+  if (!Notifications) return () => undefined;
+
+  const subscription = Notifications.addNotificationReceivedListener(
+    (notification) => {
+      const event = readAssignmentNotification(notification);
+      if (event) onAssignment(event);
+    },
+  );
+
+  return () => subscription.remove();
+}
+
 export function subscribeToCaptainOrderCancellation(
   onCancellation: (event: CaptainOrderCancellationNotification) => void,
 ): () => void {
