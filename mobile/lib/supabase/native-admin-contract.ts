@@ -61,6 +61,7 @@ export const nativeAdminContract = {
       stops: NativeAdminOrderStopInput[];
       fee: number;
       idempotencyKey: string;
+      exceptionKeyword?: string;
     }): Promise<NativeCreatedOrder> {
       const stops = input.stops.map((stop) => ({
         stop_type: stop.stopType,
@@ -75,6 +76,7 @@ export const nativeAdminContract = {
           p_stops: stops,
           p_fee: input.fee,
           p_idempotency_key: input.idempotencyKey,
+          p_exception_keyword: input.exceptionKeyword?.trim() || null,
         }),
         "انتهت مهلة إنشاء الطلب. تحقّق من قائمة الطلبات قبل إعادة الإرسال.",
       );

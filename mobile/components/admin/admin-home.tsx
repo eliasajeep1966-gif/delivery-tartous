@@ -341,6 +341,7 @@ export function AdminHome() {
       const created = await nativeAdminContract.actions.createOrderWithStops({
         stops: draft.stops,
         fee: draft.fee,
+        exceptionKeyword: draft.exceptionKeyword,
         idempotencyKey: createNativeIdempotencyKey(),
       });
       try {

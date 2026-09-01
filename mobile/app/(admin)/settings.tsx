@@ -59,8 +59,8 @@ export default function OfficeSettingsScreen() {
   const [officeShareDraft, setOfficeShareDraft] = useState<string | null>(null);
   const [exceptionsDraft, setExceptionsDraft] = useState<Exception[] | null>(null);
   const [editingExceptionId, setEditingExceptionId] = useState<string | null>(null);
-  const isBackOffice =
-    profile?.role === "admin" || profile?.role === "supervisor";
+  const isAdmin = profile?.role === "admin";
+  const isBackOffice = isAdmin || profile?.role === "supervisor";
   const officeSettings = useOfficeSettings(isBackOffice);
   const savedSettings = officeSettings.data;
   const office = officeDraft ?? {
@@ -308,16 +308,18 @@ export default function OfficeSettingsScreen() {
             <View key={item.id} style={styles.exceptionItem}>
               <View style={styles.exceptionTop}>
                 <View style={styles.exceptionActions}>
-                  <Pressable
-                    accessibilityLabel={`حذف الاستثناء ${index + 1}`}
-                    onPress={() => {
-                      replaceExceptions((items) => items.filter((candidate) => candidate.id !== item.id));
-                      if (editingExceptionId === item.id) setEditingExceptionId(null);
-                    }}
-                    style={({ pressed }) => [styles.removeException, pressed && styles.pressed]}
-                  >
-                    <MaterialIcons name="delete-outline" size={18} color={DANGER} />
-                  </Pressable>
+                  {isAdmin ? (
+                    <Pressable
+                      accessibilityLabel={`حذف الاستثناء ${index + 1}`}
+                      onPress={() => {
+                        replaceExceptions((items) => items.filter((candidate) => candidate.id !== item.id));
+                        if (editingExceptionId === item.id) setEditingExceptionId(null);
+                      }}
+                      style={({ pressed }) => [styles.removeException, pressed && styles.pressed]}
+                    >
+                      <MaterialIcons name="delete-outline" size={18} color={DANGER} />
+                    </Pressable>
+                  ) : null}
                   <Pressable
                     accessibilityLabel={`تعديل الاستثناء ${index + 1}`}
                     onPress={() => setEditingExceptionId(item.id)}
