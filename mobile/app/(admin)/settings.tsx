@@ -58,6 +58,7 @@ export default function OfficeSettingsScreen() {
   const [captainShareDraft, setCaptainShareDraft] = useState<string | null>(null);
   const [officeShareDraft, setOfficeShareDraft] = useState<string | null>(null);
   const [exceptionsDraft, setExceptionsDraft] = useState<Exception[] | null>(null);
+  const [editingExceptionId, setEditingExceptionId] = useState<string | null>(null);
   const isBackOffice =
     profile?.role === "admin" || profile?.role === "supervisor";
   const officeSettings = useOfficeSettings(isBackOffice);
@@ -306,20 +307,26 @@ export default function OfficeSettingsScreen() {
           {exceptions.map((item, index) => (
             <View key={item.id} style={styles.exceptionItem}>
               <View style={styles.exceptionTop}>
-                <Pressable
-                  accessibilityLabel={`حذف الاستثناء ${index + 1}`}
-                  onPress={() =>
-                    replaceExceptions((items) =>
-                      items.filter((candidate) => candidate.id !== item.id),
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.removeException,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <MaterialIcons name="delete-outline" size={18} color={DANGER} />
-                </Pressable>
+                <View style={styles.exceptionActions}>
+                  <Pressable
+                    accessibilityLabel={`حذف الاستثناء ${index + 1}`}
+                    onPress={() => {
+                      replaceExceptions((items) => items.filter((candidate) => candidate.id !== item.id));
+                      if (editingExceptionId === item.id) setEditingExceptionId(null);
+                    }}
+                    style={({ pressed }) => [styles.removeException, pressed && styles.pressed]}
+                  >
+                    <MaterialIcons name="delete-outline" size={18} color={DANGER} />
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel={`تعديل الاستثناء ${index + 1}`}
+                    onPress={() => setEditingExceptionId(item.id)}
+                    style={({ pressed }) => [styles.editException, pressed && styles.pressed]}
+                  >
+                    <MaterialIcons name="edit" size={16} color={BLUE} />
+                    <Text style={styles.editExceptionText}>تعديل</Text>
+                  </Pressable>
+                </View>
                 <View style={styles.exceptionTitleRow}>
                   <Text style={styles.exceptionTitle}>استثناء {index + 1}</Text>
                   <View style={styles.exceptionNumber}>
@@ -327,43 +334,39 @@ export default function OfficeSettingsScreen() {
                   </View>
                 </View>
               </View>
-              <Text style={styles.inputLabel}>الكلمة أو العبارة المطابقة</Text>
-              <TextInput
-                value={item.keyword}
-                onChangeText={(value) => updateException(item.id, "keyword", value)}
-                placeholder="مثال: طلب سريع"
-                placeholderTextColor="#91A4B3"
-                style={styles.textInput}
-                textAlign="right"
-              />
-              <View style={styles.exceptionShares}>
-                <CompactShareInput
-                  label="الكابتن"
-                  value={item.captain}
-                  onChangeText={(value) => updateException(item.id, "captain", value)}
-                  tone="captain"
-                />
-                <CompactShareInput
-                  label="المكتب"
-                  value={item.office}
-                  onChangeText={(value) => updateException(item.id, "office", value)}
-                  tone="office"
-                />
-              </View>
+              {editingExceptionId === item.id ? (
+                <>
+                  <Text style={styles.inputLabel}>استثناءات</Text>
+                  <TextInput
+                    value={item.keyword}
+                    onChangeText={(value) => updateException(item.id, "keyword", value)}
+                    placeholder="اختياري: الكلمة الدالة على الاستثناء"
+                    placeholderTextColor="#91A4B3"
+                    style={styles.textInput}
+                    textAlign="right"
+                  />
+                  <View style={styles.exceptionShares}>
+                    <CompactShareInput label="الكابتن" value={item.captain} onChangeText={(value) => updateException(item.id, "captain", value)} tone="captain" />
+                    <CompactShareInput label="المكتب" value={item.office} onChangeText={(value) => updateException(item.id, "office", value)} tone="office" />
+                  </View>
+                  <Pressable onPress={() => setEditingExceptionId(null)} style={styles.doneExceptionButton}>
+                    <Text style={styles.doneExceptionText}>تم التعديل</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <View style={styles.savedExceptionSummary}>
+                  <Text style={styles.savedExceptionKeyword}>{item.keyword || "بدون كلمة دالة"}</Text>
+                  <Text style={styles.savedExceptionMeta}>الكابتن {item.captain}% · المكتب {item.office}%</Text>
+                </View>
+              )}
             </View>
           ))}
           <MotionPressable
-            onPress={() =>
-              replaceExceptions((items) => [
-                ...items,
-                {
-                  id: String(Date.now()),
-                  keyword: "",
-                  captain: "",
-                  office: "",
-                },
-              ])
-            }
+            onPress={() => {
+              const id = String(Date.now());
+              replaceExceptions((items) => [...items, { id, keyword: "", captain: "", office: "" }]);
+              setEditingExceptionId(id);
+            }}
             style={styles.addException}
           >
             <MaterialIcons name="add-circle-outline" size={19} color={BLUE} />
@@ -652,7 +655,15 @@ const styles = StyleSheet.create({
   exceptionTitle: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 12, writingDirection: "rtl" },
   exceptionNumber: { alignItems: "center", backgroundColor: "#EAF4FF", borderRadius: 9, height: 22, justifyContent: "center", width: 22 },
   exceptionNumberText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10 },
+  exceptionActions: { alignItems: "center", flexDirection: "row", gap: 7 },
   removeException: { alignItems: "center", backgroundColor: "#FFF2F2", borderRadius: 9, height: 31, justifyContent: "center", width: 31 },
+  editException: { alignItems: "center", backgroundColor: "#EAF4FF", borderRadius: 9, flexDirection: "row-reverse", gap: 3, height: 31, justifyContent: "center", paddingHorizontal: 8 },
+  editExceptionText: { color: BLUE, fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
+  savedExceptionSummary: { alignItems: "flex-end", backgroundColor: "#F7FBFE", borderRadius: 11, gap: 3, marginTop: 8, padding: 10 },
+  savedExceptionKeyword: { color: DEEP_BLUE, fontFamily: "Cairo_700Bold", fontSize: 13, textAlign: "right", writingDirection: "rtl" },
+  savedExceptionMeta: { color: "#617887", fontFamily: "Cairo_400Regular", fontSize: 10, textAlign: "right", writingDirection: "rtl" },
+  doneExceptionButton: { alignSelf: "flex-end", backgroundColor: "#EAF8F2", borderRadius: 9, marginTop: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  doneExceptionText: { color: "#047857", fontFamily: "Cairo_700Bold", fontSize: 10, writingDirection: "rtl" },
   textInput: { backgroundColor: "#F8FBFD", borderColor: "#D8E5ED", borderRadius: 10, borderWidth: 1, color: DEEP_BLUE, fontFamily: "Cairo_400Regular", fontSize: 11, height: 40, marginTop: 5, paddingHorizontal: 10 },
   exceptionShares: { flexDirection: "row-reverse", gap: 8, marginTop: 10 },
   compactShare: { flex: 1 },
