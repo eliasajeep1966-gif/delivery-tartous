@@ -30,6 +30,7 @@ export type NativeNewOrderDraft = {
   stops: NativeAdminOrderStopInput[];
   fee: number;
   captainId: string;
+  exceptionKeyword: string;
   editingOrderId?: string;
 };
 
@@ -68,6 +69,7 @@ export function AdminNewOrderModal({
     blankLocation("delivery-1"),
   ]);
   const [fee, setFee] = useState("");
+  const [exceptionKeyword, setExceptionKeyword] = useState("");
   const [captainId, setCaptainId] = useState("");
   const [step, setStep] = useState(1);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -106,6 +108,7 @@ export function AdminNewOrderModal({
     setPickups([blankLocation(`pickup-${sequence.current++}`)]);
     setDestinations([blankLocation(`delivery-${sequence.current++}`)]);
     setFee("");
+    setExceptionKeyword("");
     setCaptainId("");
     setStep(1);
     setValidationError(null);
@@ -174,7 +177,13 @@ export function AdminNewOrderModal({
         ...normalizeLocations(destinations, "delivery", "وجهة التسليم"),
       ];
       setValidationError(null);
-      if (await onSubmit({ stops, fee: numericFee, captainId, editingOrderId: editingOrder?.id })) reset();
+      if (await onSubmit({
+        stops,
+        fee: numericFee,
+        captainId,
+        exceptionKeyword: exceptionKeyword.trim(),
+        editingOrderId: editingOrder?.id,
+      })) reset();
     } catch (error) {
       setValidationError(
         error instanceof Error
@@ -279,6 +288,16 @@ export function AdminNewOrderModal({
                     />
                     <Text style={styles.currency}>ل.س</Text>
                   </View>
+                  <Text style={styles.locationLabel}>استثناءات</Text>
+                  <TextInput
+                    editable={!isSubmitting}
+                    value={exceptionKeyword}
+                    onChangeText={setExceptionKeyword}
+                    placeholder="اختياري: الكلمة الدالة من إعدادات المكتب"
+                    placeholderTextColor="#8A98A6"
+                    style={styles.input}
+                    textAlign="right"
+                  />
                 </View>
 
                 {!isEditing ? <View style={styles.formCard}>
