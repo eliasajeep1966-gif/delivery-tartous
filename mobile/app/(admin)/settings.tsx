@@ -39,10 +39,6 @@ const defaultOffice: OfficeProfile = {
   address: "طرطوس — مركز المدينة",
 };
 
-const defaultExceptions: Exception[] = [
-  { id: "default", keyword: "طلب سريع", captain: "75", office: "25" },
-];
-
 const validSplit = (captain: string, office: string) =>
   Number(captain) + Number(office) === 100 &&
   Number(captain) >= 0 &&
@@ -70,7 +66,7 @@ export default function OfficeSettingsScreen() {
   };
   const captainShare = captainShareDraft ?? savedSettings?.captainShare ?? "70";
   const officeShare = officeShareDraft ?? savedSettings?.officeShare ?? "30";
-  const exceptions = exceptionsDraft ?? savedSettings?.exceptions ?? defaultExceptions;
+  const exceptions = exceptionsDraft ?? savedSettings?.exceptions ?? [];
   const splitIsValid = validSplit(captainShare, officeShare);
 
   const updateOffice = (key: OfficeFieldKey, value: string) =>
