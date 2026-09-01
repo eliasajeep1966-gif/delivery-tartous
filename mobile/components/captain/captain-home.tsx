@@ -803,55 +803,74 @@ function CaptainStopsList({
       first.sequence - second.sequence
     );
   });
-  const pickupCount = orderedStops.filter(
+  const pickupStops = orderedStops.filter(
     (stop) => stop.stop_type === "pickup",
-  ).length;
-  const deliveryCount = orderedStops.filter(
+  );
+  const deliveryStops = orderedStops.filter(
     (stop) => stop.stop_type === "delivery",
-  ).length;
-  const visibleStops = orderedStops.length
-    ? orderedStops
-    : [
-        {
-          id: "fallback-pickup",
-          stop_type: "pickup" as const,
-          sequence: 1,
-          contact_name: "",
-          contact_phone: "",
-          address: pickupFallback,
-          note: null,
-        },
-        {
-          id: "fallback-delivery",
-          stop_type: "delivery" as const,
-          sequence: 1,
-          contact_name: "",
-          contact_phone: "",
-          address: deliveryFallback,
-          note: null,
-        },
-      ];
-  const seenByType = { pickup: 0, delivery: 0 };
+  );
+  if (!pickupStops.length) {
+    pickupStops.push({
+      id: "fallback-pickup",
+      stop_type: "pickup",
+      sequence: 1,
+      contact_name: "",
+      contact_phone: "",
+      address: pickupFallback,
+      note: null,
+    });
+  }
+  if (!deliveryStops.length) {
+    deliveryStops.push({
+      id: "fallback-delivery",
+      stop_type: "delivery",
+      sequence: 1,
+      contact_name: "",
+      contact_phone: "",
+      address: deliveryFallback,
+      note: null,
+    });
+  }
+  const rowCount = Math.max(pickupStops.length, deliveryStops.length);
 
   return (
     <View style={styles.stopsList}>
-      {visibleStops.map((stop) => {
-        seenByType[stop.stop_type] += 1;
-        const typeIndex = seenByType[stop.stop_type];
-        const typeTotal =
-          stop.stop_type === "pickup" ? pickupCount : deliveryCount;
-        const title = stop.stop_type === "pickup" ? "المصدر" : "الوجهة";
+      {Array.from({ length: rowCount }, (_, rowIndex) => {
+        const pickup = pickupStops[rowIndex];
+        const delivery = deliveryStops[rowIndex];
         return (
-          <StopCard
-            key={stop.id}
-            title={typeTotal > 1 ? `${title} ${typeIndex}` : title}
-            icon={stop.stop_type === "pickup" ? "inventory-2" : "location-on"}
-            stop={stop}
-            fallback={
-              stop.stop_type === "pickup" ? pickupFallback : deliveryFallback
-            }
-            onCall={onCall}
-          />
+          <View key={`stop-row-${rowIndex}`} style={styles.stopsRow}>
+            <View style={styles.stopColumn}>
+              {pickup ? (
+                <StopCard
+                  title={
+                    pickupStops.length > 1
+                      ? `المصدر ${rowIndex + 1}`
+                      : "المصدر"
+                  }
+                  icon="inventory-2"
+                  stop={pickup}
+                  fallback={pickupFallback}
+                  onCall={onCall}
+                />
+              ) : null}
+            </View>
+            <View style={styles.stopColumn}>
+              {delivery ? (
+                <StopCard
+                  title={
+                    deliveryStops.length > 1
+                      ? `الوجهة ${rowIndex + 1}`
+                      : "الوجهة"
+                  }
+                  icon="location-on"
+                  stop={delivery}
+                  fallback={deliveryFallback}
+                  onCall={onCall}
+                />
+              ) : null}
+            </View>
+          </View>
         );
       })}
     </View>
@@ -1195,6 +1214,8 @@ const styles = StyleSheet.create({
   },
   cardBody: { gap: 14, padding: 14 },
   stopsList: { gap: 8 },
+  stopsRow: { flexDirection: "row-reverse", gap: 8 },
+  stopColumn: { flex: 1, minWidth: 0 },
   timeline: { gap: 7 },
   currentTimelineTitle: {
     color: "#FFFFFF",
