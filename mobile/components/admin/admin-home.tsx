@@ -140,6 +140,7 @@ export function AdminHome() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [editingOrder, setEditingOrder] = useState<NativeEditableOrder | null>(null);
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  const createIdempotencyKeyRef = useRef<string | null>(null);
   const realtimeRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleRealtimeRefresh = useCallback(() => {
@@ -353,12 +354,22 @@ export function AdminHome() {
         await refetch();
         return true;
       }
+      if (!createIdempotencyKeyRef.current) {
+        createIdempotencyKeyRef.current = createNativeIdempotencyKey();
+      }
       const created = await nativeAdminContract.actions.createOrderWithStops({
         stops: draft.stops,
         fee: draft.fee,
         exceptionKeyword: draft.exceptionKeyword,
-        idempotencyKey: createNativeIdempotencyKey(),
+        idempotencyKey: createIdempotencyKeyRef.current,
       });
+      if (created.status !== "pending") {
+        createIdempotencyKeyRef.current = null;
+        setCreateOpen(false);
+        showToast({ message: `تم تأكيد الطلب #${created.orderNumber} وحالته محفوظة.` });
+        await refetch();
+        return true;
+      }
       try {
         const assigned = await nativeAdminContract.actions.assignOrderCaptain(
           created.id,
@@ -373,9 +384,11 @@ export function AdminHome() {
           });
         });
         playSound("adminOrderSuccess");
+        createIdempotencyKeyRef.current = null;
         setCreateOpen(false);
         showToast({ message: `تم إنشاء وتعيين الطلب #${assigned.orderNumber}.` });
       } catch (assignmentError) {
+        createIdempotencyKeyRef.current = null;
         setCreateOpen(false);
         const message =
           assignmentError instanceof NativeAdminRequestTimeoutError
@@ -699,6 +712,7 @@ export function AdminHome() {
         isSubmitting={isCreating}
         errorMessage={createError}
         onClose={() => {
+          createIdempotencyKeyRef.current = null;
           setCreateOpen(false);
           setCreateError(null);
         }}

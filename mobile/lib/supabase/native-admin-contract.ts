@@ -8,7 +8,7 @@ import {
   type NativeEditableOrder,
 } from "@/lib/supabase/types/admin-contracts.types";
 
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 function withTimeout<T>(request: PromiseLike<T>, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
