@@ -502,7 +502,7 @@ export function CaptainWages() {
                         : null,
                   ]}
                 >
-                  <View style={styles.between}>
+                  <View style={styles.wageOrderHeader}>
                     <View>
                       <Text style={styles.wageOrderNumber}>
                         {row.order_kind === "medicine"
@@ -513,26 +513,26 @@ export function CaptainWages() {
                       </Text>
                       <Text style={styles.wageRowDate}>{date(row.completed_at)}</Text>
                     </View>
-                    <View style={styles.wageAmountBreakdown}>
-                      <View style={styles.wageAmountCell}>
-                        <Text style={styles.wageAmountLabel}>إجمالي الطلب</Text>
-                        <Text style={styles.wageTotalAmount}>{money(row.gross_fee)}</Text>
-                      </View>
-                      <View style={styles.wageAmountCell}>
-                        <Text style={styles.wageAmountLabel}>حصة الكابتن</Text>
-                        <Text style={styles.wageRowAmount}>{money(row.captain_amount)}</Text>
-                      </View>
-                      <View style={styles.wageAmountCell}>
-                        <Text style={styles.wageAmountLabel}>حصة الشركة</Text>
-                        <Text style={styles.wageCompanyAmount}>{money(row.company_amount)}</Text>
-                      </View>
-                      <Text style={styles.wageRowHint}>
-                        {row.order_kind === "medicine" || row.source_status === "false_order"
-                          ? "تعويض خاص — لا تُحتسب حصة شركة لهذا السجل"
-                          : "التوزيع المحفوظ لهذا الطلب"}
-                      </Text>
+                  </View>
+                  <View style={styles.wageFinancialRow}>
+                    <View style={[styles.wageFinancialItem, styles.wageCaptainCorner]}>
+                      <Text style={styles.wageCaptainLabel}>حصة الكابتن</Text>
+                      <Text style={styles.wageCaptainValue}>{money(row.captain_amount)}</Text>
+                    </View>
+                    <View style={[styles.wageFinancialItem, styles.wageOrderPay]}>
+                      <Text style={styles.wageOrderPayLabel}>أجر الطلب</Text>
+                      <Text style={styles.wageOrderPayValue}>{money(row.gross_fee)}</Text>
+                    </View>
+                    <View style={[styles.wageFinancialItem, styles.wageCompanyShare]}>
+                      <Text style={styles.wageCompanyLabel}>حصة الشركة</Text>
+                      <Text style={styles.wageCompanyValue}>{money(row.company_amount)}</Text>
                     </View>
                   </View>
+                  <Text style={styles.wageRowHint}>
+                    {row.order_kind === "medicine" || row.source_status === "false_order"
+                      ? "تعويض خاص — لا تُحتسب حصة شركة لهذا السجل"
+                      : "التوزيع المحفوظ لهذا الطلب"}
+                  </Text>
                   <View style={styles.wageRouteGrid}>
                     <View style={styles.wageRouteCard}>
                       <View style={styles.wageRouteHead}>
@@ -1509,32 +1509,82 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  wageAmountBreakdown: {
+  wageOrderHeader: {
     alignItems: "flex-end",
-    gap: 2,
-    minWidth: 150,
+    marginBottom: 9,
   },
-  wageAmountCell: {
-    alignItems: "flex-end",
+  wageFinancialRow: {
+    alignItems: "stretch",
+    borderColor: "#D7EAF3",
+    borderRadius: 13,
+    borderWidth: 1,
     flexDirection: "row-reverse",
-    gap: 5,
+    overflow: "hidden",
   },
-  wageAmountLabel: {
-    color: "#63869A",
-    fontFamily: "Cairo_400Regular",
-    fontSize: 9,
+  wageFinancialItem: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 70,
+    paddingHorizontal: 5,
+    paddingVertical: 7,
+  },
+  wageCaptainCorner: {
+    backgroundColor: "#EAF8F1",
+    borderColor: "#B6E5CA",
+    borderLeftWidth: 1,
+  },
+  wageOrderPay: {
+    backgroundColor: "#EAF5FC",
+    borderColor: "#C6E3F3",
+    borderLeftWidth: 1,
+  },
+  wageCompanyShare: {
+    backgroundColor: "#FFF0F1",
+  },
+  wageCaptainLabel: {
+    color: "#16804F",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    textAlign: "center",
     writingDirection: "rtl",
   },
-  wageTotalAmount: {
-    color: "#174F74",
+  wageCaptainValue: {
+    color: "#087A49",
     fontFamily: "Cairo_700Bold",
-    fontSize: 13,
+    fontSize: 17,
+    marginTop: 3,
+    textAlign: "center",
     writingDirection: "rtl",
   },
-  wageCompanyAmount: {
-    color: "#0A8A67",
+  wageOrderPayLabel: {
+    color: "#126FA7",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  wageOrderPayValue: {
+    color: "#075D9F",
     fontFamily: "Cairo_700Bold",
     fontSize: 13,
+    marginTop: 3,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  wageCompanyLabel: {
+    color: "#B4232D",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  wageCompanyValue: {
+    color: "#C62F3B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
+    marginTop: 3,
+    textAlign: "center",
     writingDirection: "rtl",
   },
   wageRowAmount: {
@@ -1548,8 +1598,8 @@ const styles = StyleSheet.create({
     color: "#63869A",
     fontFamily: "Cairo_400Regular",
     fontSize: 9,
-    marginTop: 2,
-    textAlign: "left",
+    marginTop: 6,
+    textAlign: "center",
     writingDirection: "rtl",
   },
   wageRouteGrid: { flexDirection: "row-reverse", gap: 8 },
