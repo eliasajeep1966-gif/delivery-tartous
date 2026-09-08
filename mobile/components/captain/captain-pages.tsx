@@ -447,32 +447,29 @@ export function CaptainWages() {
         <LoadingCards includeMetrics />
       ) : (
         <>
-          <View style={styles.wageHero}>
-            <View>
-              <Text style={styles.wageHeroKicker}>
-                {wagePeriodTitle(data.filter, data.periodStart)}
-              </Text>
-              <Text style={styles.wageHeroValue}>{money(data.totals.gross)}</Text>
-              <Text style={styles.wageHeroHint}>
-                إجمالي أجور الطلبات · {wagePeriodRange(data.periodStart, data.periodEnd)} · {data.total} طلب
-              </Text>
-            </View>
-            <View style={styles.wageHeroIcon}>
-              <MaterialIcons name="account-balance-wallet" size={25} color="#0878D1" />
-            </View>
-          </View>
           <View style={styles.wageSummaryGrid}>
+            <View style={[styles.wageSummaryCard, styles.wageSummaryTotal]}>
+              <MaterialIcons name="account-balance-wallet" size={17} color="#0878D1" />
+              <Text style={styles.wageSummaryLabel}>الإجمالي</Text>
+              <Text style={styles.wageSummaryTotalValue}>{money(data.totals.gross)}</Text>
+              <Text style={styles.wageSummaryHint}>{wagePeriodTitle(data.filter, data.periodStart)}</Text>
+            </View>
             <View style={styles.wageSummaryCard}>
+              <MaterialIcons name="two-wheeler" size={17} color="#075D9F" />
               <Text style={styles.wageSummaryLabel}>حصة الكابتن</Text>
               <Text style={styles.wageSummaryCaptain}>{money(data.totals.captain)}</Text>
-              <Text style={styles.wageSummaryHint}>المبلغ المستحق للكابتن</Text>
+              <Text style={styles.wageSummaryHint}>المستحق للكابتن</Text>
             </View>
             <View style={styles.wageSummaryCard}>
+              <MaterialIcons name="business" size={17} color="#0A8A67" />
               <Text style={styles.wageSummaryLabel}>حصة الشركة</Text>
               <Text style={styles.wageSummaryCompany}>{money(data.totals.company)}</Text>
-              <Text style={styles.wageSummaryHint}>المحفوظة فعلياً في السجل</Text>
+              <Text style={styles.wageSummaryHint}>المحفوظة فعلياً</Text>
             </View>
           </View>
+          <Text style={styles.wageSummaryPeriod}>
+            {wagePeriodRange(data.periodStart, data.periodEnd)} · {data.total} طلب
+          </Text>
 
           {data.rows.length ? (
             <>
@@ -1423,21 +1420,35 @@ const styles = StyleSheet.create({
   },
   wageSummaryGrid: {
     flexDirection: "row-reverse",
-    gap: 8,
+    gap: 6,
   },
   wageSummaryCard: {
+    alignItems: "flex-end",
     backgroundColor: "#FFFFFF",
     borderColor: "#D1ECF6",
     borderRadius: 15,
     borderWidth: 1,
     flex: 1,
-    minHeight: 88,
-    padding: 11,
+    minHeight: 98,
+    padding: 9,
+  },
+  wageSummaryTotal: {
+    backgroundColor: "#EAF9FF",
+    borderColor: "#BCEBFA",
   },
   wageSummaryLabel: {
     color: "#4C738B",
     fontFamily: "Cairo_700Bold",
-    fontSize: 10,
+    fontSize: 9,
+    marginTop: 3,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageSummaryTotalValue: {
+    color: "#075D9F",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 14,
+    marginTop: 3,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -1462,6 +1473,14 @@ const styles = StyleSheet.create({
     fontFamily: "Cairo_400Regular",
     fontSize: 8,
     marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageSummaryPeriod: {
+    color: "#63869A",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    marginTop: -2,
     textAlign: "right",
     writingDirection: "rtl",
   },
