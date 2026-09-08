@@ -452,13 +452,25 @@ export function CaptainWages() {
               <Text style={styles.wageHeroKicker}>
                 {wagePeriodTitle(data.filter, data.periodStart)}
               </Text>
-              <Text style={styles.wageHeroValue}>{money(data.totals.captain)}</Text>
+              <Text style={styles.wageHeroValue}>{money(data.totals.gross)}</Text>
               <Text style={styles.wageHeroHint}>
-                {wagePeriodRange(data.periodStart, data.periodEnd)} · {data.total} طلب
+                إجمالي أجور الطلبات · {wagePeriodRange(data.periodStart, data.periodEnd)} · {data.total} طلب
               </Text>
             </View>
             <View style={styles.wageHeroIcon}>
               <MaterialIcons name="account-balance-wallet" size={25} color="#0878D1" />
+            </View>
+          </View>
+          <View style={styles.wageSummaryGrid}>
+            <View style={styles.wageSummaryCard}>
+              <Text style={styles.wageSummaryLabel}>حصة الكابتن</Text>
+              <Text style={styles.wageSummaryCaptain}>{money(data.totals.captain)}</Text>
+              <Text style={styles.wageSummaryHint}>المبلغ المستحق للكابتن</Text>
+            </View>
+            <View style={styles.wageSummaryCard}>
+              <Text style={styles.wageSummaryLabel}>حصة الشركة</Text>
+              <Text style={styles.wageSummaryCompany}>{money(data.totals.company)}</Text>
+              <Text style={styles.wageSummaryHint}>المحفوظة فعلياً في السجل</Text>
             </View>
           </View>
 
@@ -504,12 +516,23 @@ export function CaptainWages() {
                       </Text>
                       <Text style={styles.wageRowDate}>{date(row.completed_at)}</Text>
                     </View>
-                    <View style={styles.left}>
-                      <Text style={styles.wageRowAmount}>{money(row.captain_amount)}</Text>
+                    <View style={styles.wageAmountBreakdown}>
+                      <View style={styles.wageAmountCell}>
+                        <Text style={styles.wageAmountLabel}>إجمالي الطلب</Text>
+                        <Text style={styles.wageTotalAmount}>{money(row.gross_fee)}</Text>
+                      </View>
+                      <View style={styles.wageAmountCell}>
+                        <Text style={styles.wageAmountLabel}>حصة الكابتن</Text>
+                        <Text style={styles.wageRowAmount}>{money(row.captain_amount)}</Text>
+                      </View>
+                      <View style={styles.wageAmountCell}>
+                        <Text style={styles.wageAmountLabel}>حصة الشركة</Text>
+                        <Text style={styles.wageCompanyAmount}>{money(row.company_amount)}</Text>
+                      </View>
                       <Text style={styles.wageRowHint}>
                         {row.order_kind === "medicine" || row.source_status === "false_order"
-                          ? "تعويض"
-                          : "أجرك من هذا الطلب"}
+                          ? "تعويض خاص — لا تُحتسب حصة شركة لهذا السجل"
+                          : "التوزيع المحفوظ لهذا الطلب"}
                       </Text>
                     </View>
                   </View>
@@ -1398,6 +1421,50 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
+  wageSummaryGrid: {
+    flexDirection: "row-reverse",
+    gap: 8,
+  },
+  wageSummaryCard: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D1ECF6",
+    borderRadius: 15,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 88,
+    padding: 11,
+  },
+  wageSummaryLabel: {
+    color: "#4C738B",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 10,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageSummaryCaptain: {
+    color: "#075D9F",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 16,
+    marginTop: 4,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageSummaryCompany: {
+    color: "#0A8A67",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 16,
+    marginTop: 4,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageSummaryHint: {
+    color: "#7895A4",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 8,
+    marginTop: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   wageHeroIcon: {
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -1421,6 +1488,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
     textAlign: "right",
+    writingDirection: "rtl",
+  },
+  wageAmountBreakdown: {
+    alignItems: "flex-end",
+    gap: 2,
+    minWidth: 150,
+  },
+  wageAmountCell: {
+    alignItems: "flex-end",
+    flexDirection: "row-reverse",
+    gap: 5,
+  },
+  wageAmountLabel: {
+    color: "#63869A",
+    fontFamily: "Cairo_400Regular",
+    fontSize: 9,
+    writingDirection: "rtl",
+  },
+  wageTotalAmount: {
+    color: "#174F74",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
+    writingDirection: "rtl",
+  },
+  wageCompanyAmount: {
+    color: "#0A8A67",
+    fontFamily: "Cairo_700Bold",
+    fontSize: 13,
     writingDirection: "rtl",
   },
   wageRowAmount: {
