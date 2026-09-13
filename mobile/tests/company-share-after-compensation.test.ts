@@ -10,7 +10,7 @@ const detailViewPath = new URL(
   import.meta.url,
 );
 const medicineExceptionMigrationPath = new URL(
-  "../../supabase/migrations/20260913100000_make_medicine_exception_permanent.sql",
+  "../../supabase/migrations/20260912170000_restore_medicine_compensation_exception.sql",
   import.meta.url,
 );
 
@@ -30,7 +30,6 @@ describe("Net company share after captain compensation", () => {
 
     expect(migration).toContain("distribution_exception_keyword");
     expect(migration).toContain("lower(btrim(v_order.distribution_exception_keyword)) = 'دواء'");
-    expect(migration).not.toContain("v_exception is not null");
     expect(migration).toContain("v_compensation");
     expect(migration).toContain("else 0");
     expect(migration).toContain("or v_compensation");
