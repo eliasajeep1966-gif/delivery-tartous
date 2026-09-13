@@ -112,7 +112,14 @@ begin
     v_captain_amount := round(v_order.fee * (100 - v_company_share) / 100, 2);
 
     insert into public.financial_ledger (
-      order_id, captain_id, source_status, gross_fee, captain_amount, company_amount, settlement_amount
+      order_id,
+      captain_id,
+      source_status,
+      gross_fee,
+      captain_amount,
+      company_amount,
+      settlement_amount,
+      financial_treatment
     ) values (
       v_order.id,
       v_order.assigned_captain_id,
@@ -128,7 +135,8 @@ begin
         when p_next_status = 'false_order'::public.order_status or v_compensation
           then v_order.fee - v_captain_amount
         else 0
-      end
+      end,
+      case when v_compensation then 'false_order' else 'standard' end
     );
   end if;
 

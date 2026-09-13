@@ -33,6 +33,7 @@ describe("Net company share after captain compensation", () => {
     expect(migration).toContain("v_compensation");
     expect(migration).toContain("else 0");
     expect(migration).toContain("or v_compensation");
+    expect(migration).toContain("case when v_compensation then 'false_order' else 'standard' end");
     expect(migration).not.toContain("source_notes");
   });
 
