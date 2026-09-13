@@ -9,6 +9,10 @@ const detailViewPath = new URL(
   "../components/admin/admin-captain-wage-detail.tsx",
   import.meta.url,
 );
+const medicineExceptionMigrationPath = new URL(
+  "../../supabase/migrations/20260912170000_restore_medicine_compensation_exception.sql",
+  import.meta.url,
+);
 
 describe("Net company share after captain compensation", () => {
   it("uses negative 70% company share for medicine and false orders", async () => {
@@ -19,6 +23,18 @@ describe("Net company share after captain compensation", () => {
     expect(migration).toContain("company_financial_result_for_order");
     expect(migration).toContain("then -captain_amount");
     expect(migration).toContain("then -page_rows.captain_amount");
+  });
+
+  it("activates legacy medicine compensation from the exception keyword only", async () => {
+    const migration = await readFile(medicineExceptionMigrationPath, "utf8");
+
+    expect(migration).toContain("distribution_exception_keyword");
+    expect(migration).toContain("lower(btrim(v_order.distribution_exception_keyword)) = 'دواء'");
+    expect(migration).toContain("v_compensation");
+    expect(migration).toContain("else 0");
+    expect(migration).toContain("or v_compensation");
+    expect(migration).toContain("case when v_compensation then 'false_order' else 'standard' end");
+    expect(migration).not.toContain("source_notes");
   });
 
   it("excludes reference amounts from company wage totals", async () => {
